@@ -90,6 +90,8 @@ Not the reference: Studio 14b's scripted "President Simulator" on Steam (Early A
 
 ## 5. Session Zero [proposed]
 
+Built in Layer 10 item 1 (docs/design.md §17); `/establish` is host-only until co-GM votes exist.
+
 Every campaign starts here, as at a tabletop. Defaults to a quick start: a preset historical start, a suggested roster, and preset settings. Everything can be customised.
 
 Session Zero runs in five steps, in order. Steps 3-5 are private to each player.
@@ -271,7 +273,7 @@ Four stages per intent, every tick:
 
 ## 15. Chapters, seasons and endings [decided mode; proposed mechanics]
 
-Revised 2026-10-20 (decisions 36-38). This replaces the old per-seat scoring with no winner.
+Revised 2026-10-20 (decisions 36-38). This replaces the old per-seat scoring with no winner. Win conditions, goal intelligence, the dashboard and a host-called season end are built (docs/design.md §17); chapters and timed seasons are not yet.
 
 - **Win conditions are code.** A goal compiles at Session Zero into a typed condition over state, built from a closed set of checks: holds an Office, controls an Asset, an Entity's status (alive, dead, captured, exiled), a Meter at or past a value, a Commitment in force, a Relationship at or past a disposition, and AND / OR over these. No model ever decides whether a goal is met. A goal that cannot be written this way is reworded at Session Zero or refused.
 - **Progress** is the goal's objective clock: the engine advances it as sub-conditions come true, so the dashboard can show "2 of 3" to the owner only.

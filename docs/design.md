@@ -15,6 +15,7 @@ Module map:
 | `core/intent.py` | `Verb`, `Intent` |
 | `core/goals.py` | secret goals: the `WinCondition` union, `goal_met`, goal kinds, winners (Layer 10) |
 | `core/intel.py` | goal pieces from investigations, decoys from forgeries (Layer 10) |
+| `core/dashboard.py` | one seat's dashboard from its view; the season report (Layer 10) |
 | `core/delta.py` | the `Delta` union |
 | `core/resolution.py` | bands, tiers, stages, rejection reasons, starting odds |
 | `core/events.py` | every event kind, the `Event` envelope |
@@ -64,7 +65,7 @@ Consequences the code keeps:
 | Cost | `cost_logged` (model calls outside a tick; schema v2) |
 | Admin | `admin_read` |
 | Goals | `goal_set`, `goal_progressed`, `goal_met`, `goal_undone` (schema v6) |
-| Session Zero | `session_zero_opened`, `character_listed` (schema v7); `character_claimed`, `session_zero_closed`, records `goal_proposed`, `goal_approved` (schema v8) |
+| Session Zero | `session_zero_opened`, `character_listed` (schema v7); `character_claimed`, `session_zero_closed`, records `goal_proposed`, `goal_approved` (schema v8); `season_ended` (schema v9) |
 
 Later layers add `vote_*`, `director_event_proposed`, `agent_harmed`, `seat_fallen`, `player_joined`, `key_attached`, `safety_refused`. Each addition bumps `core.SCHEMA_VERSION`.
 
@@ -582,3 +583,11 @@ README §5 steps 3-5, run by each player through their agent, privately. In `eng
 **Brief and agent.** `revisionist history` (`/history`) is the tick-0 brief from the agent: "As recorded", the goal in history, a "Suggested route (a suggestion, not a rule)", and a line where the record is thin; it is the seat's private narration. `revisionist agent` (`/agent`) designs the persona: a new person entity under the character, then `agent_assigned`. **Begin** (host) closes Session Zero with `session_zero_closed` once every human seat has a character, a goal and an agent and every flagged goal is approved; the phase becomes play and the first tick runs.
 
 **Not yet.** Changing a goal at a chapter break, the redesign after a fall (item 9), and taking an AI seat mid-campaign (item 10). The four new prompts (`character_search`, `character_pick`, `goal`, `history_brief`) have no recordings; the tests script them.
+
+### 17.5 Dashboard and season end (1e)
+
+**Dashboard.** `core/dashboard.dashboard(view)` is built from one seat's view and nothing else: the seat, the tick and its slots; its means (controlled assets not lost, with tiers); up to three of its own meters; its goal, with kind, "parts met of parts" from the objective clock and whether it is met, holding or undone (the owner only, because a view holds only its own goal); and, per rival player seat, the goal pieces this seat holds about it, in learning order. It is plain text built in code, so no prompt changed. It opens every player's tick briefing at delivery (the press gets none), heads `revisionist briefing` and `/briefing`, and stands alone as `revisionist dashboard` and `/dashboard`. A goal's objective clock now starts at the parts the world already gives it, in the compiler and at `confirm`, so tick 0 shows true progress.
+
+**Season end.** The host runs `revisionist season end` or `/season-end`, between ticks, in play. The engine applies `reveal(state, Full)` as ordinary `delta_applied` knowledge grants (decision 4), then logs a Public `season_ended(winners, revealed)`. The fold checks `winners` against `season_winners` (a log cannot crown anyone the goals did not), makes every goal public and sets the phase to `season_over`, after which every tick is refused. `core/dashboard.season_report` is built from the state just before the reveal, which still knows who had gathered which pieces on whom: the winners or "No one met their goal.", then every goal with its kind, when it was first met and whether it held at the end, and how many pieces each human rival had uncovered and how many were false. `revisionist season report` rebuilds it from the log at any time. With a public channel set, `RoutingDeliverer.publish` posts it to `#chronicle` once.
+
+**Not yet.** Timed seasons, chapter breaks with partial reveals and the history page (item 6); the climactic formal session (item 5); a sequel season inheriting the world.

@@ -246,6 +246,25 @@ From then on every **new** campaign is sealed: its events and snapshots are AES-
 - [ ] Tell the other player the threat model: the host can break glass, and every such read is logged and announced.
 - [ ] The Layer 9b exit run: 10 ticks with both players, perceived odds visible, then `revisionist leaks` and `revisionist leaks --humans` report 0, `revisionist db verify` passes with "sealed", and the restore drill passes with the master key.
 
+### 9.10 A historical campaign (Layer 10 item 1)
+
+No migration: Session Zero, goals and the season end live in the event log. Update the tool (`uv tool install --editable '.[postgres,discord,seal]' --force`) and restart the bot so the new slash commands sync.
+
+```
+set -a; . ~/.config/revisionist/revisionist.env; set +a
+revisionist establish "Florence, April 1478" --lethality hard   # or /establish in the server
+revisionist discord invite                                     # one per player, you included; no --seat in Session Zero
+```
+
+Each player redeems their code with `/join`, then works through Session Zero privately: `/character roster` (or `search <what you want>`, `claim <name>`, `pick <anyone from the record>`), `/goal history` or `could_have` or `own <words>`, then `/goal confirm <n>`, `/history` for the tick-0 brief, and `/agent` to design their aide. `revisionist goal flags` shows any goal the balance check flagged, by seat and score only; `revisionist goal approve "<seat>"` lets it stand. When everyone is ready, `/begin` (or `revisionist begin`) closes Session Zero and the scheduler starts ticking. Until then it reports `waiting: session zero`.
+
+`/dashboard` shows a player their standing and goal progress at any time; it also opens every briefing. When the season is done, `/season-end` (or `revisionist season end`) reveals everything, names the winners, posts the report to `#chronicle` and stops the ticks for good. `revisionist season report` prints it again.
+
+Still to do (Josh):
+
+- [ ] Record the five new prompts live: run one real Session Zero (both periods in `tests/drafts/` are hand-written stand-ins) and compare the drafts, the roster, the goal options and the brief against the record before any friend plays.
+- [ ] Play one season with goals to its end, then check `revisionist leaks --humans` is 0 and the report reads right.
+
 ## 10. Upgrading a host set up under the old name
 
 The project was called Wyrd Protocol through Layer 9a. Everything it installed carried that name: roles `wyrd_app` and `wyrd_admin`, database `wyrd`, `~/.config/wyrd/wyrd.env` and `wyrd-admin.env`, `~/.local/share/wyrd`, the `wyrd` tool, units `wyrd-scheduler`, `wyrd-backup` and `wyrd-discord`, dumps `wyrd-*.dump` and `WYRD_*` variables. Skip this section if none of that exists. Do every step in one sitting: the per-campaign advisory lock key changed with the rename, so an old and a new process must never run side by side.
