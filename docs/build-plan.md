@@ -1,4 +1,4 @@
-# Anansi build plan
+# Wyrd Protocol build plan
 
 Layer-by-layer plan for building the engine described in [README.md](../README.md) (v2). Written 2026-10-19. Plan only; nothing here is built.
 
@@ -23,15 +23,15 @@ Status legend as in the README: **[decided]**, **[proposed]**, **[open]**.
 **Purpose.** A repo that enforces the rules mechanically before any game code exists.
 
 **Produces.**
-- `pyproject.toml` with `uv`, Python 3.12+, `src/anansi/` layout.
+- `pyproject.toml` with `uv`, Python 3.12+, `src/wyrd/` layout.
 - Dependencies pinned: `pydantic>=2`, `anthropic`, `typer` (CLI), `hypothesis`, `pytest`, `ruff`, `mypy --strict`.
-- `anansi/core/` package marked **pure**: a lint rule (import-linter or a small test) that forbids `anthropic`, `discord`, `psycopg`, `httpx`, `os`, `time`, `random` module-level randomness in `core/`. This is how decision #34 ("pure core, no I/O") becomes a gate rather than a convention.
+- `wyrd/core/` package marked **pure**: a lint rule (import-linter or a small test) that forbids `anthropic`, `discord`, `psycopg`, `httpx`, `os`, `time`, `random` module-level randomness in `core/`. This is how decision #34 ("pure core, no I/O") becomes a gate rather than a convention.
 - GitHub Actions: lint, type-check, test on every PR; `uv lock --check`.
 - `CONTRIBUTING.md` restating the working rules (Josh owns commits and pushes; prefixes `docs:/feat:/bug:/chore:`).
 
 **Tests.** The purity gate itself has a test that fails when a forbidden import is added to `core/`.
 
-**Done when** a trivial `anansi --version` passes CI with the purity gate green.
+**Done when** a trivial `wyrd --version` passes CI with the purity gate green.
 
 **Size.** One evening.
 
@@ -39,7 +39,7 @@ Status legend as in the README: **[decided]**, **[proposed]**, **[open]**.
 
 ## Layer 1: Design doc and schema
 
-**Purpose.** README §12 and §13 as pydantic models. The design doc and the models are one deliverable: `docs/design.md` explains, `anansi/core/schema.py` (split into modules as it grows) defines.
+**Purpose.** README §12 and §13 as pydantic models. The design doc and the models are one deliverable: `docs/design.md` explains, `wyrd/core/schema.py` (split into modules as it grows) defines.
 
 **Produces.**
 
@@ -152,7 +152,7 @@ Event(
 **Purpose.** README §13's state machine: FREEZE, PROPOSE, VALIDATE, APPLY, NARRATE, DELIVER. Each stage persisted; resumable; a failed tick is quiet.
 
 **Produces.**
-- `anansi/engine/tick.py`: drives the pure core; the only module that both reads the store and calls providers.
+- `wyrd/engine/tick.py`: drives the pure core; the only module that both reads the store and calls providers.
 - Stage events in the log (`TickOpened`, `TickStageCompleted(stage)`, `TickClosed`) so a crash mid-tick is visible and the next run resumes from the last completed stage.
 - Provider protocols: `Resolver` (intents + truth -> proposals), `Narrator` (view + applied deltas -> text), `Structurer` (free text + view -> Intent | Question). All stubbed here with fixture implementations; real ones in Layers 5-6.
 - APPLY is one transaction: all `DeltaApplied` events for a tick land or none do.
@@ -183,7 +183,7 @@ Event(
 
 **Tests.** Resolver output always validates against the Delta union (fuzz with malformed fixture responses). Narrator never receives a `State`, only a `View` (type-enforced; test asserts the call signature). Canary scan over 50 fixture ticks.
 
-**Done when** one live tick resolves on Josh's Anansi key with cost recorded, and the recorded fixture of it passes in CI.
+**Done when** one live tick resolves on Josh's Wyrd Protocol key with cost recorded, and the recorded fixture of it passes in CI.
 
 **Built (2026-10-20) [decided]:** transport is the Claude Code CLI on Josh's subscription, not an API key (none available yet); see design §9.2. The `Transport` protocol keeps the SDK swap to one class. Costs recorded are list price, the real charge is subscription usage.
 
@@ -216,12 +216,12 @@ Event(
 **Purpose.** Close the solo minimum slice (README §22 step 2).
 
 **Produces.**
-- `worlds/*.yaml`: a hand-written world bible in the fixed ontology, compiled to creation events by `anansi world compile`. The first world is small: 4 polities, 3 AI faction seats, 1 human seat, 2 Meters per polity, about 15 Assets, one press outlet Entity.
+- `worlds/*.yaml`: a hand-written world bible in the fixed ontology, compiled to creation events by `wyrd world compile`. The first world is small: 4 polities, 3 AI faction seats, 1 human seat, 2 Meters per polity, about 15 Assets, one press outlet Entity.
 - `Settings` from a YAML block (plausibility, lethality, etc.) rather than an LLM-run Session Zero. The LLM Session Zero comes in Layer 10.
-- CLI (`typer`): `anansi new <world>`, `anansi order "<text>"`, `anansi tick`, `anansi briefing`, `anansi why <event_id>`, `anansi replay --to <tick>`, `anansi cost`, `anansi leaks` (run the canary scan over the campaign log).
+- CLI (`typer`): `wyrd new <world>`, `wyrd order "<text>"`, `wyrd tick`, `wyrd briefing`, `wyrd why <event_id>`, `wyrd replay --to <tick>`, `wyrd cost`, `wyrd leaks` (run the canary scan over the campaign log).
 - One press outlet narrated from its own `project()`; this is the first non-seat narrator and a second canary surface.
 
-**Exit criteria (README §22 step 3).** 10 ticks solo, zero canary hits, cost per tick recorded in the log and reported by `anansi cost`, and Josh's judgment that collisions with the AI factions felt fair.
+**Exit criteria (README §22 step 3).** 10 ticks solo, zero canary hits, cost per tick recorded in the log and reported by `wyrd cost`, and Josh's judgment that collisions with the AI factions felt fair.
 
 **Done when** Josh has played those 10 ticks.
 
@@ -236,7 +236,7 @@ Event(
 **Produces.**
 - `PostgresEventStore` behind the Layer 2 protocol: one `events` table with `UNIQUE(campaign_id, seq)`, the application role granted `INSERT, SELECT` only (no `UPDATE`/`DELETE` at the grant level, so append-only is enforced by the database, not the code).
 - Snapshots table. Migration tool (`alembic` or hand-rolled SQL files; **[open]**).
-- Scheduler: ticks fire on a timer, on all-submitted, or on host advance (README §9). systemd timer or an in-process APScheduler; **[proposed]** systemd timer calling `anansi tick`, since the orchestrator is already resumable and a cron-style trigger needs no long-running process.
+- Scheduler: ticks fire on a timer, on all-submitted, or on host advance (README §9). systemd timer or an in-process APScheduler; **[proposed]** systemd timer calling `wyrd tick`, since the orchestrator is already resumable and a cron-style trigger needs no long-running process.
 - Nightly `pg_dump` off-box (README §17).
 - Migration test: a solo SQLite campaign exported and replayed into Postgres gives the same state hash.
 
@@ -294,14 +294,14 @@ In the order README §22 step 5 gives, each as its own small PR with its tests. 
 
 ## Cross-cutting
 
-**Gates on every PR.** `ruff`, `mypy --strict`, `pytest` with the purity gate, JSON-schema diff, canary scan over fixtures, coverage of `anansi/core/` at 90%+.
+**Gates on every PR.** `ruff`, `mypy --strict`, `pytest` with the purity gate, JSON-schema diff, canary scan over fixtures, coverage of `wyrd/core/` at 90%+.
 
 **Test kinds and where they live.**
 - Property (Hypothesis): Layers 1-3.
 - Resume and idempotency: Layer 4.
 - Recorded-fixture provider: Layers 5-6, all of Layer 10.
 - Canary (string), counterfactual (behaviour), human-boundary (union): Layers 5, 6, 9.
-- Live cost job: opt-in, runs on the Anansi key, reports `$ per tick` into the PR.
+- Live cost job: opt-in, runs on the Wyrd Protocol key, reports `$ per tick` into the PR.
 
 **Who builds what.** Josh and Vera (README #17). Layers 1-3 are suited to Haiku-swarmed TDD briefs once the design doc is approved: pure functions, typed inputs, property tests already specified. Layers 4-9 are integration and stay in one head. Layer 10 items are individually briefable.
 
@@ -316,6 +316,6 @@ In the order README §22 step 5 gives, each as its own small PR with its tests. 
 3. **SQLite for the solo slice, Postgres at Layer 8** behind the same `EventStore` protocol (Layer 2).
 4. **`reveal()` emits ordinary KnowledgeGrant events** under a `partial`/`full` policy (Layer 1). No dedicated reveal event kind.
 5. **Encryption deferred to Layer 9**, with the `payload_enc` envelope slot reserved from Layer 1.
-6. **Scheduler is a systemd timer** calling `anansi tick` (Layer 8).
+6. **Scheduler is a systemd timer** calling `wyrd tick` (Layer 8).
 
 Everything else in this plan is a Vera proposal that can be changed at the layer it belongs to.

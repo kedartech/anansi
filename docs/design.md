@@ -1,6 +1,6 @@
-# Anansi design: log, state, boundary, pipeline
+# Wyrd Protocol design: log, state, boundary, pipeline
 
-Build plan Layer 1. Written 2026-10-19 against [README.md](../README.md) v2. The models in `src/anansi/core/` are the schema; this document explains them and names the rules the code must keep. Where the two disagree, the code is wrong and this doc wins until the code is fixed.
+Build plan Layer 1. Written 2026-10-19 against [README.md](../README.md) v2. The models in `src/wyrd/core/` are the schema; this document explains them and names the rules the code must keep. Where the two disagree, the code is wrong and this doc wins until the code is fixed.
 
 Status legend: **[decided]**, **[proposed]**, **[open]**.
 
@@ -27,7 +27,7 @@ Module map:
 | `engine/prompts/*.md` | versioned prompt files; content hash in `Versions.prompt` (Layers 5-6) |
 | `core/canary.py` | canary scan over narrations and deliveries (Layer 5) |
 | `engine/store.py` | `EventStore` protocol, `MemoryStore`, `SqliteStore`, `load_state` (Layer 2) |
-| `schema/anansi.schema.json` | exported JSON Schema; CI fails on drift |
+| `schema/wyrd.schema.json` | exported JSON Schema; CI fails on drift |
 
 ---
 
@@ -284,7 +284,7 @@ Stores (`engine/store.py`) enforce append-only: `seq` must be exactly the next i
 - **Transport is the Claude Code CLI** (`claude -p`), not the Anthropic SDK. It runs on the host's Claude subscription, so no API key exists in the repo, its environment, or CI. Every call strips setting sources, tools and hooks (`--setting-sources "" --tools "" --no-session-persistence`); `--bare` is avoided because it also drops the login. The CLI's JSON result carries `structured_output`, the model, token counts and a list-price `total_cost_usd`; those become one `CallCost` on the stage marker. On a subscription the real charge is zero, so `usd` is the list-price shadow, which is what README #32 wants measured. Swapping to the SDK later is one new `Transport` class; the `Request`/`Reply` dataclasses do not change.
 - **Resolver** (`ClaudeResolver`, Sonnet tier): the system prompt is `prompts/resolver.md`; the user turn is the full `State` as JSON (truth) plus each frozen intent with its rolled outcome and band. Output is constrained by `--json-schema` to `{proposals: [{intent_id, deltas: [Delta]}]}` where the Delta schema is the union's own JSON Schema with `delta_id` removed; the engine mints IDs as `derived_id(campaign, tick, intent, n)` so a re-run gives the same IDs. Each proposal is validated against `list[Delta]`; a reply with any invalid proposal is retried once with the errors appended, then the still-invalid proposals are dropped and recorded on `resolver.dropped`. Malformed output never raises (property-tested).
 - **Narrator** (`ClaudeNarrator`, Haiku tier): takes `View` and the deltas visible in it; the type is the boundary and a test asserts the signature. Output schema is `{text}`.
-- **Recordings** (`RecordedTransport`): request key is blake2b over model, system prompt, user prompt and schema; replies are stored under `tests/recordings/*.json`. A missing key fails the test (`MissingRecordingError`) unless `ANANSI_RECORD=1`, which records through the live CLI. CI never calls a model. Recordings are reviewed in the PR like any fixture.
+- **Recordings** (`RecordedTransport`): request key is blake2b over model, system prompt, user prompt and schema; replies are stored under `tests/recordings/*.json`. A missing key fails the test (`MissingRecordingError`) unless `WYRD_RECORD=1`, which records through the live CLI. CI never calls a model. Recordings are reviewed in the PR like any fixture.
 - **Prompt versions**: `prompt_versions()` hashes both prompt files; the caller passes it as `Versions.prompt` to `run_tick` (the CLI does this at Layer 7), so every envelope in a tick names the exact prompt text that produced it.
 - **Canary harness** (`core/canary.py`, pure): `canaries_hidden_from(state, seat)` is the set of canary strings on facts whose scope excludes the seat; `scan` runs over every `narration_written` in the log and `scan_deliveries` over what the deliverer actually sent. Tests run it over 50 fixture ticks with an echo narrator (so the projection alone must hold) and over the recorded live tick. One hit fails the suite.
 
@@ -325,9 +325,9 @@ Two call sites, both in the referee, both pure protocols with a fixture implemen
 - Non-public scopes need a holder.
 - No delta has a free-form field.
 - `MUTATING_KINDS` is a subset of the real kinds; `delta_applied` mutates, `narration_written` does not.
-- The committed `schema/anansi.schema.json` matches a fresh export (drift fails CI).
+- The committed `schema/wyrd.schema.json` matches a fresh export (drift fails CI).
 
-`tests/test_purity.py` keeps `anansi.core` free of I/O, clock, network, model and unseeded-random imports.
+`tests/test_purity.py` keeps `wyrd.core` free of I/O, clock, network, model and unseeded-random imports.
 
 ---
 

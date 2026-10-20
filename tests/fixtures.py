@@ -4,9 +4,9 @@ Two player seats (north, south), one AI faction, one outlet. North holds a
 covert army and a covert fact with a canary; south must never see either.
 """
 
-from anansi.core import events as ev
-from anansi.core.events import Event, Versions
-from anansi.core.ids import (
+from wyrd.core import events as ev
+from wyrd.core.events import Event, Versions
+from wyrd.core.ids import (
     AssetId,
     CampaignId,
     ClockId,
@@ -18,7 +18,7 @@ from anansi.core.ids import (
     ScheduledEventId,
     SeatId,
 )
-from anansi.core.ontology import (
+from wyrd.core.ontology import (
     Asset,
     AssetKind,
     Clock,
@@ -34,8 +34,8 @@ from anansi.core.ontology import (
     Seat,
     SeatKind,
 )
-from anansi.core.settings import Settings
-from anansi.core.visibility import PUBLIC, Scope, Visibility, private_to
+from wyrd.core.settings import Settings
+from wyrd.core.visibility import PUBLIC, Scope, Visibility, private_to
 
 __all__ = [
     "AssetId",

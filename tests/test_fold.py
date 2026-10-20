@@ -5,13 +5,13 @@ from hypothesis import given
 from hypothesis import settings as h_settings
 from hypothesis import strategies as st
 
-from anansi.core import delta as d
-from anansi.core import events as ev
-from anansi.core.fold import FoldError, apply, empty, replay, replay_to, state_hash
-from anansi.core.ids import DeltaId
-from anansi.core.ontology import AssetStatus, ClockStatus, SeatStatus
-from anansi.core.visibility import PUBLIC
 from tests import fixtures as fx
+from wyrd.core import delta as d
+from wyrd.core import events as ev
+from wyrd.core.fold import FoldError, apply, empty, replay, replay_to, state_hash
+from wyrd.core.ids import DeltaId
+from wyrd.core.ontology import AssetStatus, ClockStatus, SeatStatus
+from wyrd.core.visibility import PUBLIC
 
 
 def _delta_event(seq: int, delta: d.Delta, *, tick: int = 0) -> ev.Event:
@@ -296,8 +296,8 @@ def test_hash_is_independent_of_set_insertion_order() -> None:
 
 
 def test_remaining_delta_kinds_apply() -> None:
-    from anansi.core.ids import AssetId, ClockId, CommitmentId, FactId
-    from anansi.core.ontology import (
+    from wyrd.core.ids import AssetId, ClockId, CommitmentId, FactId
+    from wyrd.core.ontology import (
         AssetKind,
         Clause,
         ClauseKind,
@@ -389,9 +389,9 @@ def test_remaining_delta_kinds_apply() -> None:
 
 
 def test_intents_file_freeze_and_clear() -> None:
-    from anansi.core.ids import IntentId
-    from anansi.core.intent import Intent, Verb
-    from anansi.core.resolution import RejectionReason
+    from wyrd.core.ids import IntentId
+    from wyrd.core.intent import Intent, Verb
+    from wyrd.core.resolution import RejectionReason
 
     events = fx.creation_events()
     n = len(events)

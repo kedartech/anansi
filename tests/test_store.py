@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from anansi.core import events as ev
-from anansi.core.fold import replay, state_hash
-from anansi.engine.store import EventStore, MemoryStore, SqliteStore, StoreError, load_state
 from tests import fixtures as fx
+from wyrd.core import events as ev
+from wyrd.core.fold import replay, state_hash
+from wyrd.engine.store import EventStore, MemoryStore, SqliteStore, StoreError, load_state
 
 
 @pytest.fixture(params=["memory", "sqlite"])

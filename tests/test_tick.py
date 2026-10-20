@@ -5,27 +5,27 @@ from pathlib import Path
 
 import pytest
 
-from anansi.core import delta as d
-from anansi.core import events as ev
-from anansi.core.fold import replay, state_hash
-from anansi.core.ids import DeltaId, IntentId, derived_id
-from anansi.core.intent import Intent, Verb
-from anansi.core.ontology import ClockKind, ClockStatus
-from anansi.core.referee import Roll
-from anansi.core.resolution import OutcomeTier, RejectionReason, TickStage
-from anansi.core.state import State
-from anansi.core.visibility import PUBLIC, private_to
-from anansi.engine import tick as tick_mod
-from anansi.engine.providers import (
+from tests import fixtures as fx
+from wyrd.core import delta as d
+from wyrd.core import events as ev
+from wyrd.core.fold import replay, state_hash
+from wyrd.core.ids import DeltaId, IntentId, derived_id
+from wyrd.core.intent import Intent, Verb
+from wyrd.core.ontology import ClockKind, ClockStatus
+from wyrd.core.referee import Roll
+from wyrd.core.resolution import OutcomeTier, RejectionReason, TickStage
+from wyrd.core.state import State
+from wyrd.core.visibility import PUBLIC, private_to
+from wyrd.engine import tick as tick_mod
+from wyrd.engine.providers import (
     FailingResolver,
     KeywordSafety,
     RecordingDeliverer,
     ScriptedResolver,
     TemplateNarrator,
 )
-from anansi.engine.store import EventStore, MemoryStore, SqliteStore, load_state
-from anansi.engine.tick import Providers, file_intent, run_tick
-from tests import fixtures as fx
+from wyrd.engine.store import EventStore, MemoryStore, SqliteStore, load_state
+from wyrd.engine.tick import Providers, file_intent, run_tick
 
 STAGES = list(TickStage)
 

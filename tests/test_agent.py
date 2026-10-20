@@ -8,25 +8,25 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from anansi.core import canary
-from anansi.core.events import Versions
-from anansi.core.fold import replay
-from anansi.core.intent import IRREVERSIBLE_VERBS, Intent, Verb
-from anansi.core.project import project
-from anansi.core.referee import rate
-from anansi.core.state import State, View
-from anansi.engine.agent import (
+from tests import fixtures as fx
+from tests.test_tick import _file_some, _intent
+from wyrd.core import canary
+from wyrd.core.events import Versions
+from wyrd.core.fold import replay
+from wyrd.core.intent import IRREVERSIBLE_VERBS, Intent, Verb
+from wyrd.core.project import project
+from wyrd.core.referee import rate
+from wyrd.core.state import State, View
+from wyrd.engine.agent import (
     Agent,
     ClarifyingQuestion,
     counterfactual_diff,
     receive_order,
 )
-from anansi.engine.llm import RecordedTransport, Reply, Request
-from anansi.engine.providers import RecordingDeliverer, ScriptedResolver, TemplateNarrator
-from anansi.engine.store import MemoryStore, load_state
-from anansi.engine.tick import Providers, run_tick
-from tests import fixtures as fx
-from tests.test_tick import _file_some, _intent
+from wyrd.engine.llm import RecordedTransport, Reply, Request
+from wyrd.engine.providers import RecordingDeliverer, ScriptedResolver, TemplateNarrator
+from wyrd.engine.store import MemoryStore, load_state
+from wyrd.engine.tick import Providers, run_tick
 
 RECORDINGS = Path(__file__).parent / "recordings"
 
@@ -274,9 +274,9 @@ def recorded() -> Iterator[RecordedTransport]:
 def test_live_order_round_trip(recorded: RecordedTransport, state: State) -> None:
     """One real order through structure, filing, a tick and a briefing, replayed from the recording.
 
-    Refresh with ``ANANSI_RECORD=1`` on a host where ``claude`` is logged in.
+    Refresh with ``WYRD_RECORD=1`` on a host where ``claude`` is logged in.
     """
-    from anansi.engine.llm import ClaudeCli
+    from wyrd.engine.llm import ClaudeCli
 
     if not recorded.path.exists():
         recorded.live = ClaudeCli()

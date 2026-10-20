@@ -7,14 +7,16 @@ from hypothesis import given
 from hypothesis import settings as h_settings
 from hypothesis import strategies as st
 
-from anansi.core import delta as d
-from anansi.core import events as ev
-from anansi.core.fold import apply, replay
-from anansi.core.ids import ClockId, DeltaId, EntityId, IntentId, derived_id
-from anansi.core.intent import FREE_VERBS, Intent, Verb
-from anansi.core.ontology import ClockKind, EntityStatus, SeatStatus
-from anansi.core.project import project
-from anansi.core.referee import (
+from tests import fixtures as fx
+from tests import strategies as s
+from wyrd.core import delta as d
+from wyrd.core import events as ev
+from wyrd.core.fold import apply, replay
+from wyrd.core.ids import ClockId, DeltaId, EntityId, IntentId, derived_id
+from wyrd.core.intent import FREE_VERBS, Intent, Verb
+from wyrd.core.ontology import ClockKind, EntityStatus, SeatStatus
+from wyrd.core.project import project
+from wyrd.core.referee import (
     Clamped,
     Full,
     Partial,
@@ -26,18 +28,16 @@ from anansi.core.referee import (
     slots,
     validate,
 )
-from anansi.core.resolution import (
+from wyrd.core.resolution import (
     EXPOSURE_CHANCE,
     SUCCESS_CHANCE,
     FeasibilityBand,
     OutcomeTier,
     RejectionReason,
 )
-from anansi.core.settings import Lethality, Plausibility, Settings
-from anansi.core.state import State
-from anansi.core.visibility import PUBLIC, Scope, private_to
-from tests import fixtures as fx
-from tests import strategies as s
+from wyrd.core.settings import Lethality, Plausibility, Settings
+from wyrd.core.state import State
+from wyrd.core.visibility import PUBLIC, Scope, private_to
 
 BANDS = list(FeasibilityBand)
 

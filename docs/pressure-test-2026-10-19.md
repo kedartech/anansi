@@ -1,4 +1,4 @@
-# Anansi parameters: pressure test and resolution plan
+# Wyrd Protocol parameters: pressure test and resolution plan
 
 Date: 2026-10-19. Subject: README v1 (game parameters).
 
@@ -101,7 +101,7 @@ Every prompt, roll and response is logged. Replay means re-applying the logged d
   2. *Default veils,* which the table can open only by unanimous agreement: atrocity, torture and executions happen off screen and are seen through their consequences.
   3. *Table lines:* any player can add one anonymously at any time, and the most restrictive setting wins.
 - Checks run on the engine's **input**: player orders, covert actions, co-GM proposals, deputy and AI-faction moves, and standing orders. Breaking a line is refused out of character. It is not attempted in the fiction.
-- **A separate API organisation and key, used only by Anansi,** with its own billing. Never Josh's personal subscription or the account Vera runs on. Keep a fallback provider ready.
+- **A separate API organisation and key, used only by Wyrd Protocol,** with its own billing. Never Josh's personal subscription or the account Vera runs on. Keep a fallback provider ready.
 
 ---
 
@@ -221,8 +221,8 @@ Rough estimate. Assumptions: 4 ticks a day, 3 actions per player per day, no pro
 ## F. Before public distribution [gate: before any release beyond friends and family]
 
 - **Operating a service:** an LLC holding the repo, accounts and Discord app; a ToS, acceptable-use, privacy and content policy; an age gate (18+, or 16+ with the teen preset forced on); a moderation queue and ban process; Discord bot verification; payments through a merchant of record; DMCA registration if users can upload.
-- **Name:** "Anansi" is crowded near games. There is Anansi AS (a Steam publisher), Heidelbar's *Anansi* card game, the Razer Anansi keyboard and Anansi Labs (decision software), plus *Anansi Boys*. It is fine as a codename. Before launch, run a trademark knockout search in classes 9/28/41/42 and get a clearance opinion, or use a compound mark.
-- **Cultural credit:** an "About the name" page crediting the Akan/Ashanti source, Nyame and the story-box tale. No stereotyped imagery or voice. Get informal feedback from Ghanaian or Caribbean readers before launch.
+- **Name:** the codename at the time was crowded near games: a Steam publisher, a card game, a gaming keyboard and a decision-software firm share it, plus a novel. It is fine as a codename. (Superseded: the project is now Wyrd Protocol; see README §19.) Before launch, run a trademark knockout search in classes 9/28/41/42 and get a clearance opinion, or use a compound mark.
+- **Cultural credit:** an "About the name" page crediting the Akan/Ashanti source, Nyame and the story-box tale (written for the old codename; superseded, see README §19). No stereotyped imagery or voice. Get informal feedback from Ghanaian or Caribbean readers before launch.
 - **Copying:** mechanics are free to use, but text, look and marks are not. Write an original disclaimer (remove "follows Fantasy President's model" from §16). Rename the "Fantasy President style" format. Restyle the history page as an in-world almanac, not Wikipedia.
 - **Images (later client):** no photoreal or recognisable likeness of any real living person in any context. A visible AI/fiction label plus C2PA provenance. A face-match moderation pass before display.
 
@@ -257,7 +257,7 @@ Each one has a recommendation. Accepting a recommendation updates README §3 and
 5. **Betrayal intensity (B5):** a per-campaign setting that can turn off covert play against other humans. *Recommended: yes.*
 6. **First playtest:** Josh hosts rather than holding a seat; adults only (D1). *Recommended: yes.*
 7. **Real people (D3):** role-not-name for current officeholders in present-day settings; no allegations against real people. *Recommended: yes.*
-8. **Model and account (A5, E):** hybrid split; a separate API organisation used only by Anansi; a per-campaign budget cap. *Recommended: yes. The cap amount is Josh's call.*
+8. **Model and account (A5, E):** hybrid split; a separate API organisation used only by Wyrd Protocol; a per-campaign budget cap. *Recommended: yes. The cap amount is Josh's call.*
 9. **Seats (C7):** one human, one seat; switching at season boundaries; mid-campaign joiners take over AI seats. *Recommended: yes.*
 10. **First format to ship (C12):** *Recommended: campaign, with solo as the tutorial.*
 
@@ -492,7 +492,7 @@ Residual risk: with targeting unlimited, a majority bloc can vote events onto on
 
 ## H18. Models: Josh's Claude API [decided]
 
-**Decision.** For now, Anansi uses Josh's Claude API key and Claude models. This replaces the separate API organisation in A5 and E.
+**Decision.** For now, Wyrd Protocol uses Josh's Claude API key and Claude models. This replaces the separate API organisation in A5 and E.
 
 **Design.**
 - One Anthropic model family on a hybrid split: a frontier Claude model for the resolver and chronicle digests, and a small Claude model for agents, NPCs, press and personas.
@@ -503,7 +503,7 @@ Residual risk: with targeting unlimited, a majority bloc can vote events onto on
 - Generated war and terror content runs on Josh's own account, so a policy flag lands there. The input and output classifiers in A5 and the abstraction rule are the protection.
 - Use a **separate API key** under the same account. This keeps spend visible and makes the key revocable on its own. It is not a separate organisation.
 - Set a workspace or key spend limit.
-- Keep Anansi traffic off the subscription Vera runs on.
+- Keep Wyrd Protocol traffic off the subscription Vera runs on.
 - The budget cap amount is still Josh's call.
 
 ---
@@ -526,7 +526,7 @@ Residual risk: with targeting unlimited, a majority bloc can vote events onto on
 ### H19.3 Budget cap (closes H18 open item)
 - **Solo playtest:** $10 a month.
 - **10-player campaign:** $30 a week, with an alert at $20. On reaching the cap, the budget governor (E) cuts back in order: fewer persona calls, then merged press, then agents on standing orders only, then a longer tick. The game slows down rather than stopping.
-- **Backstop:** a $150 monthly spend limit on the Anansi API key in the Anthropic console. Josh sets this; it is not set from code.
+- **Backstop:** a $150 monthly spend limit on the Wyrd Protocol API key in the Anthropic console. Josh sets this; it is not set from code.
 - These numbers are provisional. Reset them once the minimum slice has measured real cost per tick.
 
 ### H19.4 Multiple seats (closes C7, part)

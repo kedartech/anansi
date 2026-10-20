@@ -5,13 +5,13 @@ from hypothesis import given
 from hypothesis import settings as h_settings
 from hypothesis import strategies as st
 
-from anansi.core.fold import replay
-from anansi.core.ids import SeatId
-from anansi.core.project import HasScope, project
-from anansi.core.state import State
-from anansi.core.visibility import Visibility
 from tests import fixtures as fx
 from tests import strategies as s
+from wyrd.core.fold import replay
+from wyrd.core.ids import SeatId
+from wyrd.core.project import HasScope, project
+from wyrd.core.state import State
+from wyrd.core.visibility import Visibility
 
 
 def test_south_cannot_see_norths_secrets() -> None:
