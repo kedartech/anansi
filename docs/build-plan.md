@@ -275,12 +275,12 @@ A Hermes profile can still serve the host as an ops assistant in a channel only 
 - `engine/discord/` package. `discord.py` gateway bot as its own process (`discord run` command plus a systemd user unit beside the Layer 8 ones). Its own Discord application and token, separate from any Hermes bot. Token from an environment variable only, never logged.
 - **No privileged intents.** Orders arrive through slash commands, modals and DMs, which Discord delivers without Message Content or Server Members. A test constructs the client and asserts default intents only.
 - Seat binding table `discord_seats` (campaign, seat, Discord user id, guild). Operational data, not game state, so not in the event log (same reasoning as the Layer 8 schedule table). The acting seat is always taken from the interaction's user id, never from text the user typed. Host links Josh's seat with a CLI command.
-- One private server per campaign. Channels from a fixed template: a public channel for public events and press, and one private dispatch channel per player. Names encode nothing about alliances or agent status.
-- Commands: `/order` (modal: paragraph, visibility select, spin line), `/briefing`, `/status`, `/advance` (host only, calls the shared tick runner), `/pause`, `/bug`, `/report`, `/key` (stub until Layer 10). A plain DM to the bot is an order to the player's agent.
+- One private server per campaign. Channels: none created by the bot in 9a (it has no Manage Channels permission); the public and dispatch channels move to 9b.
+- Commands: `/order text` (text only, the same input `wyrd order` takes; visibility select and spin move to 9b), `/briefing`, `/status`, `/advance` (host only, calls the scheduler under its lock), `/pause` and `/resume` (host only), `/bug`, `/report`, `/key` (stubs until Layer 10). A plain DM to the bot is an order to the player's agent.
 - Interactions are deferred immediately (Discord wants a first response within 3 seconds) and answered ephemerally once the engine has structured the order. Refusals are out of character.
-- **Delivery through the Layer 4 outbox.** `DiscordDeliverer` implements the existing `Deliverer` protocol (`deliver(seat_id, text, idempotency_key) -> message id`); `BriefingDelivered` is still written only after the send succeeds. It uses Discord's REST API with the bot token, so the Layer 8 scheduler (a one-shot process) can deliver without the gateway bot running. Second layer against the crash-between-send-and-log case: a message `nonce` derived from the idempotency key with `enforce_nonce: true`. Checked against Discord's Create Message docs 2026-10-20: the nonce is at most 25 characters (a 26-character ULID does not fit, so derive it, e.g. a truncated hash of the key) and uniqueness is only enforced "in the past few minutes". It covers a quick retry, not a resend hours later; the outbox stays the real guarantee.
+- **Delivery through the Layer 4 outbox.** `DiscordDeliverer` implements the existing `Deliverer` protocol (`deliver(seat_id, text, idempotency_key) -> channel label`, here the constant `discord`; message IDs stay in the `discord_deliveries` outbox table); `BriefingDelivered` is still written only after the send succeeds. It uses Discord's REST API with the bot token, so the Layer 8 scheduler (a one-shot process) can deliver without the gateway bot running. Second layer against the crash-between-send-and-log case: a message `nonce` derived from the idempotency key with `enforce_nonce: true`. Checked against Discord's Create Message docs 2026-10-20: the nonce is at most 25 characters (a 26-character ULID does not fit, so derive it, e.g. a truncated hash of the key) and uniqueness is only enforced "in the past few minutes". It covers a quick retry, not a resend hours later; the outbox stays the real guarantee.
 - Long briefings split on paragraph boundaries under Discord's size limits. No web link until the later client.
-- Test DM at onboarding. If DMs are closed, fall back to the dispatch channel and say so.
+- If DMs are closed, fall back to `$WYRD_DISCORD_FALLBACK_CHANNEL` (a channel private to the player) when set, else fail the delivery so the tick stays resumable. No onboarding test DM in 9a; the runbook's smoke check stands in.
 - Setup runbook added to `docs/deploy.md`: create the server, create the application, invite with `bot` and `applications.commands` and the fewest permissions that work, token into the service's environment file, link the seat.
 
 **Tests.** Fake gateway and fake REST, headless, in a container (house rule: no browser on the host); no test touches the network.
@@ -288,9 +288,19 @@ A Hermes profile can still serve the host as an ops assistant in a channel only 
 - Parity: the same order text through `/order` and through the CLI files an identical intent and gives an identical state hash.
 - Outbox: double-DELIVER sends once; a kill between send and log resends with the same nonce.
 - Identity: an unlinked user is refused; no input field can name another seat.
-- Canary: a planted covert string never appears in the public channel or any outbound message that is not the owner's briefing.
+- Canary: a planted covert string never appears in any outbound message that is not the owner's briefing (no public channel in 9a).
 
-**Done when** Josh plays 10 ticks of a solo campaign from Discord (briefings by DM, orders by `/order`), zero canary hits, and replaying his orders through the CLI reproduces the same state hash.
+**Done when** Josh plays 10 ticks of a solo campaign from Discord (briefings by DM, orders by `/order` or DM), `wyrd leaks` reports 0, and `wyrd db verify` passes on that campaign.
+
+**Built (2026-10-20).** `engine/play.py` (the order, briefing and status paths the CLI and the bot share), `engine/discord/` (REST deliverer and outbox, routing deliverer, operational tables, handlers, gateway bot), migration `0003_discord`, `wyrd discord link | unlink | seats | run`, `deploy/systemd/wyrd-discord.service`. Design in [design.md §15](design.md#15-the-discord-transport-layer-9a-proposed), runbook in [deploy.md §9](deploy.md#9-discord-layer-9a). Scope cuts for 9a **[decided]**:
+
+- Only the one human seat plays from Discord. AI factions and the outlet keep the file deliverer.
+- No public channel, no dispatch channels, no channel creation; the bot has no Manage Channels permission.
+- No visibility select or spin field in `/order`: the CLI `order` takes only text, and parity with it is the point. Both move to 9b.
+- Postgres only, like the scheduler. `wyrd discord ...` on a SQLite `$WYRD_DB` exits non-zero.
+- Slash commands are synced to the one guild, so they work in that server, not in DMs; in a DM, plain text is an order.
+
+The exit criterion is **not met yet**: nothing has run against the real Discord API. The live smoke test and the 10-tick play are Josh's steps (deploy.md §9).
 
 **Size.** One weekend.
 
@@ -298,6 +308,7 @@ A Hermes profile can still serve the host as an ops assistant in a channel only 
 
 **Produces.**
 - Second human seat. `/join` with a single-use invite code issued by the host.
+- Moved from 9a: the channel template (a public channel for public events and press, one private dispatch channel per player, names that encode nothing), and the `/order` modal's visibility select and spin line.
 - **Encryption at rest, keyed per player** (README §12): the `payload_enc` slot reserved in Layer 1 is now used for `OrderReceived`, `IntentFiled` with Covert visibility, and Covert `FactAsserted`. Keys per player in a separate table; erasure = key deletion. Every admin read of a decrypted payload writes `AdminRead`.
 - **Human-boundary canary** (README §7): the scan now checks the union of everything each Discord user can see across channels, DMs and threads, not just per seat.
 - Metadata-leak checks: role names, channel membership and thread titles are generated from a fixed template that encodes nothing about alliances or agent status.

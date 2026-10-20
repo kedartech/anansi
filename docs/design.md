@@ -31,6 +31,8 @@ Module map:
 | `engine/maintenance.py` | `copy_campaign`, `verify_campaign` (Layer 8) |
 | `engine/runner.py` | `play_tick`: deputy turns, `run_tick`, leak scan; shared by `wyrd tick` and the scheduler (Layer 8) |
 | `engine/scheduler.py` | the tick scheduler: pure `due` / `next_due_after` / `all_submitted`, the `schedule` table, `run` (Layer 8) |
+| `engine/play.py` | `give_order`, `get_briefing`, `status_lines`: what a seat does between ticks, shared by the CLI and the bot (Layer 9a) |
+| `engine/discord/` | Discord transport: REST deliverer and outbox, routing deliverer, operational tables, command handlers, the gateway bot (Layer 9a) |
 | `schema/wyrd.schema.json` | exported JSON Schema; CI fails on drift |
 
 ---
@@ -396,3 +398,47 @@ Covered, against a real Postgres when `$WYRD_TEST_PG_ADMIN_DSN` is set (CI sets 
 - The unit files parse and their `ExecStart` is a real `wyrd scheduler run`; the backup script and restore drill run end to end against a scratch database with a local directory as the off-box target, and the drill fails on a corrupt dump.
 
 Not covered: a real systemd run of the units, real linger and reboot behaviour, an actual off-box host or rclone remote, the real three-day soak on the home server, and GitHub Actions itself. Those are Josh's steps (`docs/deploy.md` §8).
+
+---
+
+## 15. The Discord transport (Layer 9a) **[proposed]**
+
+Build plan Layer 9a: the solo slice played from Discord. Written 2026-10-20 with the code; not yet run against the real Discord API. No new event kinds, no schema bump, `wyrd.core` unchanged.
+
+### 15.1 The bot is a transport, not a GM
+
+The bot turns a slash command or a DM into the call the CLI makes and sends back what the engine returns. It has no tools, no shell, no memory and no model call of its own. `engine/play.py` holds `give_order`, `get_briefing` (with the cost log and the `scan_deliveries` withhold) and `status_lines`; `wyrd order | briefing | status` and the bot both call them, so the two paths cannot drift. A test sends the same order text through `/order` and through `wyrd order` on two copies of one campaign and asserts the same pending intent and the same `state_hash`.
+
+### 15.2 Identity
+
+- **Seat from the link, never from text.** `discord_seats(campaign_id, seat_id, discord_user_id, guild_id, linked_at)` binds a human seat to a Discord user. The primary key on `(campaign_id, seat_id)` stops two users sharing a seat; `UNIQUE (campaign_id, discord_user_id)` stops one user holding two. The host binds with `wyrd discord link --user <id>`, which refuses a non-human seat. The bot looks the acting seat up from the interaction's (or DM author's) user ID, newest binding in its one guild. No command takes a seat argument; an unlinked user gets a refusal and nothing is written.
+- **Host commands** (`/advance`, `/pause`, `/resume`) check the user ID against `$WYRD_DISCORD_HOST_ID` and act on the host's own bound campaign, else the newest.
+- **Default intents only.** No Message Content, Server Members or Presence. Slash commands and DMs need none of them (Discord exempts DMs from Message Content). Guild messages are ignored, as are bots, the bot itself included.
+
+### 15.3 Commands
+
+`/order text`, `/briefing`, `/status`, `/advance`, `/pause`, `/resume`, `/bug notes`, and `/report`, `/key` (stubs). Synced to the one guild on startup, so they exist only in that server; a plain DM to the bot is an order. Every interaction is deferred at once (ephemeral) and answered by ephemeral followups once the handler returns. Handlers run in `asyncio.to_thread`, each with its own store connection, never on the event loop. Replies are out of character and one line on failure: never a stack trace, a model error's text or the token. Errors are logged in full for the host.
+
+`/bug` writes a `discord_bugs` row with the campaign's current `seq` and `state_hash`, so the report pins the exact state. `/advance` sets `advance_requested` and then runs `scheduler.run(..., campaign=<this one>)` in the thread, so the per-campaign advisory lock still keeps it from ticking alongside the timer (tested: an `/advance` landing mid-tick gets "a tick is already running" and the campaign ticks once). The briefing itself arrives by DM through the deliverer.
+
+### 15.4 Delivery
+
+- **Routing.** When `$WYRD_DISCORD_TOKEN` is set and the store is Postgres, `wyrd tick`, `wyrd scheduler run` and `/advance` deliver through `RoutingDeliverer`: seats bound in `discord_seats` go to `DiscordDeliverer`, every other seat (AI factions, the outlet) to the Layer 7 `FileDeliverer`. Without the token, or on SQLite, nothing changes. `play_tick` and `scheduler.run` take an optional deliverer factory for this; the default is the file deliverer.
+- **REST, stdlib only.** The scheduler is a one-shot process with no gateway, so `DiscordDeliverer` uses `urllib` against `https://discord.com/api/v10`: open the DM with `POST /users/@me/channels`, send with `POST /channels/{id}/messages` (`allowed_mentions` empty, so a narration can never ping anyone). A 429 is waited out for its `retry_after`, at most 3 attempts, then the call raises. The token comes from the environment and never appears in logs, exception text or `repr` (tested, including a network error whose own text carries the token).
+- **Parts.** Discord caps `content` at 2000 characters. A briefing is cut on paragraph boundaries, then lines, then anywhere, each part at most 1900, and the parts concatenate back to the exact text (property-tested).
+- **Idempotency, two layers.** The real guarantee is `discord_deliveries(idempotency_key, part, channel_id, message_id, sent_at)`: a part recorded there is never resent, so a second DELIVER with the same key sends nothing. For a crash after Discord accepts a part but before the row lands, every send carries `nonce` = the first 25 characters of base32 blake2b of `key:part`, with `enforce_nonce: true`. Discord checks that uniqueness only for a few minutes, so it covers a quick retry, not a resend hours later.
+- **The log stays free of Discord IDs.** `BriefingDelivered.channel` is the constant `discord`; message IDs live only in `discord_deliveries`.
+- **Closed DMs.** If Discord refuses the DM (code 50007), the part goes to `$WYRD_DISCORD_FALLBACK_CHANNEL` when set, a channel that must be private to the player. Otherwise the error propagates: `BriefingDelivered` is not written, the tick stays resumable and the scheduler counts a failure. No other error falls back, and nothing ever falls back to any other channel.
+- **Last canary check before text leaves the host.** The routing deliverer scans a bound seat's narration against the canaries hidden from that seat before sending. A hit is written to the host's briefings file instead, `BriefingDelivered.channel` is `withheld`, and the tick's leak scan then fails the tick (exit 3; the scheduler pauses the campaign). The bot's handlers run the same scan over every reply they send. The projection should make both checks dead code; they exist so a narrator or agent bug cannot reach a player.
+
+### 15.5 Operational tables
+
+Migration `0003_discord`: `discord_seats`, `discord_deliveries`, `discord_bugs`. Operational state, not game state, so none enters the event log (same reasoning as the `schedule` table, §14.4). The app role holds `SELECT, INSERT` on `discord_deliveries` and `discord_bugs` (plus `USAGE` on the bug ID sequence), and `SELECT, INSERT, UPDATE, DELETE` on `discord_seats` so the host can unlink. Nothing new on `events` or `snapshots`.
+
+### 15.6 Packaging and deployment
+
+`discord.py>=2.7` is the optional `discord` extra and is imported only by `engine/discord/bot.py`, which only `wyrd discord run` loads; a test runs the CLI and an offline tick with `discord` blocked from import. The REST deliverer needs nothing beyond the stdlib. The bot runs as `deploy/systemd/wyrd-discord.service`, a long-running user unit with `Restart=on-failure` and the scheduler unit's hardening and environment file. Runbook: `docs/deploy.md` §9.
+
+### 15.7 Not covered by the tests
+
+Everything against the real Discord API: the gateway connection, command sync, real DM delivery, closed-DM behaviour, rate limits and nonce deduplication as Discord actually applies them. The tests use fake gateway objects (interactions, messages) and a fake REST API that mimics the documented behaviour; the real HTTP client is blocked for every test.

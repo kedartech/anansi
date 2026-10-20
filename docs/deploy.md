@@ -1,6 +1,6 @@
 # Running Wyrd Protocol on the home server
 
-Runbook for build plan Layer 8: Postgres, the scheduler, nightly backups and the restore drill. Design and reasons are in [design.md §14](design.md#14-postgres-and-the-scheduler-layer-8-decided). Written 2026-10-20. Nothing here has been run on the real server yet.
+Runbook for build plan Layer 8 (Postgres, the scheduler, nightly backups and the restore drill) and Layer 9a (solo play on Discord, §9). Design and reasons are in [design.md §14](design.md#14-postgres-and-the-scheduler-layer-8-decided) and [§15](design.md#15-the-discord-transport-layer-9a-proposed). Written 2026-10-20. Nothing here has been run on the real server yet.
 
 Everything runs as one ordinary Linux user (not root): the Claude CLI login that live ticks use lives in that user's home, so the units are systemd **user** units.
 
@@ -11,7 +11,7 @@ Two roles. Create them yourself as a Postgres superuser; the migrations never cr
 | Role | Used by | Can |
 |---|---|---|
 | `wyrd_admin` | `wyrd db migrate`, backups, the restore drill | owns the database and its tables; creates scratch databases for the drill |
-| `wyrd_app` | every other `wyrd` command and the scheduler | `SELECT, INSERT` on `events` and `snapshots`; `SELECT, INSERT, UPDATE` on `schedule`; nothing else |
+| `wyrd_app` | every other `wyrd` command, the scheduler and the Discord bot | `SELECT, INSERT` on `events`, `snapshots`, `discord_deliveries` and `discord_bugs`; `SELECT, INSERT, UPDATE` on `schedule`; `SELECT, INSERT, UPDATE, DELETE` on `discord_seats`; nothing else |
 
 ```
 sudo -u postgres psql
@@ -52,6 +52,7 @@ WYRD_BACKUP_DEST=<rsync target, e.g. user@nas:/backups/wyrd, or rclone:<remote>:
 | `WYRD_BRIEFINGS_DIR` | where briefings are written; default `./wyrd-briefings` on Postgres |
 | `WYRD_BACKUP_DEST` | off-box copy target. The backup fails if it is unset |
 | `WYRD_APP_ROLE` | role `wyrd db migrate` grants to; default `wyrd_app` |
+| `WYRD_DISCORD_*` | the Discord bot and DM delivery; see §9 |
 
 To load a file into a shell: `set -a; . ~/.config/wyrd/wyrd-admin.env; set +a`.
 
@@ -60,9 +61,9 @@ To load a file into a shell: `set -a; . ~/.config/wyrd/wyrd-admin.env; set +a`.
 ```
 git clone <the repo> ~/src/wyrd-protocol
 cd ~/src/wyrd-protocol
-uv tool install --editable '.[postgres]'      # puts `wyrd` in ~/.local/bin
+uv tool install --editable '.[postgres,discord]'   # puts `wyrd` in ~/.local/bin
 set -a; . ~/.config/wyrd/wyrd-admin.env; set +a
-wyrd db migrate                                # "applied 0001_init, 0002_schedule"
+wyrd db migrate                                # "applied 0001_init, 0002_schedule, 0003_discord"
 ```
 
 `--editable` keeps `wyrd new salt-strait` finding the bundled `worlds/`. Rerunning `wyrd db migrate` is safe ("up to date"). After pulling new code, run it again before the next tick.
@@ -135,3 +136,69 @@ Real restore onto a new server: create the roles and an empty `wyrd` database as
 - [ ] The Layer 8 exit run: a solo campaign on `tick_hours: 12` running three days with no manual trigger. `wyrd scheduler status` and `wyrd db verify` at the end.
 - [ ] A real restore: the drill above against a dump fetched back from `WYRD_BACKUP_DEST`.
 - [ ] Confirm the units start under linger after a reboot (`systemctl --user list-timers`).
+
+## 9. Discord (Layer 9a)
+
+Solo play from Discord: briefings arrive by DM, orders go in by `/order` or a plain DM to the bot. Only the human seat is on Discord; AI factions and the outlet keep writing files to `WYRD_BRIEFINGS_DIR`. Postgres only.
+
+### 9.1 Create the application and bot
+
+1. Create a private Discord server for the campaign (you are its owner).
+2. In the Discord Developer Portal, **New Application** (its own application, not shared with any other bot). Under **Bot**: turn **Public Bot** off, turn every **Privileged Gateway Intent** off (Presence, Server Members, Message Content), and **Reset Token** to get the token. It is shown once; it goes straight into the environment file below, never into the repo, a shell history or a chat.
+3. Under **OAuth2 → URL Generator**: scopes `bot` and `applications.commands`; bot permissions **View Channels**, **Send Messages**, **Embed Links**, **Read Message History** only. Open the URL and add the bot to the server.
+4. Turn on **Developer Mode** in your Discord client (Settings → Advanced) and copy three IDs (right click → Copy ID): the server, your own user, and, if you want a DM fallback, a channel only you and the bot can see.
+
+### 9.2 Environment
+
+Add to `~/.config/wyrd/wyrd.env` (already `chmod 600`):
+
+```
+WYRD_DISCORD_TOKEN=<bot token>
+WYRD_DISCORD_GUILD_ID=<server ID>
+WYRD_DISCORD_HOST_ID=<your user ID>
+# optional: where your briefings go if Discord refuses the DM.
+# It must be a channel private to you; never a shared one.
+# WYRD_DISCORD_FALLBACK_CHANNEL=<channel ID>
+```
+
+| Variable | Meaning |
+|---|---|
+| `WYRD_DISCORD_TOKEN` | the bot token. When set on Postgres, `wyrd tick`, `wyrd scheduler run` and `/advance` deliver bound seats' briefings by DM |
+| `WYRD_DISCORD_GUILD_ID` | the one server the bot serves; slash commands are synced there |
+| `WYRD_DISCORD_HOST_ID` | the user allowed `/advance`, `/pause`, `/resume`; unset means nobody |
+| `WYRD_DISCORD_FALLBACK_CHANNEL` | optional private channel for briefings when DMs are closed; unset means the delivery fails and the tick retries on the next poll |
+
+With the token in `wyrd.env`, the scheduler (§5) delivers by DM too: it reads the same file.
+
+### 9.3 Migrate, link, run
+
+```
+cd ~/src/wyrd-protocol && git pull
+uv tool install --editable '.[postgres,discord]' --force
+set -a; . ~/.config/wyrd/wyrd-admin.env; set +a
+wyrd db migrate                               # "applied 0003_discord"
+set -a; . ~/.config/wyrd/wyrd.env; set +a
+wyrd discord link --user "$WYRD_DISCORD_HOST_ID"   # binds the campaign's human seat to you
+wyrd discord seats
+cp deploy/systemd/wyrd-discord.service ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now wyrd-discord.service
+journalctl --user -u wyrd-discord.service -f
+```
+
+`wyrd discord link` takes `--campaign` (default the newest) and `--seat` (default the human seat; a non-human seat is refused). `wyrd discord unlink` removes a binding. The bot is a long-running unit (`Restart=on-failure`); `wyrd discord run` runs it in the foreground for a look.
+
+### 9.4 First-run smoke check
+
+1. The journal shows the bot logged in, with no traceback.
+2. In the server, type `/` : `order`, `briefing`, `status`, `advance`, `pause`, `resume`, `bug`, `report`, `key` are listed. They exist only in this server, not in DMs.
+3. Run `/status` in any channel of the server. The reply is ephemeral (only you see it) and matches `wyrd status`.
+4. DM the bot an order. It replies `filed ...` or with a question, and `wyrd status` shows it pending.
+5. `wyrd tick --offline` (or `/advance` for a live tick): your briefing arrives by DM, and no `t<tick>-<your seat>.md` file appears in `WYRD_BRIEFINGS_DIR` (the outlet's still does).
+
+If `/status` says you hold no seat, the link is missing or `WYRD_DISCORD_GUILD_ID` names another server. If the briefing never arrives and `wyrd scheduler status` shows `50007`, your DMs from server members are closed: open them for this server or set the fallback channel.
+
+### 9.5 Still to do (Josh)
+
+- [ ] The live smoke check above.
+- [ ] The Layer 9a exit run: 10 ticks of the solo campaign played from Discord (briefings by DM, orders by `/order` or DM), then `wyrd leaks` reports 0 and `wyrd db verify` passes.
