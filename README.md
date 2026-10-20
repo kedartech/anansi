@@ -1,4 +1,4 @@
-# Anansi
+# Wyrd Protocol
 
 An AI-run multiplayer statecraft game. Game parameters, v2 (2026-10-19).
 
@@ -10,9 +10,11 @@ Status legend: **[decided]** = Josh's call. **[proposed]** = Vera's design, not 
 
 ## 1. Pitch
 
-Anansi is an AI-run multiplayer statecraft game. Think of an expanded, gamified Model UN run like a D&D campaign. Players describe a world. An AI game master builds it and runs everything nobody is playing. Each player takes a seat: head of state, general, foreign minister, spymaster, journalist, opposition leader, or anything the world supports. They can sit in the same government or in rival ones. Players act in their own words, any time, through a personal in-world agent. The world reacts, keeps secrets, and keeps moving whether they are online or not.
+Wyrd Protocol is an AI-run multiplayer statecraft game. Think of an expanded, gamified Model UN run like a D&D campaign. Players describe a world. An AI game master builds it and runs everything nobody is playing. Each player takes a seat: head of state, general, foreign minister, spymaster, journalist, opposition leader, or anything the world supports. They can sit in the same government or in rival ones. Players act in their own words, any time, through a personal in-world agent. The world reacts, keeps secrets, and keeps moving whether they are online or not.
 
-**Name.** Anansi is the West African (Akan) spider who won all the world's stories from the sky god Nyame by cleverness, not force. The name fits three things: storytelling, a web of connections, and trickery as a legitimate way to win. "Anansi" is a codename; see §19 before any public release.
+**Name.** *Wyrd* is the Old English word for fate: that which has come to be, often pictured as a woven thread. It fits the engine: the log is the past that cannot be altered, the world is a web of connections, and consequences arrive late. See §19 before any public release.
+
+Codename history: this project was called Anansi through its first seven layers.
 
 ## 2. Origin and reference
 
@@ -27,8 +29,8 @@ Inspired by **Fantasy President Career** (fantasypresidentcareer.com, @president
 - Free to month 12, then £5.99/mo.
 - Why it spreads: screenshots of polarized reactions to the same policy.
 
-**What Anansi keeps:** free-text input, persona reactions, delayed consequences, shareable artifacts.
-**What Anansi adds:** multiplayer, player-built worlds, async real-time play, hidden information, a per-player agent, a human co-GM layer, and many seat types beyond president.
+**What Wyrd Protocol keeps:** free-text input, persona reactions, delayed consequences, shareable artifacts.
+**What Wyrd Protocol adds:** multiplayer, player-built worlds, async real-time play, hidden information, a per-player agent, a human co-GM layer, and many seat types beyond president.
 
 **Closest existing games** (novelty check, 2026-10-19): Pax Historia and Open Historia (nation-level, whole room skips time together, no hidden information); STATECRAFT (secret allegiances, but a single 30-minute sitting); AI game masters such as Friends & Fables and AI Dungeon (one shared story, no secrets between players); human-run nation roleplay on Discord and NationStates (the social format, without AI running it). The combination of several players inside one government, each seeing only their own slice, in a world that runs while they are offline, was not found anywhere. The build effort goes into secrets and seats.
 
@@ -55,7 +57,7 @@ Not the reference: Studio 14b's scripted "President Simulator" on Steam (Early A
 | 15 | Votes vs. covert plans | A vote can affect a covert plan but never cancel it outright. |
 | 16 | Opacity | Players see only what is public in the world and what other players choose to disclose. Covert play is a deliberate option. |
 | 17 | Builders | Josh and Vera, not the KT team. |
-| 18 | Home | kedartech/anansi. |
+| 18 | Home | The kedartech GitHub organisation. Renaming the repository to match is Josh's step. |
 | 19 | Event log | Every event in a campaign is logged, append-only. The log is the canonical record; world state is a projection of it. |
 | 20 | Player agent | Players never talk to the GM directly. Each player has a personal in-world agent that structures orders, briefs, advises, and runs the seat as deputy when the player is away. Players design the agent's persona; its function is fixed. |
 | 21 | Agent harm | The world can act on a player's agent: kidnap, turn or kill it. Losing it blinds the seat until a replacement is found in the fiction. |
@@ -294,7 +296,7 @@ Share cards contain public information only, carry a one-line context, and carry
 - **Minors.** Under 13 is not allowed (Discord's terms). When anyone 13-17 plays: age band recorded, DMs between players routed through the bot, a guardian told, and a Session Zero reminder to set a rating. Not enforced beyond that (decision 29).
 - **Harassment.** Anonymous `/pause` and `/report`. Josh can audit reported exchanges; players are told at Session Zero that opacity is a game rule, not privacy from the admin. No targeting anyone's real identity or politics. Moderation applies to every channel level.
 - **Data.** A one-page notice at Session Zero: what is stored, who can read it (Josh and the model provider), retention (for example 90 days after the season), and how to get a copy or request deletion. API terms with no training on data and minimal retention.
-- **Before public distribution** (not needed for friends and family): an LLC holding the repo, accounts and Discord app; ToS, acceptable-use, privacy and content policy; an age gate; a moderation queue and ban process; Discord bot verification; payments through a merchant of record. Trademark knockout search on "Anansi" (crowded near games: Anansi AS, Heidelbar's *Anansi*, Razer Anansi, Anansi Labs) or use a compound mark. An "About the name" page crediting the Akan/Ashanti source. Original disclaimer text and format names, not copied from Fantasy President. For the later client: no likeness of any real living person, a visible AI/fiction label plus C2PA provenance, a face-match moderation pass.
+- **Before public distribution** (not needed for friends and family): an LLC holding the repo, accounts and Discord app; ToS, acceptable-use, privacy and content policy; an age gate; a moderation queue and ban process; Discord bot verification; payments through a merchant of record. **[open]** A trademark knockout search on "Wyrd Protocol" has not been run and must be before any public release. **[open]** An "About the name" page crediting the Old English and Old Norse source of *wyrd* (Norse *urðr*). Original disclaimer text and format names, not copied from Fantasy President. For the later client: no likeness of any real living person, a visible AI/fiction label plus C2PA provenance, a face-match moderation pass.
 
 ## 20. Models and cost [decided]
 

@@ -1,13 +1,13 @@
 """The core package must stay pure (README §3 #34, build plan Layer 0).
 
-Any module under ``anansi.core`` that imports an I/O, network, clock, model
+Any module under ``wyrd.core`` that imports an I/O, network, clock, model
 or unseeded-randomness module fails this test.
 """
 
 import ast
 from pathlib import Path
 
-import anansi.core
+import wyrd.core
 
 FORBIDDEN_ROOTS = {
     "anthropic",
@@ -26,11 +26,11 @@ FORBIDDEN_ROOTS = {
     "threading",
     "time",
     "urllib",
-    "anansi.engine",
-    "anansi.cli",
+    "wyrd.engine",
+    "wyrd.cli",
 }
 
-CORE_DIR = Path(anansi.core.__file__).parent
+CORE_DIR = Path(wyrd.core.__file__).parent
 
 
 def _imports(path: Path) -> set[str]:
@@ -54,7 +54,7 @@ def test_core_has_no_forbidden_imports() -> None:
         bad = {name for name in _imports(path) if _is_forbidden(name)}
         if bad:
             offenders[str(path.relative_to(CORE_DIR))] = bad
-    assert not offenders, f"impure imports in anansi.core: {offenders}"
+    assert not offenders, f"impure imports in wyrd.core: {offenders}"
 
 
 def test_purity_gate_catches_a_violation(tmp_path: Path) -> None:

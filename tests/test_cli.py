@@ -13,10 +13,10 @@ from typing import Any
 import pytest
 from typer.testing import CliRunner
 
-from anansi import __version__, cli
-from anansi.engine import campaign as cmp
-from anansi.engine.llm import Reply, Request
-from anansi.engine.store import load_state
+from wyrd import __version__, cli
+from wyrd.engine import campaign as cmp
+from wyrd.engine.llm import Reply, Request
+from wyrd.engine.store import load_state
 
 runner = CliRunner()
 
@@ -56,7 +56,7 @@ class FakeClaude:
 
 @pytest.fixture
 def fake(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[FakeClaude]:
-    monkeypatch.setenv("ANANSI_DB", str(tmp_path / "game.db"))
+    monkeypatch.setenv("WYRD_DB", str(tmp_path / "game.db"))
     claude = FakeClaude()
     monkeypatch.setattr(cli, "transport_factory", lambda: claude)
     yield claude
@@ -77,7 +77,7 @@ def test_version() -> None:
 def test_commands_need_a_campaign(fake: FakeClaude) -> None:
     result = runner.invoke(cli.app, ["status"])
     assert result.exit_code == 1
-    assert "anansi new" in result.output
+    assert "wyrd new" in result.output
 
 
 def test_new_compiles_the_bundled_world(fake: FakeClaude) -> None:
@@ -157,7 +157,7 @@ def test_why_traces_a_filed_order(fake: FakeClaude) -> None:
 
 
 def test_a_leaked_canary_fails_the_tick(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setenv("ANANSI_DB", str(tmp_path / "game.db"))
+    monkeypatch.setenv("WYRD_DB", str(tmp_path / "game.db"))
     claude = FakeClaude(narration="Rumour: CANARY-OSTREL-HARROW-4c1e")
     monkeypatch.setattr(cli, "transport_factory", lambda: claude)
     _ok("new", "salt-strait")

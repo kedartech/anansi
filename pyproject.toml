@@ -1,5 +1,5 @@
 [project]
-name = "anansi"
+name = "wyrd-protocol"
 version = "0.0.1"
 description = "An AI-run multiplayer statecraft game engine"
 readme = "README.md"
@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.scripts]
-anansi = "anansi.cli:app"
+wyrd = "wyrd.cli:app"
 
 [dependency-groups]
 dev = [
@@ -30,7 +30,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/anansi"]
+packages = ["src/wyrd"]
 
 [tool.ruff]
 line-length = 100
@@ -51,4 +51,4 @@ testpaths = ["tests"]
 addopts = "-q"
 
 [tool.coverage.run]
-source = ["anansi.core"]
+source = ["wyrd.core"]

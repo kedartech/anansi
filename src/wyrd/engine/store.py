@@ -1,0 +1,204 @@
+"""Event stores (build plan Layer 2).
+
+One protocol, two implementations: ``MemoryStore`` for tests and
+``SqliteStore`` for the solo slice (decision 3). Postgres arrives in Layer 8
+behind the same protocol.
+
+Append-only is enforced by the store, not by convention: a sequence number
+must be exactly the next one, and the SQLite schema carries triggers that
+abort any UPDATE or DELETE on the events table.
+"""
+
+import sqlite3
+from collections.abc import Iterator, Sequence
+from pathlib import Path
+from typing import Protocol
+
+from wyrd.core.events import Event
+from wyrd.core.fold import replay
+from wyrd.core.ids import CampaignId
+from wyrd.core.state import State
+
+
+class StoreError(RuntimeError):
+    pass
+
+
+class EventStore(Protocol):
+    def append(self, event: Event) -> int:
+        """Append one event. Returns its ``seq``. Raises ``StoreError`` on a gap or repeat."""
+        ...
+
+    def append_all(self, events: Sequence[Event]) -> int:
+        """Append atomically: all land or none do. Returns the last ``seq``."""
+        ...
+
+    def read(self, campaign_id: CampaignId, from_seq: int = 0) -> Iterator[Event]: ...
+
+    def last_seq(self, campaign_id: CampaignId) -> int:
+        """-1 for an unknown campaign."""
+        ...
+
+    def save_snapshot(self, state: State) -> None: ...
+
+    def latest_snapshot(self, campaign_id: CampaignId) -> State | None: ...
+
+
+def load_state(store: EventStore, campaign_id: CampaignId) -> State:
+    """Nearest snapshot plus the tail of the log."""
+    snapshot = store.latest_snapshot(campaign_id)
+    from_seq = snapshot.last_seq + 1 if snapshot is not None else 0
+    events = list(store.read(campaign_id, from_seq))
+    if snapshot is None and not events:
+        raise StoreError(f"no events for campaign {campaign_id!r}")
+    if not events:
+        assert snapshot is not None
+        return snapshot
+    return replay(events, initial=snapshot)
+
+
+def _check_next(expected: int, event: Event) -> None:
+    if event.seq != expected:
+        raise StoreError(
+            f"append-only: campaign {event.campaign_id} expects seq {expected}, got {event.seq}"
+        )
+
+
+class MemoryStore:
+    def __init__(self) -> None:
+        self._events: dict[CampaignId, list[Event]] = {}
+        self._snapshots: dict[CampaignId, State] = {}
+
+    def append(self, event: Event) -> int:
+        return self.append_all([event])
+
+    def append_all(self, events: Sequence[Event]) -> int:
+        if not events:
+            raise StoreError("nothing to append")
+        campaign_id = events[0].campaign_id
+        log = self._events.setdefault(campaign_id, [])
+        expected = len(log)
+        for event in events:
+            if event.campaign_id != campaign_id:
+                raise StoreError("a batch belongs to one campaign")
+            _check_next(expected, event)
+            expected += 1
+        log.extend(events)
+        return expected - 1
+
+    def read(self, campaign_id: CampaignId, from_seq: int = 0) -> Iterator[Event]:
+        yield from self._events.get(campaign_id, [])[from_seq:]
+
+    def last_seq(self, campaign_id: CampaignId) -> int:
+        return len(self._events.get(campaign_id, [])) - 1
+
+    def save_snapshot(self, state: State) -> None:
+        current = self._snapshots.get(state.campaign_id)
+        if current is None or state.last_seq > current.last_seq:
+            self._snapshots[state.campaign_id] = state
+
+    def latest_snapshot(self, campaign_id: CampaignId) -> State | None:
+        return self._snapshots.get(campaign_id)
+
+
+_SCHEMA = """
+CREATE TABLE IF NOT EXISTS events (
+    campaign_id TEXT    NOT NULL,
+    seq         INTEGER NOT NULL,
+    event_id    TEXT    NOT NULL UNIQUE,
+    tick        INTEGER NOT NULL,
+    kind        TEXT    NOT NULL,
+    body        TEXT    NOT NULL,
+    PRIMARY KEY (campaign_id, seq)
+) WITHOUT ROWID;
+CREATE TRIGGER IF NOT EXISTS events_no_update BEFORE UPDATE ON events
+BEGIN SELECT RAISE(ABORT, 'events are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS events_no_delete BEFORE DELETE ON events
+BEGIN SELECT RAISE(ABORT, 'events are append-only'); END;
+CREATE TABLE IF NOT EXISTS snapshots (
+    campaign_id TEXT    NOT NULL,
+    seq         INTEGER NOT NULL,
+    body        TEXT    NOT NULL,
+    PRIMARY KEY (campaign_id, seq)
+) WITHOUT ROWID;
+"""
+
+
+class SqliteStore:
+    """Single-file store for the solo slice."""
+
+    def __init__(self, path: Path | str) -> None:
+        self._conn = sqlite3.connect(str(path), isolation_level=None)
+        self._conn.execute("PRAGMA journal_mode=WAL")
+        self._conn.execute("PRAGMA foreign_keys=ON")
+        self._conn.executescript(_SCHEMA)
+
+    def close(self) -> None:
+        self._conn.close()
+
+    def append(self, event: Event) -> int:
+        return self.append_all([event])
+
+    def append_all(self, events: Sequence[Event]) -> int:
+        if not events:
+            raise StoreError("nothing to append")
+        campaign_id = events[0].campaign_id
+        self._conn.execute("BEGIN IMMEDIATE")
+        try:
+            expected = self.last_seq(campaign_id) + 1
+            for event in events:
+                if event.campaign_id != campaign_id:
+                    raise StoreError("a batch belongs to one campaign")
+                _check_next(expected, event)
+                self._conn.execute(
+                    "INSERT INTO events (campaign_id, seq, event_id, tick, kind, body)"
+                    " VALUES (?, ?, ?, ?, ?, ?)",
+                    (
+                        event.campaign_id,
+                        event.seq,
+                        event.event_id,
+                        event.tick,
+                        event.kind,
+                        event.model_dump_json(),
+                    ),
+                )
+                expected += 1
+        except Exception:
+            self._conn.execute("ROLLBACK")
+            raise
+        self._conn.execute("COMMIT")
+        return expected - 1
+
+    def read(self, campaign_id: CampaignId, from_seq: int = 0) -> Iterator[Event]:
+        rows = self._conn.execute(
+            "SELECT body FROM events WHERE campaign_id = ? AND seq >= ? ORDER BY seq",
+            (campaign_id, from_seq),
+        )
+        for (body,) in rows:
+            yield Event.model_validate_json(body)
+
+    def last_seq(self, campaign_id: CampaignId) -> int:
+        row = self._conn.execute(
+            "SELECT COALESCE(MAX(seq), -1) FROM events WHERE campaign_id = ?", (campaign_id,)
+        ).fetchone()
+        return int(row[0])
+
+    def save_snapshot(self, state: State) -> None:
+        self._conn.execute(
+            "INSERT OR IGNORE INTO snapshots (campaign_id, seq, body) VALUES (?, ?, ?)",
+            (state.campaign_id, state.last_seq, state.model_dump_json()),
+        )
+
+    def campaign_ids(self) -> list[CampaignId]:
+        """Every campaign in this file, oldest first by first event."""
+        rows = self._conn.execute(
+            "SELECT campaign_id FROM events WHERE seq = 0 ORDER BY event_id"
+        ).fetchall()
+        return [CampaignId(r[0]) for r in rows]
+
+    def latest_snapshot(self, campaign_id: CampaignId) -> State | None:
+        row = self._conn.execute(
+            "SELECT body FROM snapshots WHERE campaign_id = ? ORDER BY seq DESC LIMIT 1",
+            (campaign_id,),
+        ).fetchone()
+        return State.model_validate_json(row[0]) if row else None

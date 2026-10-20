@@ -1,12 +1,13 @@
 import pytest
 
-from anansi.core import events as ev
-from anansi.core.delta import AssetTierDelta
-from anansi.core.events import CallCost, Event
-from anansi.core.fold import replay
-from anansi.core.ids import DeltaId, IntentId
-from anansi.core.intent import Intent, Verb
-from anansi.core.report import (
+from tests import fixtures as fx
+from wyrd.core import events as ev
+from wyrd.core.delta import AssetTierDelta
+from wyrd.core.events import CallCost, Event
+from wyrd.core.fold import replay
+from wyrd.core.ids import DeltaId, IntentId
+from wyrd.core.intent import Intent, Verb
+from wyrd.core.report import (
     cost_report,
     leak_report,
     render_cost,
@@ -14,9 +15,8 @@ from anansi.core.report import (
     render_why,
     why,
 )
-from anansi.core.resolution import FeasibilityBand, OutcomeTier, RejectionReason, TickStage
-from anansi.core.visibility import PUBLIC
-from tests import fixtures as fx
+from wyrd.core.resolution import FeasibilityBand, OutcomeTier, RejectionReason, TickStage
+from wyrd.core.visibility import PUBLIC
 
 I1 = IntentId("01ARZ3NDEKTSV4RRFFQ69INT01")
 I2 = IntentId("01ARZ3NDEKTSV4RRFFQ69INT02")

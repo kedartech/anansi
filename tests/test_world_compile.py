@@ -5,22 +5,23 @@ from pathlib import Path
 import pytest
 import yaml
 
-from anansi.core import events as ev
-from anansi.core._base import Model
-from anansi.core.canary import canaries_hidden_from
-from anansi.core.fold import replay
-from anansi.core.ids import AssetId, CampaignId, EntityId, FactId, SeatId
-from anansi.core.ontology import (
+from tests import fixtures as fx
+from wyrd.core import events as ev
+from wyrd.core._base import Model
+from wyrd.core.canary import canaries_hidden_from
+from wyrd.core.fold import replay
+from wyrd.core.ids import AssetId, CampaignId, EntityId, FactId, SeatId
+from wyrd.core.ontology import (
     AssetKind,
     ClockKind,
     Controller,
     EntityKind,
     SeatKind,
 )
-from anansi.core.project import project
-from anansi.core.settings import Settings
-from anansi.core.visibility import Visibility
-from anansi.core.world import (
+from wyrd.core.project import project
+from wyrd.core.settings import Settings
+from wyrd.core.visibility import Visibility
+from wyrd.core.world import (
     AgentDecl,
     AssetDecl,
     ClockDecl,
@@ -32,8 +33,7 @@ from anansi.core.world import (
     SeatDecl,
     WorldFile,
 )
-from anansi.core.world_compile import WorldError, compile_world, object_id, resolve_keys
-from tests import fixtures as fx
+from wyrd.core.world_compile import WorldError, compile_world, object_id, resolve_keys
 
 CANARY = "CANARY-VARDA-LEDGER-1a2b3c"
 OTHER_CAMPAIGN = CampaignId("01ARZ3NDEKTSV4RRFFQ69G5FB0")

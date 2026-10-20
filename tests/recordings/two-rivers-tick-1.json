@@ -1,5 +1,5 @@
 {
- "a277f19ca4221837ceb0441a": {
+ "25713aebcc22c9dceb3cca43": {
   "call_class": "narrator",
   "model": "claude-haiku-5-5",
   "prompt_head": "## Reader: Chancellor of the South (seat 01ARZ3NDEKTSV4RRFFQ69G5SS0), tick 0\n\n## What this seat knows\n{\"campaign_id\":\"01",
@@ -14,7 +14,7 @@
    "usd": 0.00182488
   }
  },
- "d8e7b85942a4c36cb89d09a7": {
+ "9fe93a9036f9b464a6c0ed49": {
   "call_class": "resolver",
   "model": "claude-sonnet-5-5",
   "prompt_head": "## World state (truth; tick 0)\n{\"campaign_id\":\"01ARZ3NDEKTSV4RRFFQ69G5FA0\",\"tick\":0,\"settings\":{\"plausibility\":\"plausibl",
@@ -77,7 +77,7 @@
    "usd": 0.057354
   }
  },
- "fc02ef32770e2fd728054054": {
+ "e1aeb52c273c700d608ecfaf": {
   "call_class": "narrator",
   "model": "claude-haiku-5-5",
   "prompt_head": "## Reader: Regent of the North (seat 01ARZ3NDEKTSV4RRFFQ69G5SN0), tick 0\n\n## What this seat knows\n{\"campaign_id\":\"01ARZ3",
