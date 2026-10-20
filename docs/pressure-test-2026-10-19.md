@@ -457,17 +457,73 @@ Residual risk: with targeting unlimited, a majority bloc can vote events onto on
 
 ---
 
-## Updated decision status
+## H14. Group votes: simple majority, off below 3 players [decided]
 
-1. Capacity / operation slots (B1): **open**
-2. Endings (B2): **decided**, goal modes (H6)
-3. Co-GM (B4): **partly decided**, proposals unlimited (H9); quorum, threshold and minimum player count open
-4. v1 scope (B6): **decided**, 1-10 plus solo (H13)
-5. Betrayal (B5): **decided**, Session Zero intensity including cutthroat elimination (H8)
-6. First playtest (B5, D1): **decided**, Josh holds a seat and plays solo first; ratings set at Session Zero (H11, H12)
-7. Real people (D3): **decided**, names allowed and no invented allegations (H10)
-8. Model and account (A5, E): **open**
-9. Seats, switching and joining (C7): **partly decided**, eliminated players redesign (H8); multi-seat and mid-campaign joining open
-10. First format (C12): **decided for the playtest**, solo first (H11)
+- **Threshold.** A simple majority of votes cast passes a proposal. This replaces the two-thirds proposal in B4 and H9.
+- **Minimum table.** Group votes are not available with 2 or fewer human players. Josh wrote "2>". It is read here as "2 or fewer", which matches the question asked.
+- **Quorum.** Not specified. Proposed default: at least half the human seats must vote, otherwise the proposal lapses. Still open.
+- **Residual risk.** A bare majority with unlimited proposals (H9) makes a 3-2 bloc decisive. The engine and the safety floor still apply to every event, and a vote still adapts covert plans rather than cancelling them.
 
-New open items: whether the agent can be harmed (H4); the default Lethality setting (H5); whether the rating cap applies when minors are present (H12).
+## H15. Agents can be harmed or killed [decided]
+
+**Decision.** The world can act on a player's agent: kidnap, turn or kill it. This answers the H4 question.
+
+**Design.**
+- **Losing the agent blinds the seat.** Briefings drop to the public feed only, plus raw intercepts with no analysis. There are no perceived odds and no suggested moves. While the seat has no agent, orders are still accepted, but they go to the engine as written, with no clarifying questions.
+- **Recovery happens in the fiction.** The player recovers by finding or procuring a new agent: recruit, buy, borrow from an ally, or rescue the old one. This is an acquisition action (A4) that takes time and carries exposure. It is never automatic.
+- **The replacement starts with partial knowledge.** It inherits the seat's knowledge layer only as far as the fiction allows. A rescued agent keeps its memory. A new hire is briefed from the seat's surviving records.
+- **A turned agent** follows the compromised-aide rules. It is available at cutthroat (H16) without a separate opt-in.
+- **Absence.** An absent seat whose agent is lost has no deputy. The engine holds that seat's existing standing orders, and no new commitments are made.
+- **The player redesigns the replacement's persona** (H4), within the same restraints.
+
+## H16. Default intensity: cutthroat [decided]
+
+**Decision.** The Session Zero default is **cutthroat**. Tables can choose softer or harsher settings.
+
+**Interpretation, to confirm.** The default betrayal intensity (H8) is cutthroat, which means full covert play between human seats. Elimination stays a separate opt-in. The default lethality (H5) is **Hard**, meaning permanent losses are possible, because that is the lethality setting that fits cutthroat play.
+
+## H17. No content rating unless specified [decided]
+
+**Decision.** By default a campaign has no content rating. A rating applies only if the table sets one at Session Zero. This supersedes H12's rating step and its recommended teen cap.
+
+**What still holds at every table.** The platform hard lines (A5), and the table's own lines and veils.
+
+**Residual risk.** No rating is applied automatically when minors are present. The D1 protections (recorded age band, DMs routed through the bot, guardian told) are kept as defaults. A Session Zero prompt reminds the table to set a rating when anyone under 18 is present. It is not enforced.
+
+## H18. Models: Josh's Claude API [decided]
+
+**Decision.** For now, Anansi uses Josh's Claude API key and Claude models. This replaces the separate API organisation in A5 and E.
+
+**Design.**
+- One Anthropic model family on a hybrid split: a frontier Claude model for the resolver and chronicle digests, and a small Claude model for agents, NPCs, press and personas.
+- The key lives in the engine's environment and never appears in logs or bug reports.
+- Prompt caching is on from day one.
+
+**Residual risk and mitigations.**
+- Generated war and terror content runs on Josh's own account, so a policy flag lands there. The input and output classifiers in A5 and the abstraction rule are the protection.
+- Use a **separate API key** under the same account. This keeps spend visible and makes the key revocable on its own. It is not a separate organisation.
+- Set a workspace or key spend limit.
+- Keep Anansi traffic off the subscription Vera runs on.
+- The budget cap amount is still Josh's call.
+
+---
+
+## Updated decision status (after H14 to H18)
+
+1. Capacity: visible operation slots (B1). **Open**
+2. Endings (B2). **Decided:** Goals mode and Open mode (H6)
+3. Co-GM (B4). **Decided:** proposals unlimited (H9), simple majority, off at 2 or fewer players (H14). Quorum is **open**; proposed default is half the seats.
+4. v1 scope (B6). **Decided:** 1 to 10 players plus solo (H13)
+5. Betrayal (B5). **Decided:** cutthroat by default (H16), elimination opt-in (H8)
+6. First playtest (B5, D1). **Decided:** Josh holds a seat, solo first (H11). No rating unless set (H17).
+7. Real people (D3). **Decided:** names allowed, no invented allegations (H10)
+8. Model and account (A5, E). **Decided:** Josh's Claude API on a hybrid split (H18). Budget cap amount is **open**.
+9. Seats, switching and joining (C7). **Partly decided:** eliminated players redesign (H8). Multi-seat and mid-campaign joining are **open**.
+10. First format (C12). **Decided for the playtest:** solo first (H11)
+
+Still open:
+- operation slots (B1)
+- co-GM quorum
+- budget cap
+- multi-seat and mid-campaign joining
+- whether "cutthroat" also implies elimination and Hard lethality by default (H16)
