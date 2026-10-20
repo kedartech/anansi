@@ -121,6 +121,8 @@ class MemoryStore:
         self.sealer = sealer
         self._events: dict[CampaignId, list[Event]] = {}
         self._snapshots: dict[CampaignId, tuple[int, str]] = {}
+        self._ids: set[str] = set()
+        """Every event_id held, unique across campaigns as in the SQL stores."""
 
     def append(self, event: Event) -> int:
         return self.append_all([event])
@@ -131,12 +133,17 @@ class MemoryStore:
         campaign_id = events[0].campaign_id
         log = self._events.setdefault(campaign_id, [])
         expected = len(log)
+        ids = set(self._ids)
         for event in events:
             if event.campaign_id != campaign_id:
                 raise StoreError("append-only: a batch belongs to one campaign")
             check_next(expected, event)
+            if event.event_id in ids:
+                raise StoreError(f"append-only: event_id {event.event_id} repeats")
+            ids.add(event.event_id)
             expected += 1
         log.extend(self.sealer.seal(events) if self.sealer else events)
+        self._ids = ids
         return expected - 1
 
     def read(self, campaign_id: CampaignId, from_seq: int = 0) -> Iterator[Event]:
@@ -224,6 +231,9 @@ class SqliteStore:
                     ),
                 )
                 expected += 1
+        except sqlite3.IntegrityError as exc:
+            self._conn.execute("ROLLBACK")
+            raise StoreError(f"append-only: campaign {campaign_id}: {exc}") from exc
         except Exception:
             self._conn.execute("ROLLBACK")
             raise

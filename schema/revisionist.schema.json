@@ -623,6 +623,32 @@
         "title": "Character",
         "type": "object"
       },
+      "CharacterClaimed": {
+        "additionalProperties": false,
+        "description": "A player takes a character from the roster (README \u00a75 step 3).\n\nThe fold creates the player's seat here, embodying the character. The\nengine gives this event an ID derived from the campaign and the character,\nso a second claim of the same person fails at the store, not just here.",
+        "properties": {
+          "entity_id": {
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "character_claimed",
+            "default": "character_claimed",
+            "title": "Kind",
+            "type": "string"
+          },
+          "seat_id": {
+            "title": "Seat Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "seat_id",
+          "entity_id"
+        ],
+        "title": "CharacterClaimed",
+        "type": "object"
+      },
       "CharacterListed": {
         "additionalProperties": false,
         "description": "One character on the Session Zero roster. Public: every player sees the roster.",
@@ -2176,6 +2202,27 @@
         "title": "Goal",
         "type": "object"
       },
+      "GoalApproved": {
+        "additionalProperties": false,
+        "description": "The host let a goal the balance check flagged stand. The host sees the scores\nand the flag, never the goal. A record.",
+        "properties": {
+          "goal_id": {
+            "title": "Goal Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "goal_approved",
+            "default": "goal_approved",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "goal_id"
+        ],
+        "title": "GoalApproved",
+        "type": "object"
+      },
       "GoalKind": {
         "enum": [
           "lasting",
@@ -2205,6 +2252,68 @@
         "title": "GoalMet",
         "type": "object"
       },
+      "GoalOption": {
+        "additionalProperties": false,
+        "properties": {
+          "condition": {
+            "discriminator": {
+              "mapping": {
+                "all_of": "#/$defs/AllOf",
+                "any_of": "#/$defs/AnyOf",
+                "commitment_in_force": "#/$defs/CommitmentInForce",
+                "controls_asset": "#/$defs/ControlsAsset",
+                "disposition_at": "#/$defs/DispositionAt",
+                "entity_is": "#/$defs/EntityIs",
+                "holds_office": "#/$defs/HoldsOffice",
+                "meter_at": "#/$defs/MeterAt"
+              },
+              "propertyName": "check"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/HoldsOffice"
+              },
+              {
+                "$ref": "#/$defs/ControlsAsset"
+              },
+              {
+                "$ref": "#/$defs/EntityIs"
+              },
+              {
+                "$ref": "#/$defs/MeterAt"
+              },
+              {
+                "$ref": "#/$defs/CommitmentInForce"
+              },
+              {
+                "$ref": "#/$defs/DispositionAt"
+              },
+              {
+                "$ref": "#/$defs/AllOf"
+              },
+              {
+                "$ref": "#/$defs/AnyOf"
+              }
+            ],
+            "title": "Condition"
+          },
+          "kind": {
+            "$ref": "#/$defs/GoalKind"
+          },
+          "text": {
+            "maxLength": 280,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "condition",
+          "kind"
+        ],
+        "title": "GoalOption",
+        "type": "object"
+      },
       "GoalProgressed": {
         "additionalProperties": false,
         "description": "The goal's objective clock moved: ``parts_met`` of its parts hold now.",
@@ -2230,6 +2339,46 @@
           "parts_met"
         ],
         "title": "GoalProgressed",
+        "type": "object"
+      },
+      "GoalProposed": {
+        "additionalProperties": false,
+        "description": "The goals a player's agent offered on one route (README \u00a75 step 4). A record,\nPrivate to the seat and sealed with its key: these are the player's own words.",
+        "properties": {
+          "kind": {
+            "const": "goal_proposed",
+            "default": "goal_proposed",
+            "title": "Kind",
+            "type": "string"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/$defs/GoalOption"
+            },
+            "maxItems": 3,
+            "title": "Options",
+            "type": "array"
+          },
+          "route": {
+            "enum": [
+              "history",
+              "could_have",
+              "own"
+            ],
+            "title": "Route",
+            "type": "string"
+          },
+          "seat_id": {
+            "title": "Seat Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "seat_id",
+          "route",
+          "options"
+        ],
+        "title": "GoalProposed",
         "type": "object"
       },
       "GoalSet": {
@@ -3361,6 +3510,20 @@
         "title": "SeatStatusSet",
         "type": "object"
       },
+      "SessionZeroClosed": {
+        "additionalProperties": false,
+        "description": "Every player has a character, a goal and an agent: play begins.",
+        "properties": {
+          "kind": {
+            "const": "session_zero_closed",
+            "default": "session_zero_closed",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "title": "SessionZeroClosed",
+        "type": "object"
+      },
       "SessionZeroOpened": {
         "additionalProperties": false,
         "description": "The table locked a point in history with ``/establish`` (README \u00a75 step 2).\n\nTicks wait until Session Zero closes. ``notes`` is where the GM logs each\nreading it chose where historians disagree or the record is silent.",
@@ -3755,6 +3918,7 @@
             "asset_created": "#/$defs/AssetCreated",
             "briefing_delivered": "#/$defs/BriefingDelivered",
             "campaign_created": "#/$defs/CampaignCreated",
+            "character_claimed": "#/$defs/CharacterClaimed",
             "character_listed": "#/$defs/CharacterListed",
             "clarification_asked": "#/$defs/ClarificationAsked",
             "clock_created": "#/$defs/ClockCreated",
@@ -3766,8 +3930,10 @@
             "entity_created": "#/$defs/EntityCreated",
             "fact_asserted": "#/$defs/FactAsserted",
             "feasibility_rated": "#/$defs/FeasibilityRated",
+            "goal_approved": "#/$defs/GoalApproved",
             "goal_met": "#/$defs/GoalMet",
             "goal_progressed": "#/$defs/GoalProgressed",
+            "goal_proposed": "#/$defs/GoalProposed",
             "goal_set": "#/$defs/GoalSet",
             "goal_undone": "#/$defs/GoalUndone",
             "intent_filed": "#/$defs/IntentFiled",
@@ -3783,6 +3949,7 @@
             "sealed": "#/$defs/Sealed",
             "seat_created": "#/$defs/SeatCreated",
             "seat_status_set": "#/$defs/SeatStatusSet",
+            "session_zero_closed": "#/$defs/SessionZeroClosed",
             "session_zero_opened": "#/$defs/SessionZeroOpened",
             "settings_set": "#/$defs/SettingsSet",
             "statement_issued": "#/$defs/StatementIssued",
@@ -3878,6 +4045,12 @@
             "$ref": "#/$defs/CharacterListed"
           },
           {
+            "$ref": "#/$defs/CharacterClaimed"
+          },
+          {
+            "$ref": "#/$defs/SessionZeroClosed"
+          },
+          {
             "$ref": "#/$defs/GoalSet"
           },
           {
@@ -3888,6 +4061,12 @@
           },
           {
             "$ref": "#/$defs/GoalUndone"
+          },
+          {
+            "$ref": "#/$defs/GoalProposed"
+          },
+          {
+            "$ref": "#/$defs/GoalApproved"
           },
           {
             "$ref": "#/$defs/BriefingDelivered"

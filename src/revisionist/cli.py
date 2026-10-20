@@ -21,7 +21,7 @@ from revisionist import __version__
 from revisionist.core.canary import HumanLeak, scan_humans, surfaces_from_log
 from revisionist.core.fold import replay_to, state_hash
 from revisionist.core.ids import CampaignId, EventId, SeatId
-from revisionist.core.ontology import Controller
+from revisionist.core.ontology import Controller, Persona, Phase
 from revisionist.core.report import (
     cost_report,
     leak_report,
@@ -38,6 +38,7 @@ from revisionist.core.world_compile import WorldError
 from revisionist.engine import campaign as cmp
 from revisionist.engine import play, session_zero
 from revisionist.engine import scheduler as sch
+from revisionist.engine.ids import new_id
 from revisionist.engine.llm import Transport, TransportError
 from revisionist.engine.maintenance import copy_campaign, verify_campaign
 from revisionist.engine.runner import DelivererFactory, play_tick
@@ -410,6 +411,192 @@ def _holdings(store: EventStore, state: State) -> dict[str, frozenset[SeatId]]:
 
 # --- revisionist db ------------------------------------------------------------------
 
+# --- Session Zero: character, goal, brief, agent (Layer 10) ----------------------
+
+character_app = typer.Typer(no_args_is_help=True, help="Session Zero: choose your character.")
+app.add_typer(character_app, name="character")
+goal_app = typer.Typer(no_args_is_help=True, help="Session Zero: choose your secret goal.")
+app.add_typer(goal_app, name="goal")
+
+
+def _zero(work: Callable[[EventStore, CampaignId], list[str] | str]) -> None:
+    store = cmp.open_store()
+    try:
+        out = work(store, _campaign(store))
+    except session_zero.StepRefusedError as exc:
+        raise _fail(str(exc), EXIT_REFUSED) from exc
+    except TransportError as exc:
+        raise _fail(f"your agent could not be reached: {exc}") from exc
+    for line in [out] if isinstance(out, str) else out:
+        typer.echo(line)
+
+
+def _new_seat(store: EventStore, campaign_id: CampaignId, new: bool) -> SeatId:
+    """A seat for someone about to claim a character. The CLI plays one human unless
+    ``--new`` asks for another."""
+    humans = cmp.human_seats(load_state(store, campaign_id))
+    if humans and not new:
+        name = load_state(store, campaign_id).seats[humans[0]].name
+        raise _fail(f"you already play {name}; pass --new for another player", EXIT_REFUSED)
+    return SeatId(new_id())
+
+
+NewPlayer = Annotated[bool, typer.Option("--new", help="Claim for another player")]
+
+
+@character_app.command("roster")
+def character_roster() -> None:
+    """The characters on offer, and who is taken."""
+    _zero(lambda store, c: session_zero.roster_lines(load_state(store, c)))
+
+
+@character_app.command("search")
+def character_search(
+    description: Annotated[str, typer.Argument(help="What you want to play")],
+) -> None:
+    """Characters on the roster that fit what you describe."""
+
+    def work(store: EventStore, c: CampaignId) -> list[str]:
+        found = session_zero.search(store, c, None, description, transport_factory())
+        return found or ["no one on the roster fits; try other words, or pick your own"]
+
+    _zero(work)
+
+
+@character_app.command("claim")
+def character_claim(
+    name: Annotated[str, typer.Argument(help="A name from the roster")], new: NewPlayer = False
+) -> None:
+    """Take a character from the roster."""
+
+    def work(store: EventStore, c: CampaignId) -> str:
+        who = session_zero.claim(store, c, _new_seat(store, c, new), name)
+        return f"you play {who}"
+
+    _zero(work)
+
+
+@character_app.command("pick")
+def character_pick(
+    name: Annotated[str, typer.Argument(help="Any real person from this moment")],
+    new: NewPlayer = False,
+) -> None:
+    """Play someone the roster leaves out, if the record places them at the start."""
+
+    def work(store: EventStore, c: CampaignId) -> str:
+        seat = _new_seat(store, c, new)
+        return f"you play {session_zero.pick(store, c, seat, name, transport_factory())}"
+
+    _zero(work)
+
+
+@goal_app.command("suggest")
+def goal_suggest(
+    route: Annotated[
+        str, typer.Argument(help="history (as it went) or could_have (as it could have gone)")
+    ],
+    seat: PlayerSeat = None,
+) -> None:
+    """Your agent offers up to three goals on a route."""
+    if route not in ("history", "could_have"):
+        raise _fail("route is history or could_have; write your own with `goal own`")
+    chosen: session_zero.Route = "history" if route == "history" else "could_have"
+
+    def work(store: EventStore, c: CampaignId) -> list[str]:
+        me = _me(load_state(store, c), seat)
+        return session_zero.propose_goals(store, c, me, chosen, transport_factory())
+
+    _zero(work)
+
+
+@goal_app.command("own")
+def goal_own(
+    text: Annotated[str, typer.Argument(help="Your goal, in your words")], seat: PlayerSeat = None
+) -> None:
+    """Write your own goal; your agent turns it into one the engine can check."""
+
+    def work(store: EventStore, c: CampaignId) -> list[str]:
+        me = _me(load_state(store, c), seat)
+        return session_zero.propose_goals(store, c, me, "own", transport_factory(), text)
+
+    _zero(work)
+
+
+@goal_app.command("confirm")
+def goal_confirm(
+    number: Annotated[int, typer.Argument(help="Which of the offered goals")],
+    seat: PlayerSeat = None,
+) -> None:
+    """Fix one offered goal for the season."""
+    _zero(
+        lambda store, c: session_zero.confirm_goal(
+            store, c, _me(load_state(store, c), seat), number
+        )
+    )
+
+
+@goal_app.command("flags")
+def goal_flags() -> None:
+    """Host: goals the balance check flagged. Scores only; never the goal."""
+
+    def work(store: EventStore, c: CampaignId) -> list[str]:
+        state = load_state(store, c)
+        rows = session_zero.flagged(store, c)
+        return [
+            f"{state.seats[s].name}: power {b.power}, difficulty {b.difficulty}, {b.flag}"
+            for s, b in rows
+        ] or ["no goals wait for approval"]
+
+    _zero(work)
+
+
+@goal_app.command("approve")
+def goal_approve(seat: Annotated[str, typer.Argument(help="The seat, by ID or name")]) -> None:
+    """Host: let one flagged goal stand."""
+
+    def work(store: EventStore, c: CampaignId) -> str:
+        return session_zero.approve(store, c, _me(load_state(store, c), seat))
+
+    _zero(work)
+
+
+@app.command("history")
+def history_cmd(seat: PlayerSeat = None) -> None:
+    """Session Zero: your tick-0 brief, from the record."""
+
+    def work(store: EventStore, c: CampaignId) -> str:
+        me = _me(load_state(store, c), seat)
+        return session_zero.history_brief(store, c, me, transport_factory())
+
+    _zero(work)
+
+
+@app.command("agent")
+def agent_cmd(
+    name: Annotated[str, typer.Option("--name")],
+    role: Annotated[str, typer.Option("--role", help="chief of staff, handler, spouse...")],
+    voice: Annotated[str, typer.Option("--voice")] = "",
+    backstory: Annotated[str, typer.Option("--backstory")] = "",
+    relationship: Annotated[str, typer.Option("--relationship")] = "",
+    seat: PlayerSeat = None,
+) -> None:
+    """Session Zero: design your agent's persona."""
+    persona = Persona(
+        name=name, role=role, voice=voice, backstory=backstory, relationship=relationship
+    )
+    _zero(
+        lambda store, c: session_zero.design_agent(
+            store, c, _me(load_state(store, c), seat), persona
+        )
+    )
+
+
+@app.command("begin")
+def begin_cmd() -> None:
+    """Host: close Session Zero and start play."""
+    _zero(session_zero.begin)
+
+
 db_app = typer.Typer(no_args_is_help=True, help="Postgres migrations, copy and verify.")
 app.add_typer(db_app, name="db")
 
@@ -771,12 +958,17 @@ def discord_invite(
 
     store = _pg_store(*_DISCORD)
     try:
-        campaign_id, seat_id = _bound_seat(store, campaign, seat)
+        current = CampaignId(campaign) if campaign else _campaign(store)
+        if seat is None and load_state(store, current).phase is Phase.SESSION_ZERO:
+            # The player's seat appears when they claim a character.
+            campaign_id, seat_id, name = current, SeatId(new_id()), "a new player"
+        else:
+            campaign_id, seat_id = _bound_seat(store, campaign, seat)
+            name = load_state(store, campaign_id).seats[seat_id].name
         if seat_id in SeatLinks(store.conn).users(campaign_id):
             raise _fail(f"{seat_id} is already linked; unlink it first", EXIT_REFUSED)
         now = clock()
         code = Invites(store.conn).issue(campaign_id, seat_id, now, hours)
-        name = load_state(store, campaign_id).seats[seat_id].name
     finally:
         store.close()
     expires = (now + timedelta(hours=hours)).astimezone(UTC)

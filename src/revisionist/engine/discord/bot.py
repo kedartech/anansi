@@ -15,6 +15,7 @@ from typing import Literal
 import discord
 from discord import app_commands
 
+from revisionist.core.ontology import Persona
 from revisionist.engine.discord.handlers import BROKEN, NOT_YET, Handlers
 from revisionist.engine.discord.rest import split_message
 
@@ -27,6 +28,11 @@ COMMANDS = (
     "status",
     "join",
     "establish",
+    "character",
+    "goal",
+    "history",
+    "agent",
+    "begin",
     "advance",
     "pause",
     "resume",
@@ -100,6 +106,63 @@ def register(
     ) -> None:
         user = str(interaction.user.id)
         await answer(interaction, lambda: h.establish(user, place))
+
+    @tree.command(name="character", description="Session Zero: choose who you play", guild=guild)
+    @app_commands.describe(
+        action="roster, search for a fit, claim from the roster, or pick anyone from the record",
+        text="What you want to play (search) or a name (claim, pick)",
+    )
+    async def character(
+        interaction: discord.Interaction,
+        action: Literal["roster", "search", "claim", "pick"],
+        text: app_commands.Range[str, 1, 400] | None = None,
+    ) -> None:
+        user = str(interaction.user.id)
+        await answer(interaction, lambda: h.character(user, action, text or ""))
+
+    @tree.command(name="goal", description="Session Zero: choose your secret goal", guild=guild)
+    @app_commands.describe(
+        action="as history went, as it could have gone, your own, or confirm a number",
+        text="Your own goal, or the number to confirm",
+    )
+    async def goal(
+        interaction: discord.Interaction,
+        action: Literal["history", "could_have", "own", "confirm"],
+        text: app_commands.Range[str, 1, 280] | None = None,
+    ) -> None:
+        user = str(interaction.user.id)
+        await answer(interaction, lambda: h.goal(user, action, text or ""))
+
+    @tree.command(
+        name="history", description="Session Zero: your brief from the record", guild=guild
+    )
+    async def history(interaction: discord.Interaction) -> None:
+        user = str(interaction.user.id)
+        await answer(interaction, lambda: h.history(user))
+
+    @tree.command(name="agent", description="Session Zero: design your agent", guild=guild)
+    async def agent(
+        interaction: discord.Interaction,
+        name: app_commands.Range[str, 1, 60],
+        role: app_commands.Range[str, 1, 60],
+        voice: app_commands.Range[str, 1, 200] | None = None,
+        backstory: app_commands.Range[str, 1, 400] | None = None,
+        relationship: app_commands.Range[str, 1, 200] | None = None,
+    ) -> None:
+        user = str(interaction.user.id)
+        persona = Persona(
+            name=name,
+            role=role,
+            voice=voice or "",
+            backstory=backstory or "",
+            relationship=relationship or "",
+        )
+        await answer(interaction, lambda: h.agent(user, persona))
+
+    @tree.command(name="begin", description="Host: close Session Zero and start play", guild=guild)
+    async def begin(interaction: discord.Interaction) -> None:
+        user = str(interaction.user.id)
+        await answer(interaction, lambda: h.begin(user))
 
     @tree.command(name="advance", description="Host: run the next tick now", guild=guild)
     async def advance(interaction: discord.Interaction) -> None:
