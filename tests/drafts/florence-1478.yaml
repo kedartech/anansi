@@ -1,0 +1,88 @@
+# A hand-written stand-in for the GM's /establish reply (Layer 10 item 1c).
+# Not a model output: re-record live. Drawn from the documented record of the
+# Pazzi conspiracy; the start is the week before 26 April 1478.
+
+world: draft
+name: Florence, April 1478
+
+settings:
+  lethality: brutal  # the table's settings replace whatever the draft says
+
+entities:
+  - {key: florence, kind: polity, name: Republic of Florence}
+  - {key: papacy, kind: polity, name: The Papal States}
+  - {key: urbino, kind: polity, name: Duchy of Urbino}
+  - {key: medici, kind: faction, name: The Medici, parent: florence}
+  - {key: pazzi, kind: faction, name: The Pazzi, parent: florence}
+  - {key: signoria, kind: org, name: The Signoria, parent: florence}
+  - {key: duomo, kind: location, name: Santa Maria del Fiore, parent: florence}
+  - {key: palazzo, kind: location, name: Palazzo della Signoria, parent: florence}
+  - {key: lorenzo, kind: person, name: "Lorenzo de' Medici", parent: medici}
+  - {key: giuliano, kind: person, name: "Giuliano de' Medici", parent: medici}
+  - {key: lucrezia, kind: person, name: Lucrezia Tornabuoni, parent: medici}
+  - {key: francesco_pazzi, kind: person, name: "Francesco de' Pazzi", parent: pazzi}
+  - {key: jacopo_pazzi, kind: person, name: "Jacopo de' Pazzi", parent: pazzi}
+  - {key: salviati, kind: person, name: Francesco Salviati, parent: papacy}
+  - {key: riario, kind: person, name: Girolamo Riario, parent: papacy}
+  - {key: montesecco, kind: person, name: Giovan Battista da Montesecco, parent: papacy}
+  - {key: bandini, kind: person, name: Bernardo Bandini Baroncelli, parent: pazzi}
+  - {key: petrucci, kind: person, name: Cesare Petrucci, parent: signoria}
+  - {key: clerk, kind: person, name: Tommaso Vanni, parent: medici, tags: [composite]}
+  - {key: federico, kind: person, name: Federico da Montefeltro, parent: urbino}
+  - {key: gazette, kind: org, name: The Mercato Criers}
+
+assets:
+  - {key: medici_bank, kind: wealth, name: The Medici Bank, tier: 4, controller: lorenzo}
+  - {key: medici_friends, kind: network, name: Friends of the Palace, tier: 3, controller: lorenzo}
+  - {key: giuliano_household, kind: force, name: "Giuliano's household", tier: 1, controller: giuliano}
+  - {key: tornabuoni_ties, kind: network, name: Tornabuoni connections, tier: 2, controller: lucrezia}
+  - {key: pazzi_bank, kind: wealth, name: The Pazzi Bank, tier: 3, controller: francesco_pazzi}
+  - {key: pazzi_retainers, kind: force, name: Pazzi retainers, tier: 1, controller: jacopo_pazzi}
+  - {key: pisa_see, kind: office, name: Archbishopric of Pisa, tier: 2, controller: salviati}
+  - {key: imola, kind: office, name: Lordship of Imola, tier: 2, controller: riario}
+  - {key: papal_soldiers, kind: force, name: Papal soldiers at the gates, tier: 2, controller: montesecco}
+  - {key: bandini_blade, kind: force, name: "Bandini's men", tier: 1, controller: bandini}
+  - {key: gonfalonier, kind: office, name: Gonfalonier of Justice, tier: 3, controller: petrucci}
+  - {key: palace_guard, kind: force, name: Palace guard, tier: 2, controller: petrucci, location: palazzo}
+  - {key: ledgers, kind: info, name: The branch ledgers, tier: 1, controller: clerk}
+  - {key: urbino_lances, kind: force, name: Urbino lances, tier: 4, controller: federico}
+  - {key: criers, kind: info, name: Criers of the Mercato, tier: 1, controller: gazette}
+
+relationships:
+  - {key: medici_pazzi, a: medici, b: pazzi, disposition: -2, leverage_tags: [alum_contract]}
+  - {key: medici_papacy, a: medici, b: papacy, disposition: -3}
+  - {key: pazzi_papacy, a: pazzi, b: papacy, disposition: 3}
+  - {key: florence_urbino, a: florence, b: urbino, disposition: 0}
+
+meters:
+  - {key: medici_standing, owner: medici, name: Medici standing, value: 70}
+  - {key: pazzi_standing, owner: pazzi, name: Pazzi standing, value: 45}
+  - {key: city_calm, owner: florence, name: Calm in the city, value: 60}
+
+clocks:
+  - {key: the_plot, kind: threat, name: The plot against the brothers, target: lorenzo, segments_total: 4, segments_filled: 3, exposure: 2, scope: {visibility: covert, known_by: [papacy_seat]}}
+
+facts:
+  - {key: plot_fact, subject: pazzi, predicate: plots_against, obj: medici, exposure: 2, scope: {visibility: covert, known_by: [papacy_seat]}}
+
+seats:
+  - {key: papacy_seat, kind: faction, name: The Papal Court, embodies: papacy, standing_orders: [bring Florence to heel without open war]}
+  - {key: urbino_seat, kind: faction, name: The Duke of Urbino, embodies: urbino, standing_orders: [keep the lances ready and the price high]}
+  - {key: signoria_seat, kind: faction, name: The Signoria, embodies: signoria, standing_orders: [keep order in the city]}
+  - {key: criers_seat, kind: outlet, name: The Mercato Criers, embodies: gazette}
+
+roster:
+  - {entity: lorenzo, pitch: "The first citizen in all but name, banker to half of Europe.", reach: "Florence's councils, the bank's branches, allies in Milan.", composite: false, means: [medici_bank, medici_friends]}
+  - {entity: giuliano, pitch: "The beloved younger brother, the city's darling.", reach: "The young nobility and the jousting crowd.", composite: false, means: [giuliano_household]}
+  - {entity: lucrezia, pitch: "Poet and matriarch who arranges the marriages that hold the city.", reach: "The great families through her letters.", composite: false, means: [tornabuoni_ties]}
+  - {entity: francesco_pazzi, pitch: "The Pazzi bank's man in Rome, impatient to unseat the Medici.", reach: "The papal treasury and the Pazzi branches.", composite: false, means: [pazzi_bank]}
+  - {entity: jacopo_pazzi, pitch: "Head of the old Pazzi house, cautious and proud.", reach: "The Pazzi retainers and old Florentine names.", composite: false, means: [pazzi_retainers]}
+  - {entity: salviati, pitch: "The Archbishop of Pisa whom Florence refused to seat.", reach: "The papal court and the Church in Tuscany.", composite: false, means: [pisa_see]}
+  - {entity: riario, pitch: "The Pope's nephew, lord of Imola, hungry for more.", reach: "Rome and the Romagna.", composite: false, means: [imola]}
+  - {entity: montesecco, pitch: "A papal captain with soldiers near the city and doubts.", reach: "The papal soldiers waiting at the gates.", composite: false, means: [papal_soldiers]}
+  - {entity: bandini, pitch: "A debt-ridden gentleman who will use a blade.", reach: "Few, but close.", composite: false, means: [bandini_blade]}
+  - {entity: petrucci, pitch: "Gonfalonier of Justice, who holds the Palazzo.", reach: "The palace guard and the government's bell.", composite: false, means: [gonfalonier, palace_guard]}
+  - {entity: clerk, pitch: "A clerk of the Medici bank who sees every ledger.", reach: "The branches' correspondence and the money behind it.", composite: true, means: [ledgers]}
+
+notes:
+  - The record disagrees on how much Sixtus IV knew; this world has the papal court back the plot without ordering a killing.

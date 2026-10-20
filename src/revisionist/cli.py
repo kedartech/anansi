@@ -31,16 +31,18 @@ from revisionist.core.report import (
     why,
 )
 from revisionist.core.sealing import needs_admin_read
+from revisionist.core.settings import Betrayal, Inertia, Lethality, Plausibility, Settings
 from revisionist.core.state import State
 from revisionist.core.visibility import Visibility
 from revisionist.core.world_compile import WorldError
 from revisionist.engine import campaign as cmp
-from revisionist.engine import play
+from revisionist.engine import play, session_zero
 from revisionist.engine import scheduler as sch
 from revisionist.engine.llm import Transport, TransportError
 from revisionist.engine.maintenance import copy_campaign, verify_campaign
 from revisionist.engine.runner import DelivererFactory, play_tick
 from revisionist.engine.store import EventStore, Sealer, StoreError, load_state
+from revisionist.engine.tick import NotInPlayError
 
 if TYPE_CHECKING:
     from revisionist.engine.pg_store import PostgresEventStore
@@ -150,6 +152,40 @@ def new(world: Annotated[str, typer.Argument(help="World name or path to a YAML 
 
 
 @app.command()
+def establish(
+    place: Annotated[str, typer.Argument(help='A point in history, e.g. "Florence, April 1478"')],
+    plausibility: Annotated[Plausibility, typer.Option()] = Plausibility.PLAUSIBLE,
+    inertia: Annotated[Inertia, typer.Option()] = Inertia.TENDENCIES,
+    lethality: Annotated[Lethality, typer.Option()] = Lethality.HARD,
+    betrayal: Annotated[Betrayal, typer.Option()] = Betrayal.CUTTHROAT,
+    tone: Annotated[str, typer.Option(help="grounded, satirical, pulp, grim...")] = "grounded",
+    tick_hours: Annotated[int, typer.Option(min=1, max=168)] = 24,
+) -> None:
+    """Session Zero: lock a point in history and draft its world bible from the record."""
+    settings = Settings(
+        plausibility=plausibility,
+        inertia=inertia,
+        lethality=lethality,
+        betrayal=betrayal,
+        tone=tone,
+        tick_hours=tick_hours,
+    )
+    store = cmp.open_store()
+    try:
+        campaign_id = session_zero.establish(store, place, settings, transport_factory())
+    except session_zero.SessionZeroError as exc:
+        raise _fail(str(exc)) from exc
+    except TransportError as exc:
+        raise _fail(f"the GM could not be reached: {exc}") from exc
+    state = load_state(store, campaign_id)
+    typer.echo(f"campaign {campaign_id}: Session Zero at {place.strip()}")
+    typer.echo(f"{len(state.roster)} characters to choose from:")
+    for ch in sorted(state.roster.values(), key=lambda c: state.entities[c.entity_id].name):
+        label = " (composite)" if ch.composite else ""
+        typer.echo(f"  {state.entities[ch.entity_id].name}{label}: {ch.pitch}")
+
+
+@app.command()
 def status(seat: PlayerSeat = None) -> None:
     """Where the campaign stands, as your seat sees it."""
     store = cmp.open_store()
@@ -231,15 +267,18 @@ def _deliverers() -> DelivererFactory | None:
 def tick(offline: Offline = False) -> None:
     """AI factions take their turns, then the world resolves one tick."""
     store = cmp.open_store()
-    run = play_tick(
-        store,
-        _campaign(store),
-        offline=offline,
-        transport_factory=transport_factory,
-        briefings=cmp.briefings_dir(),
-        warn=lambda message: typer.echo(message, err=True),
-        deliverer_factory=_deliverers(),
-    )
+    try:
+        run = play_tick(
+            store,
+            _campaign(store),
+            offline=offline,
+            transport_factory=transport_factory,
+            briefings=cmp.briefings_dir(),
+            warn=lambda message: typer.echo(message, err=True),
+            deliverer_factory=_deliverers(),
+        )
+    except NotInPlayError as exc:
+        raise _fail(str(exc), EXIT_REFUSED) from exc
     result = run.result
     word = "quiet" if result.quiet else "resolved"
     typer.echo(

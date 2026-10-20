@@ -570,6 +570,79 @@
         "title": "CampaignCreated",
         "type": "object"
       },
+      "Character": {
+        "additionalProperties": false,
+        "description": "A real person from the chosen moment that a player may claim (README \u00a75 step 3).\n\nJudged by agency in history, not fame. Where the record names no one, the\ncharacter is a composite: named, built from what people in that role did,\nand labelled as such in the brief.",
+        "properties": {
+          "claimed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Claimed By"
+          },
+          "composite": {
+            "title": "Composite",
+            "type": "boolean"
+          },
+          "entity_id": {
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "means": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Means",
+            "type": "array",
+            "uniqueItems": true
+          },
+          "pitch": {
+            "maxLength": 200,
+            "title": "Pitch",
+            "type": "string"
+          },
+          "reach": {
+            "maxLength": 200,
+            "title": "Reach",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_id",
+          "pitch",
+          "reach",
+          "composite"
+        ],
+        "title": "Character",
+        "type": "object"
+      },
+      "CharacterListed": {
+        "additionalProperties": false,
+        "description": "One character on the Session Zero roster. Public: every player sees the roster.",
+        "properties": {
+          "character": {
+            "$ref": "#/$defs/Character"
+          },
+          "kind": {
+            "const": "character_listed",
+            "default": "character_listed",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "character"
+        ],
+        "title": "CharacterListed",
+        "type": "object"
+      },
       "ClarificationAsked": {
         "additionalProperties": false,
         "properties": {
@@ -3288,6 +3361,36 @@
         "title": "SeatStatusSet",
         "type": "object"
       },
+      "SessionZeroOpened": {
+        "additionalProperties": false,
+        "description": "The table locked a point in history with ``/establish`` (README \u00a75 step 2).\n\nTicks wait until Session Zero closes. ``notes`` is where the GM logs each\nreading it chose where historians disagree or the record is silent.",
+        "properties": {
+          "kind": {
+            "const": "session_zero_opened",
+            "default": "session_zero_opened",
+            "title": "Kind",
+            "type": "string"
+          },
+          "notes": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "start": {
+            "maxLength": 80,
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start"
+        ],
+        "title": "SessionZeroOpened",
+        "type": "object"
+      },
       "Settings": {
         "additionalProperties": false,
         "properties": {
@@ -3652,6 +3755,7 @@
             "asset_created": "#/$defs/AssetCreated",
             "briefing_delivered": "#/$defs/BriefingDelivered",
             "campaign_created": "#/$defs/CampaignCreated",
+            "character_listed": "#/$defs/CharacterListed",
             "clarification_asked": "#/$defs/ClarificationAsked",
             "clock_created": "#/$defs/ClockCreated",
             "commitment_created": "#/$defs/CommitmentCreated",
@@ -3679,6 +3783,7 @@
             "sealed": "#/$defs/Sealed",
             "seat_created": "#/$defs/SeatCreated",
             "seat_status_set": "#/$defs/SeatStatusSet",
+            "session_zero_opened": "#/$defs/SessionZeroOpened",
             "settings_set": "#/$defs/SettingsSet",
             "statement_issued": "#/$defs/StatementIssued",
             "tick_closed": "#/$defs/TickClosed",
@@ -3765,6 +3870,12 @@
           },
           {
             "$ref": "#/$defs/StatementIssued"
+          },
+          {
+            "$ref": "#/$defs/SessionZeroOpened"
+          },
+          {
+            "$ref": "#/$defs/CharacterListed"
           },
           {
             "$ref": "#/$defs/GoalSet"
@@ -4063,6 +4174,59 @@
         ],
         "title": "Betrayal",
         "type": "string"
+      },
+      "Character": {
+        "additionalProperties": false,
+        "description": "A real person from the chosen moment that a player may claim (README \u00a75 step 3).\n\nJudged by agency in history, not fame. Where the record names no one, the\ncharacter is a composite: named, built from what people in that role did,\nand labelled as such in the brief.",
+        "properties": {
+          "claimed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Claimed By"
+          },
+          "composite": {
+            "title": "Composite",
+            "type": "boolean"
+          },
+          "entity_id": {
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "means": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Means",
+            "type": "array",
+            "uniqueItems": true
+          },
+          "pitch": {
+            "maxLength": 200,
+            "title": "Pitch",
+            "type": "string"
+          },
+          "reach": {
+            "maxLength": 200,
+            "title": "Reach",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_id",
+          "pitch",
+          "reach",
+          "composite"
+        ],
+        "title": "Character",
+        "type": "object"
       },
       "Clause": {
         "additionalProperties": false,
@@ -4973,6 +5137,16 @@
         ],
         "title": "Persona",
         "type": "object"
+      },
+      "Phase": {
+        "description": "Where a campaign is in its life (Layer 10). Ticks run only in ``PLAY``.",
+        "enum": [
+          "session_zero",
+          "play",
+          "season_over"
+        ],
+        "title": "Phase",
+        "type": "string"
       },
       "Plausibility": {
         "enum": [
@@ -5453,11 +5627,22 @@
         "title": "Pending",
         "type": "object"
       },
+      "phase": {
+        "$ref": "#/$defs/Phase",
+        "default": "play"
+      },
       "relationships": {
         "additionalProperties": {
           "$ref": "#/$defs/Relationship"
         },
         "title": "Relationships",
+        "type": "object"
+      },
+      "roster": {
+        "additionalProperties": {
+          "$ref": "#/$defs/Character"
+        },
+        "title": "Roster",
         "type": "object"
       },
       "scheduled": {
@@ -5731,6 +5916,59 @@
         ],
         "title": "Betrayal",
         "type": "string"
+      },
+      "Character": {
+        "additionalProperties": false,
+        "description": "A real person from the chosen moment that a player may claim (README \u00a75 step 3).\n\nJudged by agency in history, not fame. Where the record names no one, the\ncharacter is a composite: named, built from what people in that role did,\nand labelled as such in the brief.",
+        "properties": {
+          "claimed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Claimed By"
+          },
+          "composite": {
+            "title": "Composite",
+            "type": "boolean"
+          },
+          "entity_id": {
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "means": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Means",
+            "type": "array",
+            "uniqueItems": true
+          },
+          "pitch": {
+            "maxLength": 200,
+            "title": "Pitch",
+            "type": "string"
+          },
+          "reach": {
+            "maxLength": 200,
+            "title": "Reach",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_id",
+          "pitch",
+          "reach",
+          "composite"
+        ],
+        "title": "Character",
+        "type": "object"
       },
       "Clause": {
         "additionalProperties": false,
@@ -6641,6 +6879,16 @@
         ],
         "title": "Persona",
         "type": "object"
+      },
+      "Phase": {
+        "description": "Where a campaign is in its life (Layer 10). Ticks run only in ``PLAY``.",
+        "enum": [
+          "session_zero",
+          "play",
+          "season_over"
+        ],
+        "title": "Phase",
+        "type": "string"
       },
       "Plausibility": {
         "enum": [
@@ -7141,11 +7389,22 @@
         "title": "Own Pending",
         "type": "array"
       },
+      "phase": {
+        "$ref": "#/$defs/Phase",
+        "default": "play"
+      },
       "relationships": {
         "additionalProperties": {
           "$ref": "#/$defs/Relationship"
         },
         "title": "Relationships",
+        "type": "object"
+      },
+      "roster": {
+        "additionalProperties": {
+          "$ref": "#/$defs/Character"
+        },
+        "title": "Roster",
         "type": "object"
       },
       "scheduled": {

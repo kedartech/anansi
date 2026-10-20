@@ -178,6 +178,21 @@ class GoalDecl(Model):
     canary: str | None = Field(default=None, max_length=60)
 
 
+class CharacterDecl(Model):
+    """A character on the Session Zero roster. ``entity`` is a person key.
+
+    ``composite`` has no default on purpose: whoever writes the roster must say
+    whether the record names this person or the character is built from a role.
+    """
+
+    entity: Key
+    pitch: str = Field(max_length=200)
+    reach: str = Field(max_length=200)
+    composite: bool
+    means: tuple[Key, ...] = ()
+    """Asset keys the character controls at the start date."""
+
+
 Slug = Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_-]*$", max_length=40)]
 """A world's file name: lowercase, digits, underscores and hyphens."""
 
@@ -197,11 +212,17 @@ class WorldFile(Model):
     commitments: tuple[CommitmentDecl, ...] = ()
     seats: tuple[SeatDecl, ...] = ()
     goals: tuple[GoalDecl, ...] = ()
+    start: str = Field(default="", max_length=80)
+    """A point in history, "Florence, April 1478". Set, it opens Session Zero."""
+    roster: tuple[CharacterDecl, ...] = ()
+    notes: tuple[Annotated[str, StringConstraints(max_length=200)], ...] = ()
+    """Readings the GM chose where the record is disputed or silent (README §5)."""
 
 
 __all__ = [
     "AgentDecl",
     "AssetDecl",
+    "CharacterDecl",
     "ClauseDecl",
     "ClockDecl",
     "CommitmentDecl",

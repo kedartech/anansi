@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING, Any
 from revisionist.core import events as ev
 from revisionist.core.events import Event
 from revisionist.core.ids import CampaignId, SeatId
-from revisionist.core.ontology import Controller
+from revisionist.core.ontology import Controller, Phase
 from revisionist.core.report import render_leaks
 from revisionist.core.resolution import TickStage
 from revisionist.core.state import State
@@ -304,6 +304,8 @@ def _one(
     now = clock()
     row = table.get(campaign_id)  # re-read under the lock
     state = load_state(store, campaign_id)
+    if state.phase is not Phase.PLAY:
+        return Outcome(campaign_id, Action.WAITING, state.phase.value.replace("_", " "))
     tail = _tail(store, campaign_id)
     why = due(row, now, in_flight=in_flight(tail), submitted=all_submitted(state, tail))
     if why is None:

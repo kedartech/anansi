@@ -35,7 +35,7 @@ from revisionist.core.events import CallCost, Event, Versions
 from revisionist.core.fold import replay, state_hash
 from revisionist.core.ids import CampaignId, ClockId, DeltaId, EventId, IntentId, SeatId, derived_id
 from revisionist.core.intent import Intent
-from revisionist.core.ontology import ClockKind, ClockStatus, Controller, SeatKind
+from revisionist.core.ontology import ClockKind, ClockStatus, Controller, Phase, SeatKind
 from revisionist.core.project import project
 from revisionist.core.resolution import OutcomeTier, TickStage
 from revisionist.core.state import State, View
@@ -108,6 +108,15 @@ class TickError(RuntimeError):
 
 
 # --- log access --------------------------------------------------------------
+
+
+class NotInPlayError(RuntimeError):
+    """Ticks run only in play: not during Session Zero, not after the season ends."""
+
+    def __init__(self, phase: Phase) -> None:
+        self.phase = phase
+        what = "Session Zero is still open" if phase is Phase.SESSION_ZERO else "the season is over"
+        super().__init__(f"no tick: {what}")
 
 
 class _Emitter:
@@ -233,6 +242,8 @@ def run_tick(
     """Run (or resume) one tick. Safe to call again after a crash at any point."""
     versions = versions or _VERSIONS
     state = load_state(store, campaign_id)
+    if state.phase is not Phase.PLAY:
+        raise NotInPlayError(state.phase)
     events = list(store.read(campaign_id))
     tail = _tail(events)
     em = _Emitter(store, state, versions)
