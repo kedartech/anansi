@@ -534,6 +534,6 @@ An ID the state does not hold is unmet, so nothing is met in an empty world. Pro
 
 **World files** declare goals with keys (`goals:` in the YAML). The compiler gives each goal its own private objective clock, adds it to the seat's objectives, and computes the kind. It refuses a goal on a non-player seat, a second goal for one seat, a key of the wrong type, an office that is not an Office, a duplicate canary, and a goal already met at tick 0.
 
-**Compatibility.** `State.goals` is a late field: it is left out of serialisation while empty (`Model.late_fields`), so every older state hashes, and every view serialises, byte for byte as before. Old logs replay and the recordings keep their keys. Goal records are sealed with the campaign key, never a seat key, because the fold needs them; erasing a player keeps their goal.
+**Compatibility.** `State.goals` is a late field: it is left out of serialisation while empty (`Model.late_fields`), so every older state hashes, and every view serialises, byte for byte as before. Old logs replay and the recordings keep their keys. Goal records are sealed with the campaign key, never a seat key, because the fold needs them; erasing a player keeps their goal. The resolver's truth leaves goals out: no model weighs whether, or how, a goal is met. The player's own agent does see its seat's goal, through the view.
 
 **Deferred.** README §15 lists "exiled" as an entity status. Adding it changes the resolver's output schema and so every resolver recording key; it waits for the next live re-record.

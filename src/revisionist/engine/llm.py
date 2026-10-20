@@ -353,7 +353,8 @@ def _resolver_prompt(
         "## World state (truth; tick "
         + str(state.tick)
         + ")\n"
-        + state.model_dump_json(exclude={"pending", "frozen", "last_seq"})
+        # Goals stay out: no model weighs whether, or how, a goal is met (README §15).
+        + state.model_dump_json(exclude={"pending", "frozen", "last_seq", "goals"})
         + "\n\n## Orders resolved this tick, with their rolled outcomes\n"
         + json.dumps(orders)
         + "\n\nReturn one proposal per order, in the same order."

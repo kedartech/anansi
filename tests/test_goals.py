@@ -23,6 +23,7 @@ from revisionist.core.project import project
 from revisionist.core.sealing import needs_admin_read, seal_holder
 from revisionist.core.state import State
 from revisionist.core.visibility import private_to
+from revisionist.engine.llm import _resolver_prompt
 from revisionist.engine.providers import RecordingDeliverer, ScriptedResolver, TemplateNarrator
 from revisionist.engine.store import MemoryStore, load_state
 from revisionist.engine.tick import Providers, run_tick
@@ -280,3 +281,9 @@ def test_a_state_with_goals_round_trips() -> None:
     state = replay(_with_goal(g.AnyOf(conditions=(TAKE_GUARD, AIDE_DEAD))))
     assert State.model_validate_json(state.model_dump_json()) == state
     assert '"goals":{' in state.model_dump_json()
+
+
+def test_the_resolver_never_sees_a_goal() -> None:
+    state = replay(_with_goal(TAKE_GUARD))
+    prompt = _resolver_prompt(state, [], {})
+    assert GOAL_CANARY not in prompt and '"goals"' not in prompt.replace('"mode":"goals"', "")
