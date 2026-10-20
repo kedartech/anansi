@@ -23,7 +23,8 @@ Module map:
 | `engine/tick.py` | `run_tick`, `file_intent`; provider protocols `Resolver`, `Narrator`, `Deliverer` (Layer 4) |
 | `engine/providers.py` | fixture providers: scripted/failing resolver, template narrator, recording deliverer, keyword safety (Layer 4) |
 | `engine/llm.py` | `ClaudeResolver`, `ClaudeNarrator`, `ClaudeCli` transport, `RecordedTransport` (Layer 5) |
-| `engine/prompts/*.md` | versioned prompt files; content hash in `Versions.prompt` (Layer 5) |
+| `engine/agent.py` | `Agent`: `structure`, `brief`, `perceived_odds`, `deputy_turn`; `receive_order` (Layer 6) |
+| `engine/prompts/*.md` | versioned prompt files; content hash in `Versions.prompt` (Layers 5-6) |
 | `core/canary.py` | canary scan over narrations and deliveries (Layer 5) |
 | `engine/store.py` | `EventStore` protocol, `MemoryStore`, `SqliteStore`, `load_state` (Layer 2) |
 | `schema/anansi.schema.json` | exported JSON Schema; CI fails on drift |
@@ -275,7 +276,7 @@ Stores (`engine/store.py`) enforce append-only: `seq` must be exactly the next i
 - **DELIVER** sends each narration with key `derived_id(campaign, tick, "deliver", seat)` and logs `briefing_delivered` right after each send, so a crash between two sends resumes with exactly the undelivered seats.
 - **close** sums the stage costs into `tick_closed(costs, state_hash)` and writes a snapshot.
 
-`file_intent(store, campaign_id, intent, safety=)` is the filing path: `referee.validate` then `intent_filed` or `intent_rejected`. Both outcomes are logged under the intent's scope. Providers are protocols (`Resolver`, `Narrator`, `Deliverer`, plus the `SafetyCheck` hook); `engine/providers.py` ships the fixture implementations used by the tests and by Layer 7's dry run. Operations re-rolled per tick by the resolver, and narration for outlets, arrive with Layer 6.
+`file_intent(store, campaign_id, intent, safety=)` is the filing path: `referee.validate` then `intent_filed` or `intent_rejected`. Both outcomes are logged under the intent's scope. Providers are protocols (`Resolver`, `Narrator`, `Deliverer`, plus the `SafetyCheck` hook); `engine/providers.py` ships the fixture implementations used by the tests and by Layer 7's dry run. A running operation is re-rated and re-rolled each tick (see §9.3), and outlets are narrated from their own view.
 
 ### 9.2 Claude adapters (`engine/llm.py`) **[decided]**
 
@@ -285,6 +286,16 @@ Stores (`engine/store.py`) enforce append-only: `seq` must be exactly the next i
 - **Recordings** (`RecordedTransport`): request key is blake2b over model, system prompt, user prompt and schema; replies are stored under `tests/recordings/*.json`. A missing key fails the test (`MissingRecordingError`) unless `ANANSI_RECORD=1`, which records through the live CLI. CI never calls a model. Recordings are reviewed in the PR like any fixture.
 - **Prompt versions**: `prompt_versions()` hashes both prompt files; the caller passes it as `Versions.prompt` to `run_tick` (the CLI does this at Layer 7), so every envelope in a tick names the exact prompt text that produced it.
 - **Canary harness** (`core/canary.py`, pure): `canaries_hidden_from(state, seat)` is the set of canary strings on facts whose scope excludes the seat; `scan` runs over every `narration_written` in the log and `scan_deliveries` over what the deliverer actually sent. Tests run it over 50 fixture ticks with an echo narrator (so the projection alone must hold) and over the recorded live tick. One hit fails the suite.
+
+### 9.3 The agent and the deputy (`engine/agent.py`) **[decided]**
+
+- **`Agent` holds a view, never a state.** `Agent.for_seat(state, seat, transport)` calls `project` once and keeps the result. The constructor's type is the boundary: a test asserts it takes `View` and has no `state` parameter. AI factions are the same class in permanent deputy mode (decided pre-Layer-1).
+- **`structure(text)`** returns an `Intent` or a `ClarifyingQuestion`, never a delta. The schema constrains the verb to the closed enum and every ID to those in the view; the parser refuses unseen IDs itself, so a recording or a model that ignored the schema cannot smuggle one in. `receive_order` logs `order_received` (private to the seat) before the model call, then files what validates or logs `clarification_asked`.
+- **`perceived_odds(intent)`** is `rate(view, intent)`. It differs from truth when the view lacks an asset the rating weighs: South sabotaging the covert army reads impossible, and in truth it is assured.
+- **`deputy_turn()`** is pure over the view plus the seat's standing orders. It returns nothing when there are no orders. An irreversible verb (declare, transfer, dismiss) is dropped unless an order names it. Because it is pure, the counterfactual leak test can remove a fact the seat cannot see and assert the intents are identical.
+- **`brief()`** returns prose, one dilemma on an open clock, and exactly three moves.
+- **Operation re-rolls.** A running operation is re-rated and re-rolled each tick from its own seed. A failure abandons the clock and frees the slot; a success that fills it logs `operation_resolved` with the outcome rolled. The fold keeps an intent pending while its operation clock is open, and the slot check counts that intent through the clock only, so a seat is never charged twice. An intent opens at most one operation, so a crash and resume cannot open a second.
+- **Outlet narration.** `_narration_seats` adds outlet seats to the human ones. An outlet's narration is public and built from its own view, so the press learns a secret exactly when someone leaked it. The canary scan covers it.
 
 ---
 

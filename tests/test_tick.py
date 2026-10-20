@@ -115,8 +115,8 @@ def test_one_full_tick(store: EventStore) -> None:
     result = run_tick(store, fx.CAMPAIGN, providers)
     assert not result.quiet and result.resumed_from is None
     assert result.applied >= 3 and result.rejected == ()
-    assert result.delivered == tuple(sorted((fx.NORTH, fx.SOUTH)))
-    assert {s for s, _, _ in deliverer.sent} == {fx.NORTH, fx.SOUTH}
+    assert result.delivered == tuple(sorted((fx.NORTH, fx.SOUTH, fx.HERALD)))
+    assert {s for s, _, _ in deliverer.sent} == {fx.NORTH, fx.SOUTH, fx.HERALD}
     state = load_state(store, fx.CAMPAIGN)
     assert state.tick == 1 and state.pending == {} and state.frozen == ()
     kinds = [e.kind for e in store.read(fx.CAMPAIGN)]
@@ -203,7 +203,7 @@ def test_crash_after_every_stage_then_resume(store: EventStore, crash_after: Tic
     assert [e.kind for e in store.read(fx.CAMPAIGN)] == [e.kind for e in clean.read(fx.CAMPAIGN)]
     # exactly one delivery per human seat, whichever path was taken
     assert sorted(s for s, _, _ in deliverer.sent) == sorted(s for s, _, _ in clean_deliverer.sent)
-    assert len(deliverer.sent) == 2
+    assert len(deliverer.sent) == 3
 
 
 def test_deliver_twice_sends_once(store: EventStore) -> None:
@@ -232,7 +232,7 @@ def test_deliver_twice_sends_once(store: EventStore) -> None:
     )
     run_tick(store, fx.CAMPAIGN, providers)
     keys = [k for _, _, k in deliverer.sent]
-    assert len(keys) == len(set(keys)) == 2
+    assert len(keys) == len(set(keys)) == 3
 
 
 # --- ten ticks ----------------------------------------------------------------
@@ -257,11 +257,53 @@ def test_ten_ticks_with_two_crashes_replay_to_the_same_hashes(store: EventStore)
     assert state_hash(replay(events[:-1])) == hashes[-1]
     closes = [e.payload for e in events if isinstance(e.payload, ev.TickClosed)]
     assert [c.state_hash for c in closes] == hashes
-    assert len(deliverer.sent) == 20
-    assert len({k for _, _, k in deliverer.sent}) == 20
+    assert len(deliverer.sent) == 30
+    assert len({k for _, _, k in deliverer.sent}) == 30
     # The South operations resolved over their two ticks.
     resolved = [c for c in final.clocks.values() if c.kind is ClockKind.OPERATION]
     assert resolved and all(c.status is ClockStatus.RESOLVED for c in resolved[:-1])
-    # Costs plumbed: one resolver call per tick, two narrator calls per tick.
-    assert all(len(c.costs) == 3 for c in closes)
+    # Costs plumbed: one resolver call per tick, three narrator calls per tick.
+    assert all(len(c.costs) == 4 for c in closes)
     assert all(sum(x.usd for x in c.costs) == 0 for c in closes)
+
+
+# --- Layer 6: re-rolls and outlets ---------------------------------------------
+
+
+def test_a_failed_reroll_abandons_the_operation(store: EventStore) -> None:
+    _file_some(store, 0, 1)
+    providers, _ = _providers()
+    first = run_tick(store, fx.CAMPAIGN, providers)
+    assert not first.quiet
+    opened = [
+        c
+        for c in load_state(store, fx.CAMPAIGN).clocks.values()
+        if c.kind is ClockKind.OPERATION and c.intent_id is not None
+    ]
+    if not opened:
+        return  # the opening roll was itself a failure; nothing to re-roll
+    _file_some(store, 1, 20)
+    failure = Roll(
+        seed="0" * 32, outcome=OutcomeTier.FAIL_COMPLICATION, exposure_roll=0, exposed=False
+    )
+    second = run_tick(store, fx.CAMPAIGN, providers, roll_for=failure)
+    assert not second.quiet
+    state = load_state(store, fx.CAMPAIGN)
+    clock = state.clocks[opened[0].clock_id]
+    assert clock.status is ClockStatus.FAILED and clock.holds_slot is False
+
+
+def test_outlet_narration_is_public_and_cannot_see_secrets(store: EventStore) -> None:
+    _file_some(store, 0, 1)
+    providers, deliverer = _providers()
+    assert not run_tick(store, fx.CAMPAIGN, providers).quiet
+    events = list(store.read(fx.CAMPAIGN))
+    herald = next(
+        e
+        for e in events
+        if isinstance(e.payload, ev.NarrationWritten) and e.payload.seat_id == fx.HERALD
+    )
+    assert herald.scope.visible_to(fx.SOUTH) and herald.scope.visible_to(fx.NORTH)
+    assert fx.CANARY not in herald.payload.text  # type: ignore[union-attr]
+    sent = next(text for seat, text, _ in deliverer.sent if seat == fx.HERALD)
+    assert fx.CANARY not in sent and fx.A_NORTH_SECRET_ARMY not in sent

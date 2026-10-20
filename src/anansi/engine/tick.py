@@ -35,7 +35,7 @@ from anansi.core.events import CallCost, Event, Versions
 from anansi.core.fold import replay, state_hash
 from anansi.core.ids import CampaignId, ClockId, DeltaId, EventId, IntentId, SeatId, derived_id
 from anansi.core.intent import Intent
-from anansi.core.ontology import ClockKind, ClockStatus, Controller
+from anansi.core.ontology import ClockKind, ClockStatus, Controller, SeatKind
 from anansi.core.project import project
 from anansi.core.resolution import OutcomeTier, TickStage
 from anansi.core.state import State, View
@@ -118,6 +118,7 @@ class _Emitter:
         self.state = state
         self.versions = versions
         self.next_seq = state.last_seq + 1
+        self.roll_for: referee.Roll | None = None
 
     def event(
         self, payload: ev.Payload, *, actor: SeatId | None = None, scope: Scope = PUBLIC
@@ -223,6 +224,7 @@ def run_tick(
     *,
     versions: Versions | None = None,
     stop_after: TickStage | None = None,
+    roll_for: referee.Roll | None = None,
 ) -> TickResult:
     """Run (or resume) one tick. Safe to call again after a crash at any point."""
     versions = versions or _VERSIONS
@@ -230,6 +232,7 @@ def run_tick(
     events = list(store.read(campaign_id))
     tail = _tail(events)
     em = _Emitter(store, state, versions)
+    em.roll_for = roll_for
     done = set(tail.completed)
     result = TickResult(
         tick=state.tick, resumed_from=tail.completed[-1] if tail.completed else None
@@ -359,7 +362,7 @@ def run_tick(
         for source, delta in kept:
             batch.append(em.event(ev.DeltaApplied(intent_id=source, delta=delta)))
             applied.append(delta)
-        batch.extend(_operations(em, intents, rolls))
+        batch.extend(_operations(em, intents, rolls, providers.resolver))
         batch.extend(_scheduled(em))
         batch.append(em.event(ev.TickStageCompleted(stage=TickStage.APPLY)))
         em.commit(batch)
@@ -375,12 +378,14 @@ def run_tick(
         batch = []
         costs: list[CallCost] = []
         applied_deltas = [delta for _, delta in kept]
-        for seat_id in _human_seats(em.state):
+        for seat_id in _narration_seats(em.state):
             view = project(em.state, seat_id)
             visible = [x for x in applied_deltas if _in_view(view, x)]
             narration = providers.narrator.narrate(view, visible)
             if narration.cost is not None:
                 costs.append(narration.cost)
+            seat = em.state.seats[seat_id]
+            scope = PUBLIC if seat.kind is SeatKind.OUTLET else private_to(seat_id)
             batch.append(
                 em.event(
                     ev.NarrationWritten(
@@ -389,7 +394,7 @@ def run_tick(
                         from_deltas=tuple(x.delta_id for x in visible),
                     ),
                     actor=seat_id,
-                    scope=private_to(seat_id),
+                    scope=scope,
                 )
             )
         batch.append(em.event(ev.TickStageCompleted(stage=TickStage.NARRATE, costs=tuple(costs))))
@@ -469,13 +474,17 @@ def _clamp_all(
 
 
 def _operations(
-    em: _Emitter, intents: Sequence[Intent], rolls: Mapping[IntentId, referee.Roll]
+    em: _Emitter,
+    intents: Sequence[Intent],
+    rolls: Mapping[IntentId, referee.Roll],
+    resolver: Resolver,
 ) -> list[Event]:
     """Open an operation clock for each surviving multi-tick slot-holding intent,
     then advance every open operation (old and new) by one segment.
 
-    A clock that fills logs ``operation_resolved``. From Layer 6 the resolver
-    re-rolls a running operation each tick; here it simply runs to completion.
+    A running operation is re-rated and re-rolled each tick from its own seed
+    (README: the world keeps moving). A failure stops it; a success that fills
+    the clock logs ``operation_resolved`` with the outcome actually rolled.
     """
     out: list[Event] = []
     state = em.state
@@ -494,7 +503,8 @@ def _operations(
         ):
             continue
         clock_id = ClockId(derived_id(state.campaign_id, tick, "op", intent.intent_id))
-        if clock_id in state.clocks:
+        already = any(c.intent_id == intent.intent_id for c in state.clocks.values())
+        if clock_id in state.clocks or already:
             continue
         create = d.ClockCreate(
             delta_id=DeltaId(derived_id(state.campaign_id, tick, "opc", intent.intent_id)),
@@ -514,8 +524,49 @@ def _operations(
             out.append(em.event(payload, actor=intent.actor, scope=intent.scope))
         running.append((clock_id, intent.intent_id, intent.actor, intent.scope, False))
     for clock_id, intent_id, owner, scope, done in running:
-        _advance(em, out, clock_id, intent_id, owner, scope, done=done)
+        outcome = _reroll(em, resolver, intent_id, rolls)
+        if outcome is OutcomeTier.FAIL_COMPLICATION:
+            _abandon(em, out, clock_id, intent_id, owner, scope)
+            continue
+        _advance(em, out, clock_id, intent_id, owner, scope, done=done, outcome=outcome)
     return out
+
+
+def _reroll(
+    em: _Emitter,
+    resolver: Resolver,
+    intent_id: IntentId | None,
+    rolls: Mapping[IntentId, referee.Roll],
+) -> OutcomeTier:
+    """Re-rate and re-roll one running operation. Falls back to its opening roll."""
+    if intent_id is None or intent_id not in em.state.pending:
+        return OutcomeTier.SUCCESS
+    intent = em.state.pending[intent_id]
+    fresh = em.roll_for if em.roll_for is not None else _roll(em.state, intent)
+    rolls_now = {intent_id: fresh}
+    try:
+        resolver.propose(em.state, [intent], rolls_now)
+    except Exception:
+        return rolls[intent_id].outcome if intent_id in rolls else OutcomeTier.SUCCESS
+    return fresh.outcome
+
+
+def _abandon(
+    em: _Emitter,
+    out: list[Event],
+    clock_id: ClockId,
+    intent_id: IntentId | None,
+    owner: SeatId | None,
+    scope: Scope,
+) -> None:
+    """A re-roll came up a failure: the operation stops and frees its slot."""
+    fail = d.ClockStatusSet(
+        delta_id=DeltaId(derived_id(em.state.campaign_id, em.state.tick, "opf", clock_id)),
+        reason="operation failed its re-roll",
+        clock_id=clock_id,
+        status=ClockStatus.FAILED,
+    )
+    out.append(em.event(ev.DeltaApplied(intent_id=intent_id, delta=fail), actor=owner, scope=scope))
 
 
 def _advance(
@@ -527,6 +578,7 @@ def _advance(
     scope: Scope,
     *,
     done: bool,
+    outcome: OutcomeTier = OutcomeTier.SUCCESS,
 ) -> None:
     tick = em.state.tick
     advance = d.ClockAdvance(
@@ -545,7 +597,7 @@ def _advance(
                     intent_id=intent_id,
                     clock_id=clock_id,
                     seat_id=owner,
-                    outcome=OutcomeTier.SUCCESS,
+                    outcome=outcome,
                 ),
                 actor=owner,
                 scope=scope,
@@ -562,8 +614,17 @@ def _scheduled(em: _Emitter) -> list[Event]:
     ]
 
 
-def _human_seats(state: State) -> list[SeatId]:
-    return sorted(s.seat_id for s in state.seats.values() if s.controller is Controller.HUMAN)
+def _narration_seats(state: State) -> list[SeatId]:
+    """Humans get a private briefing; outlets get a public one from their own view.
+
+    An outlet only ever narrates what its view contains, so a press seat learns a
+    secret exactly when someone leaked it and not before (README §11).
+    """
+    return sorted(
+        s.seat_id
+        for s in state.seats.values()
+        if s.controller is Controller.HUMAN or s.kind is SeatKind.OUTLET
+    )
 
 
 def _in_view(view: View, delta: d.Delta) -> bool:

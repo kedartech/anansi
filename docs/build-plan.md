@@ -205,6 +205,8 @@ Event(
 
 **Done when** a solo seat can type an order, get a clarifying question, file an intent, see perceived odds, run a tick, and read a briefing, with 3 AI-faction seats acting from their own views.
 
+**Built (2026-10-20) [decided]:** `engine/agent.py` as above; see design §9.3. The live order round trip is recorded once the Claude session limit resets (8am ET); CI runs on fixtures and the Layer 5 recording until then.
+
 **Size.** One to two weekends.
 
 ---

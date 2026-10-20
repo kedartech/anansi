@@ -191,7 +191,18 @@ def _mutate(state: State, event: Event) -> State:
             if p.quiet:
                 pending = dict(state.pending)  # nothing resolved; intents carry forward
             else:
-                pending = {k: v for k, v in state.pending.items() if k not in done}
+                # An intent with an operation still running stays pending, so the
+                # next tick can re-rate and re-roll it (design: the world keeps moving).
+                running = {
+                    c.intent_id
+                    for c in state.clocks.values()
+                    if (
+                        c.kind is ClockKind.OPERATION
+                        and c.status is ClockStatus.OPEN
+                        and c.intent_id
+                    )
+                }
+                pending = {k: v for k, v in state.pending.items() if k not in done or k in running}
             return state.model_copy(
                 update={"pending": pending, "frozen": (), "tick": event.tick + 1}
             )
@@ -254,7 +265,9 @@ def _apply_delta(state: State, delta: d.Delta, tick: int) -> State:
             c = _need(state.clocks, delta.clock_id, "clock")
             filled = _clamp(c.segments_filled + delta.segments, 0, c.segments_total)
             status = c.status
-            if status is ClockStatus.OPEN and filled >= c.segments_total:
+            # Resolves on the tick the segment fills it, not the tick after.
+            fills = c.segments_filled + delta.segments >= c.segments_total
+            if status is ClockStatus.OPEN and fills:
                 status = ClockStatus.RESOLVED
             c = c.model_copy(
                 update={

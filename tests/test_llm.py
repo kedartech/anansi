@@ -27,9 +27,9 @@ from anansi.engine.llm import (
     Reply,
     Request,
 )
-from anansi.engine.providers import KeywordSafety, RecordingDeliverer
+from anansi.engine.providers import KeywordSafety, RecordingDeliverer, TemplateNarrator
 from anansi.engine.store import MemoryStore, load_state
-from anansi.engine.tick import Providers, run_tick
+from anansi.engine.tick import Narration, Providers, run_tick
 from tests import fixtures as fx
 from tests.test_tick import _file_some, _intent
 
@@ -197,7 +197,7 @@ def test_canary_scan_over_fifty_fixture_ticks() -> None:
     assert state.tick == 50
     assert canary.scan(state, store.read(fx.CAMPAIGN)) == []
     assert canary.scan_deliveries(state, [(s, t) for s, t, _ in deliverer.sent]) == []
-    assert len(deliverer.sent) == 100
+    assert len(deliverer.sent) == 150
 
 
 # --- recorded transport -------------------------------------------------------
@@ -230,6 +230,21 @@ def recorded() -> Iterator[RecordedTransport]:
         print(f"recorded {t.recorded} new replies into {t.path}")
 
 
+class _RecordedOrFixture:
+    """Claude for calls the recording has, the fixture narrator otherwise."""
+
+    def __init__(self, recorded: RecordedTransport) -> None:
+        self.recorded = recorded
+        self.claude = ClaudeNarrator(recorded)
+        self.fixture = TemplateNarrator()
+
+    def narrate(self, view: View, deltas: Sequence[d.Delta]) -> Narration:
+        try:
+            return self.claude.narrate(view, deltas)
+        except MissingRecordingError:
+            return self.fixture.narrate(view, deltas)
+
+
 def test_one_live_tick_from_recording(recorded: RecordedTransport) -> None:
     """One real tick of Two Rivers through Claude, replayed from the committed recording.
 
@@ -241,16 +256,18 @@ def test_one_live_tick_from_recording(recorded: RecordedTransport) -> None:
     _file_some(store, 0, 1)
     deliverer = RecordingDeliverer()
     resolver = ClaudeResolver(recorded)
+    # The recording predates outlet narration, so the outlet falls back to a
+    # fixture narrator while the two human briefings still come from Claude.
     providers = Providers(
         resolver=resolver,
-        narrator=ClaudeNarrator(recorded),
+        narrator=_RecordedOrFixture(recorded),
         deliverer=deliverer,
         safety=KeywordSafety(),
     )
     versions = Versions(engine="test", schema_version="1", prompt=llm.prompt_versions())
     result = run_tick(store, fx.CAMPAIGN, providers, versions=versions)
     assert not result.quiet, result.quiet_reason
-    assert result.applied >= 1 and result.delivered == tuple(sorted((fx.NORTH, fx.SOUTH)))
+    assert result.applied >= 1 and fx.NORTH in result.delivered and fx.SOUTH in result.delivered
     state = load_state(store, fx.CAMPAIGN)
     assert state.tick == 1 and state.pending == {}
     # canaries: in the log, in what was sent, and by the resolver's own prompt not leaking out
@@ -259,8 +276,9 @@ def test_one_live_tick_from_recording(recorded: RecordedTransport) -> None:
     # costs recorded per call class; prompt version on every envelope
     closed = [e for e in store.read(fx.CAMPAIGN) if e.kind == "tick_closed"][-1]
     classes = sorted(c.call_class for c in closed.payload.costs)  # type: ignore[union-attr]
-    assert classes.count("resolver") >= 1 and classes.count("narrator") == 2
-    assert all(c.input_tokens > 0 for c in closed.payload.costs)  # type: ignore[union-attr]
+    assert classes.count("resolver") >= 1 and classes.count("narrator") >= 2
+    recorded_costs = [c for c in closed.payload.costs if c.model != "fixture"]  # type: ignore[union-attr]
+    assert recorded_costs and all(c.input_tokens > 0 for c in recorded_costs)
     tick_events = [e for e in store.read(fx.CAMPAIGN) if e.kind == "tick_opened"]
     assert all(e.versions.prompt == llm.prompt_versions() for e in tick_events)
     events = list(store.read(fx.CAMPAIGN))

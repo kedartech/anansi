@@ -252,10 +252,15 @@ def validate(
             return Rejection(reason=RejectionReason.MALFORMED, detail="nothing offered to accept")
 
     slotted = seat.kind in (SeatKind.PLAYER, SeatKind.FACTION)
+    # An intent whose operation clock is already open holds its slot through the
+    # clock, so counting the intent as well would charge the seat twice.
+    running = {c.intent_id for c in state.clocks.values() if c.holds_slot and c.intent_id}
     queued = (
         i
         for i in state.pending.values()
-        if i.intent_id not in state.frozen and i.intent_id != intent.intent_id
+        if i.intent_id not in state.frozen
+        and i.intent_id != intent.intent_id
+        and i.intent_id not in running
     )
     if slotted and intent.holds_slot and slots(state, intent.actor, queued).free <= 0:
         return Rejection(reason=RejectionReason.NO_SLOT)

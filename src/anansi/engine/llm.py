@@ -123,12 +123,13 @@ class ClaudeCli:
             )
         except (OSError, subprocess.TimeoutExpired) as exc:
             raise TransportError(f"claude cli: {exc}") from exc
-        if proc.returncode != 0:
-            raise TransportError(f"claude cli exit {proc.returncode}: {proc.stderr[-400:]}")
         try:
-            result = json.loads(proc.stdout)
-        except json.JSONDecodeError as exc:
-            raise TransportError(f"claude cli non-JSON output: {proc.stdout[:200]}") from exc
+            result = json.loads(proc.stdout) if proc.stdout.lstrip().startswith("{") else {}
+        except json.JSONDecodeError:
+            result = {}
+        if proc.returncode != 0:
+            detail = result.get("result") or proc.stderr or proc.stdout
+            raise TransportError(f"claude cli exit {proc.returncode}: {str(detail)[-400:]}")
         if result.get("is_error") or result.get("structured_output") is None:
             raise TransportError(f"claude cli error: {str(result.get('result'))[:200]}")
         usage = result.get("usage", {})
