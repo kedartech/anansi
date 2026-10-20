@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Annotated
 import typer
 
 from revisionist import __version__
+from revisionist.core.canary import HumanLeak, scan_humans, surfaces_from_log
 from revisionist.core.fold import replay_to, state_hash
 from revisionist.core.ids import CampaignId, SeatId
 from revisionist.core.ontology import Controller
@@ -91,6 +92,23 @@ PlayerSeat = Annotated[
 ]
 
 
+def _guard(store: EventStore, campaign_id: CampaignId, seat: SeatId) -> None:
+    """Refuse to read or act for a seat someone else plays from Discord (Layer 9b).
+
+    The host runs this CLI and may hold a seat too; another player's briefings,
+    orders and status are not the host's to see. Break-glass reads come later.
+    """
+    if not cmp.is_postgres(cmp.db_target()):
+        return
+    from revisionist.engine.discord.tables import SeatLinks
+    from revisionist.engine.pg_store import PostgresEventStore
+
+    assert isinstance(store, PostgresEventStore)
+    user = SeatLinks(store.conn).users(campaign_id).get(seat)
+    if user is not None and user != os.environ.get("REVISIONIST_DISCORD_HOST_ID"):
+        raise _fail("that seat is played from Discord by someone else", EXIT_REFUSED)
+
+
 @app.callback()
 def main() -> None:
     """Revisionist game engine."""
@@ -134,7 +152,9 @@ def status(seat: PlayerSeat = None) -> None:
     """Where the campaign stands, as your seat sees it."""
     store = cmp.open_store()
     state = load_state(store, _campaign(store))
-    for line in play.status_lines(state, _me(state, seat)):
+    me = _me(state, seat)
+    _guard(store, state.campaign_id, me)
+    for line in play.status_lines(state, me):
         typer.echo(line)
 
 
@@ -144,6 +164,7 @@ def briefing(seat: PlayerSeat = None) -> None:
     store = cmp.open_store()
     campaign_id = _campaign(store)
     me = _me(load_state(store, campaign_id), seat)
+    _guard(store, campaign_id, me)
     try:
         brief = play.get_briefing(store, campaign_id, me, transport_factory())
     except TransportError as exc:
@@ -175,6 +196,7 @@ def order(
     store = cmp.open_store()
     campaign_id = _campaign(store)
     me = _me(load_state(store, campaign_id), seat)
+    _guard(store, campaign_id, me)
     try:
         result = play.give_order(
             store,
@@ -256,14 +278,49 @@ def cost() -> None:
 
 
 @app.command()
-def leaks() -> None:
+def leaks(
+    humans: Annotated[
+        bool,
+        typer.Option(
+            "--humans", help="Also check each person across all their seats (Postgres, Discord)"
+        ),
+    ] = False,
+) -> None:
     """Scan every narration for canaries its reader must not see. Exit 3 on any hit."""
     store = cmp.open_store()
     campaign_id = _campaign(store)
-    found = leak_report(load_state(store, campaign_id), store.read(campaign_id))
+    state = load_state(store, campaign_id)
+    found = leak_report(state, store.read(campaign_id))
     typer.echo(render_leaks(found))
-    if found:
+    human_leaks: list[HumanLeak] = []
+    if humans:
+        holdings = _holdings(store, state)
+        seen = surfaces_from_log(store.read(campaign_id), holdings)
+        human_leaks = scan_humans(state, holdings, seen)
+        for leak in human_leaks:
+            typer.echo(f"LEAK human={leak.human} fact={leak.fact_id} in {leak.surface}")
+        if not human_leaks:
+            typer.echo(f"0 leaks across {len(holdings)} people")
+    if found or human_leaks:
         raise typer.Exit(EXIT_LEAK)
+
+
+def _holdings(store: EventStore, state: State) -> dict[str, frozenset[SeatId]]:
+    """Who holds which seats: Discord users from their links, and the host, who
+    can read every human seat nobody else holds through this CLI."""
+    if not cmp.is_postgres(cmp.db_target()):
+        raise _fail("--humans needs the Postgres store and Discord seat links")
+    from revisionist.engine.discord.tables import SeatLinks
+    from revisionist.engine.pg_store import PostgresEventStore
+
+    assert isinstance(store, PostgresEventStore)
+    links = SeatLinks(store.conn).users(state.campaign_id)
+    host = os.environ.get("REVISIONIST_DISCORD_HOST_ID") or "host"
+    held: dict[str, set[SeatId]] = {host: set()}
+    for seat, user in links.items():
+        held.setdefault(user, set()).add(seat)
+    held[host] |= {s for s in cmp.human_seats(state) if s not in links}
+    return {human: frozenset(seats) for human, seats in held.items()}
 
 
 # --- revisionist db ------------------------------------------------------------------

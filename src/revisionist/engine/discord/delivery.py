@@ -2,7 +2,10 @@
 
 A bound seat's briefing goes by DM. With a public channel set (migration
 0006), an outlet's narration is posted there, and after a clean tick every
-player statement not yet posted. Everything else goes to a file.
+player statement not yet posted. A human seat nobody holds yet is ``held``
+(read later with ``/dispatch``), never written to the host's briefings
+directory: the host may be the other player. Only the outlet without a public
+channel still goes to a file.
 
 ``revisionist tick``, ``revisionist scheduler run`` and the bot's ``/advance``
 use this when ``$REVISIONIST_DISCORD_TOKEN`` is set and the store is Postgres;
@@ -16,8 +19,13 @@ from pathlib import Path
 from revisionist.core import events as ev
 from revisionist.core.canary import scan_text
 from revisionist.core.ids import CampaignId, SeatId, derived_id
-from revisionist.core.ontology import SeatKind
-from revisionist.engine.discord.rest import PUBLIC_LABEL, DiscordDeliverer, DiscordRest
+from revisionist.core.ontology import Controller, SeatKind
+from revisionist.engine.discord.rest import (
+    HELD_LABEL,
+    PUBLIC_LABEL,
+    DiscordDeliverer,
+    DiscordRest,
+)
 from revisionist.engine.discord.tables import Channels, PgOutbox, SeatLinks
 from revisionist.engine.runner import DelivererFactory, file_deliverer
 from revisionist.engine.store import EventStore, load_state
@@ -38,13 +46,15 @@ class RoutingDeliverer:
     def deliver(self, seat_id: SeatId, text: str, idempotency_key: str) -> str:
         state = load_state(self.store, self.campaign_id)
         to_public = self.public_channel is not None and state.seats[seat_id].kind is SeatKind.OUTLET
+        human = state.seats[seat_id].controller is Controller.HUMAN
+        if human and seat_id not in self.discord.users:
+            return HELD_LABEL
         if seat_id not in self.discord.users and not to_public:
             return self.files.deliver(seat_id, text, idempotency_key)
         # Last check before text leaves the host: a narration naming a canary the
-        # seat cannot see goes to the host's briefings file instead, and the
-        # tick's leak scan then fails the tick (exit 3, scheduler pause).
+        # seat cannot see goes nowhere, and the tick's leak scan then fails the
+        # tick (exit 3, scheduler pause). The text stays in the log only.
         if scan_text(state, seat_id, text):
-            self.files.deliver(seat_id, text, idempotency_key)
             return WITHHELD_LABEL
         if to_public:
             assert self.public_channel is not None
