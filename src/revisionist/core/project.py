@@ -45,6 +45,7 @@ def project(state: State, seat: SeatId) -> View:
         facts=_visible(state.facts, seat),
         scheduled=_visible(state.scheduled, seat),
         commitments=_visible(state.commitments, seat),
+        goals=_visible(state.goals, seat),
         me=state.seats[seat],
         seats={k: face(v) for k, v in state.seats.items()},
         own_pending=tuple(i for i in state.pending.values() if i.actor == seat),

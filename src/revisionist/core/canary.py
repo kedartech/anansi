@@ -14,29 +14,28 @@ from collections.abc import Iterable, Mapping, Sequence
 from revisionist.core import events as ev
 from revisionist.core._base import Model
 from revisionist.core.events import Event
-from revisionist.core.ids import EventId, FactId, SeatId
+from revisionist.core.ids import EventId, FactId, GoalId, SeatId
 from revisionist.core.state import State
 from revisionist.core.visibility import Visibility
+
+Secret = FactId | GoalId
+"""What a canary marks: a fact, or a goal's text."""
 
 
 class Leak(Model):
     seat_id: SeatId
-    fact_id: FactId
+    fact_id: Secret
     canary: str
     event_id: EventId
     kind: str
 
 
-def canaries_hidden_from(state: State, seat_id: SeatId) -> dict[str, FactId]:
-    """Canary strings on facts whose scope excludes ``seat_id``."""
-    return {
-        f.canary: f.fact_id
-        for f in state.facts.values()
-        if f.canary and not f.scope.visible_to(seat_id)
-    }
+def canaries_hidden_from(state: State, seat_id: SeatId) -> dict[str, Secret]:
+    """Canary strings on facts and goals whose scope excludes ``seat_id``."""
+    return canaries_hidden_from_human(state, (seat_id,))
 
 
-def scan_text(state: State, seat_id: SeatId, text: str) -> list[tuple[str, FactId]]:
+def scan_text(state: State, seat_id: SeatId, text: str) -> list[tuple[str, Secret]]:
     hidden = canaries_hidden_from(state, seat_id)
     return [(c, fid) for c, fid in hidden.items() if c in text]
 
@@ -67,7 +66,7 @@ def scan(state: State, events: Iterable[Event]) -> list[Leak]:
 
 def scan_deliveries(
     state: State, deliveries: Sequence[tuple[SeatId, str]]
-) -> list[tuple[SeatId, str, FactId]]:
+) -> list[tuple[SeatId, str, Secret]]:
     """The same check over what a deliverer actually sent."""
     return [
         (seat_id, canary, fact_id)
@@ -85,17 +84,21 @@ class HumanLeak(Model):
     surface: str
     """Where they read it, e.g. ``narration <event id>`` or ``dm``."""
     canary: str
-    fact_id: FactId
+    fact_id: Secret
 
 
-def canaries_hidden_from_human(state: State, seats: Iterable[SeatId]) -> dict[str, FactId]:
-    """Canaries on facts that none of one person's seats may see."""
+def canaries_hidden_from_human(state: State, seats: Iterable[SeatId]) -> dict[str, Secret]:
+    """Canaries on facts and goals that none of one person's seats may see."""
     held = frozenset(seats)
-    return {
+    out: dict[str, Secret] = {
         f.canary: f.fact_id
         for f in state.facts.values()
         if f.canary and not any(f.scope.visible_to(s) for s in held)
     }
+    for g in state.goals.values():
+        if g.canary and not any(g.scope.visible_to(s) for s in held):
+            out[g.canary] = g.goal_id
+    return out
 
 
 def surfaces_from_log(

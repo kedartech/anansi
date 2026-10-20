@@ -18,6 +18,7 @@ from collections.abc import Iterable, Mapping
 from revisionist.core import delta as d
 from revisionist.core import events as ev
 from revisionist.core.events import MUTATING_KINDS, Event
+from revisionist.core.goals import GoalKind
 from revisionist.core.ids import CampaignId
 from revisionist.core.ontology import (
     Asset,
@@ -178,6 +179,36 @@ def _mutate(state: State, event: Event) -> State:
             s = _need(state.scheduled, p.scheduled_id, "scheduled event")
             s = s.model_copy(update={"fired": True})
             return state.model_copy(update={"scheduled": _put(state.scheduled, s.scheduled_id, s)})
+        case ev.GoalSet():
+            g = p.goal
+            _fresh(state.goals, g.goal_id, "goal")
+            seat = _need(state.seats, g.seat_id, "seat")
+            clock = _need(state.clocks, g.clock_id, "clock")
+            if clock.kind is not ClockKind.OBJECTIVE or clock.owner != seat.seat_id:
+                raise FoldError(f"goal {g.goal_id}: clock {g.clock_id} is not its objective")
+            if any(o.seat_id == g.seat_id for o in state.goals.values()):
+                raise FoldError(f"seat {g.seat_id} already has a goal")
+            return state.model_copy(update={"goals": _put(state.goals, g.goal_id, g)})
+        case ev.GoalProgressed():
+            g = _need(state.goals, p.goal_id, "goal")
+            objective = _need(state.clocks, g.clock_id, "clock")
+            if p.parts_met > objective.segments_total:
+                raise FoldError(f"goal {g.goal_id}: {p.parts_met} parts on a clock that has fewer")
+            objective = objective.model_copy(update={"segments_filled": p.parts_met})
+            return state.model_copy(
+                update={"clocks": _put(state.clocks, objective.clock_id, objective)}
+            )
+        case ev.GoalMet():
+            g = _need(state.goals, p.goal_id, "goal")
+            first = g.met_tick if g.met_tick is not None else event.tick
+            g = g.model_copy(update={"holding": True, "met_tick": first})
+            return state.model_copy(update={"goals": _put(state.goals, g.goal_id, g)})
+        case ev.GoalUndone():
+            g = _need(state.goals, p.goal_id, "goal")
+            if g.kind is GoalKind.LASTING:
+                raise FoldError(f"goal {g.goal_id} is lasting and cannot be undone")
+            g = g.model_copy(update={"holding": False})
+            return state.model_copy(update={"goals": _put(state.goals, g.goal_id, g)})
         case ev.TickOpened():
             for intent_id in p.intents_frozen:
                 _need(state.pending, intent_id, "intent")

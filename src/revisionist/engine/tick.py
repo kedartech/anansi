@@ -27,7 +27,7 @@ from typing import Protocol
 from pydantic import Field
 
 from revisionist import __version__
-from revisionist.core import SCHEMA_VERSION, referee
+from revisionist.core import SCHEMA_VERSION, goals, referee
 from revisionist.core import delta as d
 from revisionist.core import events as ev
 from revisionist.core._base import Model
@@ -378,6 +378,7 @@ def run_tick(
             applied.append(delta)
         batch.extend(_operations(em, intents, rolls, providers.resolver))
         batch.extend(_scheduled(em))
+        batch.extend(_goals(em))
         batch.append(em.event(ev.TickStageCompleted(stage=TickStage.APPLY)))
         em.commit(batch)
         done.add(TickStage.APPLY)
@@ -630,6 +631,15 @@ def _scheduled(em: _Emitter) -> list[Event]:
         for s in sorted(state.scheduled.values(), key=lambda s: s.scheduled_id)
         if not s.fired and s.fire_at_tick <= state.tick
     ]
+
+
+def _goals(em: _Emitter) -> list[Event]:
+    """Goal changes at the end of APPLY, each private to the goal's owner."""
+    out: list[Event] = []
+    for change in goals.check(em.state):
+        owner = em.state.goals[change.goal_id].seat_id
+        out.append(em.event(change, scope=private_to(owner)))
+    return out
 
 
 def _narration_seats(state: State) -> list[SeatId]:

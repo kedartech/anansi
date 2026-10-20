@@ -6,6 +6,7 @@ from hypothesis import strategies as st
 
 from revisionist.core import delta as d
 from revisionist.core import events as ev
+from revisionist.core import goals as g
 from revisionist.core.ids import (
     AssetId,
     CampaignId,
@@ -15,6 +16,7 @@ from revisionist.core.ids import (
     EntityId,
     EventId,
     FactId,
+    GoalId,
     IntentId,
     MeterId,
     RelationshipId,
@@ -33,6 +35,7 @@ from revisionist.core.ontology import (
     Commitment,
     Entity,
     EntityKind,
+    EntityStatus,
     Fact,
     Meter,
     Persona,
@@ -60,6 +63,7 @@ commitment_ids = ulid.map(CommitmentId)
 seat_ids = ulid.map(SeatId)
 intent_ids = ulid.map(IntentId)
 delta_ids = ulid.map(DeltaId)
+goal_ids = ulid.map(GoalId)
 
 short_text = st.text(min_size=1, max_size=40)
 tags = st.frozensets(short_text, max_size=3)
@@ -307,6 +311,47 @@ deltas = st.one_of(
     st.builds(d.SeatSlotsDelta, seat_id=seat_ids, change=st.integers(-2, 2), **_delta_common),
 )
 
+ops = st.sampled_from(["ge", "le"])
+
+condition_leaves = st.one_of(
+    st.builds(g.HoldsOffice, holder=entity_ids, office=asset_ids),
+    st.builds(g.ControlsAsset, holder=entity_ids, asset=asset_ids),
+    st.builds(g.EntityIs, entity=entity_ids, status=st.sampled_from(list(EntityStatus))),
+    st.builds(g.MeterAt, meter=meter_ids, op=ops, value=st.integers(-50, 150)),
+    st.builds(g.CommitmentInForce, commitment=commitment_ids),
+    st.builds(g.DispositionAt, relationship=relationship_ids, op=ops, value=st.integers(-5, 5)),
+)
+
+
+def _combine(
+    children: st.SearchStrategy[g.WinCondition],
+) -> st.SearchStrategy[g.WinCondition]:
+    group = st.lists(children, min_size=1, max_size=3).map(tuple)
+    return st.builds(g.AllOf, conditions=group) | st.builds(g.AnyOf, conditions=group)
+
+
+conditions: st.SearchStrategy[g.WinCondition] = st.recursive(
+    condition_leaves, _combine, max_leaves=6
+).filter(lambda c: g.depth(c) <= g.MAX_DEPTH and len(g.leaves(c)) <= g.MAX_PARTS)
+
+
+@st.composite
+def goals(draw: st.DrawFn) -> g.Goal:
+    condition = draw(conditions)
+    seat = draw(seat_ids)
+    return g.Goal(
+        goal_id=draw(goal_ids),
+        seat_id=seat,
+        text=draw(short_text),
+        condition=condition,
+        kind=g.goal_kind(condition),
+        clock_id=draw(clock_ids),
+        met_tick=draw(st.none() | st.integers(0, 500)),
+        holding=draw(st.booleans()),
+        scope=Scope(visibility=Visibility.PRIVATE, known_by=frozenset({seat})),
+    )
+
+
 versions = st.builds(ev.Versions, engine=short_text, schema_version=short_text, prompt=short_text)
 
 call_costs = st.builds(
@@ -361,6 +406,10 @@ payloads = st.one_of(
         from_deltas=st.lists(delta_ids, max_size=4).map(tuple),
     ),
     st.builds(ev.StatementIssued, seat_id=seat_ids, intent_id=intent_ids, text=short_text),
+    st.builds(ev.GoalSet, goal=goals()),
+    st.builds(ev.GoalProgressed, goal_id=goal_ids, parts_met=st.integers(0, 8)),
+    st.builds(ev.GoalMet, goal_id=goal_ids),
+    st.builds(ev.GoalUndone, goal_id=goal_ids),
     st.builds(
         ev.BriefingDelivered,
         seat_id=seat_ids,
@@ -416,5 +465,6 @@ ALL_MODEL_STRATEGIES: dict[str, st.SearchStrategy[object]] = {
     "Commitment": cast(st.SearchStrategy[object], commitments),
     "Seat": cast(st.SearchStrategy[object], seats),
     "Intent": cast(st.SearchStrategy[object], intents),
+    "Goal": cast(st.SearchStrategy[object], goals()),
     "Event": cast(st.SearchStrategy[object], events),
 }

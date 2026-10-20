@@ -399,6 +399,8 @@ def test_the_duo_world_is_salt_strait_with_ostrel_played_by_a_human() -> None:
     assert seat.pop("agent")["entity"] == "sefa"
     solo_seat = next(s for s in solo["seats"] if s["key"] == "ostrel_seat")
     assert solo_seat.pop("kind") == "faction"
+    goal = duo["goals"].pop()
+    assert goal["seat"] == "ostrel_seat"  # a faction has no goal; the human does
     assert duo == solo
 
     campaign = CampaignId("01ARZ3NDEKTSV4RRFFQ69G5DU0")
@@ -410,8 +412,102 @@ def test_the_duo_world_is_salt_strait_with_ostrel_played_by_a_human() -> None:
     assert canaries_hidden_from(state, ostrel.seat_id) != canaries_hidden_from(state, varda.seat_id)
     assert "CANARY-OSTREL-HARROW-4c1e" in canaries_hidden_from(state, varda.seat_id)
     assert "CANARY-OSTREL-HARROW-4c1e" not in canaries_hidden_from(state, ostrel.seat_id)
+    assert "CANARY-OSTREL-GOAL-2d90" in canaries_hidden_from(state, varda.seat_id)
+    assert "CANARY-VARDA-GOAL-71a3" in canaries_hidden_from(state, ostrel.seat_id)
 
 
 def duo_raw() -> dict[str, object]:
     loaded: dict[str, object] = yaml.safe_load(DUO.read_text())
     return loaded
+
+
+# --- goals (Layer 10 item 1a) ----------------------------------------------------
+
+
+def _duo_with(goals: list[dict[str, object]]) -> WorldFile:
+    raw = duo_raw()
+    raw["goals"] = goals
+    return WorldFile.model_validate(raw)
+
+
+def _goal_problems(goal: dict[str, object]) -> tuple[str, ...]:
+    with pytest.raises(WorldError) as info:
+        compile_world(_duo_with([goal]), OTHER_CAMPAIGN, fx.VERSIONS)
+    return info.value.problems
+
+
+TAKE = {"check": "controls_asset", "holder": "ostrel", "asset": "varda_saltworks"}
+
+
+def test_goals_compile_with_their_own_private_objective_clock() -> None:
+    world = WorldFile.model_validate(duo_raw())
+    state = replay(compile_world(world, OTHER_CAMPAIGN, fx.VERSIONS))
+    ids = resolve_keys(world, OTHER_CAMPAIGN)
+    varda, ostrel = SeatId(ids["varda_seat"]), SeatId(ids["ostrel_seat"])
+    goals = {goal.seat_id: goal for goal in state.goals.values()}
+    assert set(goals) == {varda, ostrel}
+    for seat, goal in goals.items():
+        clock = state.clocks[goal.clock_id]
+        assert clock.kind is ClockKind.OBJECTIVE and clock.owner == seat
+        assert goal.clock_id in state.seats[seat].objectives
+        assert clock.scope.known_by == goal.scope.known_by == {seat}
+        assert goal.kind.value == "undoable" and goal.met_tick is None
+    assert state.clocks[goals[varda].clock_id].segments_total == 2
+    assert state.clocks[goals[ostrel].clock_id].segments_total == 1
+    assert goals[ostrel].condition.holder == EntityId(ids["ostrel"])  # type: ignore[union-attr]
+
+
+def test_a_goal_is_refused_for_a_faction_and_a_second_goal_for_one_seat() -> None:
+    problems = _goal_problems(
+        {"key": "kesh_goal", "seat": "kesh_seat", "text": "t", "condition": TAKE}
+    )
+    assert problems == ("goal kesh_goal: only a player seat has a goal",)
+    with pytest.raises(WorldError, match="already has a goal"):
+        compile_world(
+            _duo_with(
+                [
+                    {"key": "a", "seat": "ostrel_seat", "text": "t", "condition": TAKE},
+                    {"key": "b", "seat": "ostrel_seat", "text": "t", "condition": TAKE},
+                ]
+            ),
+            OTHER_CAMPAIGN,
+            fx.VERSIONS,
+        )
+
+
+def test_a_goal_names_real_keys_of_the_right_kind() -> None:
+    condition = {
+        "check": "any_of",
+        "conditions": [
+            {"check": "holds_office", "holder": "ostrel", "office": "varda_treasury"},
+            {"check": "meter_at", "meter": "nowhere", "op": "ge", "value": 1},
+            {"check": "entity_is", "entity": "varda_guard", "status": "dead"},
+        ],
+    }
+    problems = _goal_problems(
+        {"key": "g", "seat": "ostrel_seat", "text": "t", "condition": condition}
+    )
+    assert problems == (
+        "goal g: unknown meter nowhere",
+        "goal g: varda_guard is a asset, not a entity",
+        "goal g: varda_treasury is not an office",
+    )
+
+
+def test_a_goal_already_met_at_the_start_is_refused() -> None:
+    held = {"check": "controls_asset", "holder": "varda", "asset": "varda_saltworks"}
+    problems = _goal_problems({"key": "g", "seat": "ostrel_seat", "text": "t", "condition": held})
+    assert problems == ("goal g: already met at tick 0",)
+
+
+def test_goal_canaries_are_unique_across_facts() -> None:
+    problems = _goal_problems(
+        {
+            "key": "g",
+            "seat": "ostrel_seat",
+            "text": "t",
+            "condition": TAKE,
+            "canary": "CANARY-OSTREL-HARROW-4c1e",
+        }
+    )
+    assert problems == ("goal g: duplicate canary",)

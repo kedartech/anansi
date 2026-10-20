@@ -64,6 +64,132 @@
         "title": "AgentAssigned",
         "type": "object"
       },
+      "AllOf": {
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "const": "all_of",
+            "default": "all_of",
+            "title": "Check",
+            "type": "string"
+          },
+          "conditions": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "all_of": "#/$defs/AllOf",
+                  "any_of": "#/$defs/AnyOf",
+                  "commitment_in_force": "#/$defs/CommitmentInForce",
+                  "controls_asset": "#/$defs/ControlsAsset",
+                  "disposition_at": "#/$defs/DispositionAt",
+                  "entity_is": "#/$defs/EntityIs",
+                  "holds_office": "#/$defs/HoldsOffice",
+                  "meter_at": "#/$defs/MeterAt"
+                },
+                "propertyName": "check"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/HoldsOffice"
+                },
+                {
+                  "$ref": "#/$defs/ControlsAsset"
+                },
+                {
+                  "$ref": "#/$defs/EntityIs"
+                },
+                {
+                  "$ref": "#/$defs/MeterAt"
+                },
+                {
+                  "$ref": "#/$defs/CommitmentInForce"
+                },
+                {
+                  "$ref": "#/$defs/DispositionAt"
+                },
+                {
+                  "$ref": "#/$defs/AllOf"
+                },
+                {
+                  "$ref": "#/$defs/AnyOf"
+                }
+              ]
+            },
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Conditions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "conditions"
+        ],
+        "title": "AllOf",
+        "type": "object"
+      },
+      "AnyOf": {
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "const": "any_of",
+            "default": "any_of",
+            "title": "Check",
+            "type": "string"
+          },
+          "conditions": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "all_of": "#/$defs/AllOf",
+                  "any_of": "#/$defs/AnyOf",
+                  "commitment_in_force": "#/$defs/CommitmentInForce",
+                  "controls_asset": "#/$defs/ControlsAsset",
+                  "disposition_at": "#/$defs/DispositionAt",
+                  "entity_is": "#/$defs/EntityIs",
+                  "holds_office": "#/$defs/HoldsOffice",
+                  "meter_at": "#/$defs/MeterAt"
+                },
+                "propertyName": "check"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/HoldsOffice"
+                },
+                {
+                  "$ref": "#/$defs/ControlsAsset"
+                },
+                {
+                  "$ref": "#/$defs/EntityIs"
+                },
+                {
+                  "$ref": "#/$defs/MeterAt"
+                },
+                {
+                  "$ref": "#/$defs/CommitmentInForce"
+                },
+                {
+                  "$ref": "#/$defs/DispositionAt"
+                },
+                {
+                  "$ref": "#/$defs/AllOf"
+                },
+                {
+                  "$ref": "#/$defs/AnyOf"
+                }
+              ]
+            },
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Conditions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "conditions"
+        ],
+        "title": "AnyOf",
+        "type": "object"
+      },
       "Asset": {
         "additionalProperties": false,
         "properties": {
@@ -1030,6 +1156,26 @@
         "title": "CommitmentCreated",
         "type": "object"
       },
+      "CommitmentInForce": {
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "const": "commitment_in_force",
+            "default": "commitment_in_force",
+            "title": "Check",
+            "type": "string"
+          },
+          "commitment": {
+            "title": "Commitment",
+            "type": "string"
+          }
+        },
+        "required": [
+          "commitment"
+        ],
+        "title": "CommitmentInForce",
+        "type": "object"
+      },
       "CommitmentStatus": {
         "enum": [
           "offered",
@@ -1090,6 +1236,31 @@
         ],
         "title": "Controller",
         "type": "string"
+      },
+      "ControlsAsset": {
+        "additionalProperties": false,
+        "properties": {
+          "asset": {
+            "title": "Asset",
+            "type": "string"
+          },
+          "check": {
+            "const": "controls_asset",
+            "default": "controls_asset",
+            "title": "Check",
+            "type": "string"
+          },
+          "holder": {
+            "title": "Holder",
+            "type": "string"
+          }
+        },
+        "required": [
+          "holder",
+          "asset"
+        ],
+        "title": "ControlsAsset",
+        "type": "object"
       },
       "CostLogged": {
         "additionalProperties": false,
@@ -1386,6 +1557,42 @@
         "title": "DeltaRejected",
         "type": "object"
       },
+      "DispositionAt": {
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "const": "disposition_at",
+            "default": "disposition_at",
+            "title": "Check",
+            "type": "string"
+          },
+          "op": {
+            "enum": [
+              "ge",
+              "le"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "relationship": {
+            "title": "Relationship",
+            "type": "string"
+          },
+          "value": {
+            "maximum": 5,
+            "minimum": -5,
+            "title": "Value",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "relationship",
+          "op",
+          "value"
+        ],
+        "title": "DispositionAt",
+        "type": "object"
+      },
       "DispositionDelta": {
         "additionalProperties": false,
         "properties": {
@@ -1501,6 +1708,30 @@
           "entity"
         ],
         "title": "EntityCreated",
+        "type": "object"
+      },
+      "EntityIs": {
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "const": "entity_is",
+            "default": "entity_is",
+            "title": "Check",
+            "type": "string"
+          },
+          "entity": {
+            "title": "Entity",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/$defs/EntityStatus"
+          }
+        },
+        "required": [
+          "entity",
+          "status"
+        ],
+        "title": "EntityIs",
         "type": "object"
       },
       "EntityKind": {
@@ -1759,6 +1990,239 @@
           "perceived"
         ],
         "title": "FeasibilityRated",
+        "type": "object"
+      },
+      "Goal": {
+        "additionalProperties": false,
+        "description": "One player seat's secret goal. Private to its owner (decision 37).",
+        "properties": {
+          "canary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Canary"
+          },
+          "clock_id": {
+            "title": "Clock Id",
+            "type": "string"
+          },
+          "condition": {
+            "discriminator": {
+              "mapping": {
+                "all_of": "#/$defs/AllOf",
+                "any_of": "#/$defs/AnyOf",
+                "commitment_in_force": "#/$defs/CommitmentInForce",
+                "controls_asset": "#/$defs/ControlsAsset",
+                "disposition_at": "#/$defs/DispositionAt",
+                "entity_is": "#/$defs/EntityIs",
+                "holds_office": "#/$defs/HoldsOffice",
+                "meter_at": "#/$defs/MeterAt"
+              },
+              "propertyName": "check"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/HoldsOffice"
+              },
+              {
+                "$ref": "#/$defs/ControlsAsset"
+              },
+              {
+                "$ref": "#/$defs/EntityIs"
+              },
+              {
+                "$ref": "#/$defs/MeterAt"
+              },
+              {
+                "$ref": "#/$defs/CommitmentInForce"
+              },
+              {
+                "$ref": "#/$defs/DispositionAt"
+              },
+              {
+                "$ref": "#/$defs/AllOf"
+              },
+              {
+                "$ref": "#/$defs/AnyOf"
+              }
+            ],
+            "title": "Condition"
+          },
+          "goal_id": {
+            "title": "Goal Id",
+            "type": "string"
+          },
+          "holding": {
+            "default": false,
+            "title": "Holding",
+            "type": "boolean"
+          },
+          "kind": {
+            "$ref": "#/$defs/GoalKind"
+          },
+          "met_tick": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Met Tick"
+          },
+          "scope": {
+            "$ref": "#/$defs/Scope"
+          },
+          "seat_id": {
+            "title": "Seat Id",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 280,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "goal_id",
+          "seat_id",
+          "text",
+          "condition",
+          "kind",
+          "clock_id",
+          "scope"
+        ],
+        "title": "Goal",
+        "type": "object"
+      },
+      "GoalKind": {
+        "enum": [
+          "lasting",
+          "undoable"
+        ],
+        "title": "GoalKind",
+        "type": "string"
+      },
+      "GoalMet": {
+        "additionalProperties": false,
+        "description": "The goal's condition holds at the end of this tick, first time or again.",
+        "properties": {
+          "goal_id": {
+            "title": "Goal Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "goal_met",
+            "default": "goal_met",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "goal_id"
+        ],
+        "title": "GoalMet",
+        "type": "object"
+      },
+      "GoalProgressed": {
+        "additionalProperties": false,
+        "description": "The goal's objective clock moved: ``parts_met`` of its parts hold now.",
+        "properties": {
+          "goal_id": {
+            "title": "Goal Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "goal_progressed",
+            "default": "goal_progressed",
+            "title": "Kind",
+            "type": "string"
+          },
+          "parts_met": {
+            "minimum": 0,
+            "title": "Parts Met",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "goal_id",
+          "parts_met"
+        ],
+        "title": "GoalProgressed",
+        "type": "object"
+      },
+      "GoalSet": {
+        "additionalProperties": false,
+        "description": "A seat's secret goal, fixed at Session Zero (README \u00a715). Private to the owner.",
+        "properties": {
+          "goal": {
+            "$ref": "#/$defs/Goal"
+          },
+          "kind": {
+            "const": "goal_set",
+            "default": "goal_set",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "goal"
+        ],
+        "title": "GoalSet",
+        "type": "object"
+      },
+      "GoalUndone": {
+        "additionalProperties": false,
+        "description": "An Undoable goal stopped holding. It counts as unmet until it holds again.",
+        "properties": {
+          "goal_id": {
+            "title": "Goal Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "goal_undone",
+            "default": "goal_undone",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "goal_id"
+        ],
+        "title": "GoalUndone",
+        "type": "object"
+      },
+      "HoldsOffice": {
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "const": "holds_office",
+            "default": "holds_office",
+            "title": "Check",
+            "type": "string"
+          },
+          "holder": {
+            "title": "Holder",
+            "type": "string"
+          },
+          "office": {
+            "title": "Office",
+            "type": "string"
+          }
+        },
+        "required": [
+          "holder",
+          "office"
+        ],
+        "title": "HoldsOffice",
         "type": "object"
       },
       "Inertia": {
@@ -2026,6 +2490,40 @@
           "scope"
         ],
         "title": "Meter",
+        "type": "object"
+      },
+      "MeterAt": {
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "const": "meter_at",
+            "default": "meter_at",
+            "title": "Check",
+            "type": "string"
+          },
+          "meter": {
+            "title": "Meter",
+            "type": "string"
+          },
+          "op": {
+            "enum": [
+              "ge",
+              "le"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "meter",
+          "op",
+          "value"
+        ],
+        "title": "MeterAt",
         "type": "object"
       },
       "MeterCreated": {
@@ -3164,6 +3662,10 @@
             "entity_created": "#/$defs/EntityCreated",
             "fact_asserted": "#/$defs/FactAsserted",
             "feasibility_rated": "#/$defs/FeasibilityRated",
+            "goal_met": "#/$defs/GoalMet",
+            "goal_progressed": "#/$defs/GoalProgressed",
+            "goal_set": "#/$defs/GoalSet",
+            "goal_undone": "#/$defs/GoalUndone",
             "intent_filed": "#/$defs/IntentFiled",
             "intent_rejected": "#/$defs/IntentRejected",
             "meter_created": "#/$defs/MeterCreated",
@@ -3265,6 +3767,18 @@
             "$ref": "#/$defs/StatementIssued"
           },
           {
+            "$ref": "#/$defs/GoalSet"
+          },
+          {
+            "$ref": "#/$defs/GoalProgressed"
+          },
+          {
+            "$ref": "#/$defs/GoalMet"
+          },
+          {
+            "$ref": "#/$defs/GoalUndone"
+          },
+          {
             "$ref": "#/$defs/BriefingDelivered"
           },
           {
@@ -3332,6 +3846,132 @@
   },
   "state": {
     "$defs": {
+      "AllOf": {
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "const": "all_of",
+            "default": "all_of",
+            "title": "Check",
+            "type": "string"
+          },
+          "conditions": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "all_of": "#/$defs/AllOf",
+                  "any_of": "#/$defs/AnyOf",
+                  "commitment_in_force": "#/$defs/CommitmentInForce",
+                  "controls_asset": "#/$defs/ControlsAsset",
+                  "disposition_at": "#/$defs/DispositionAt",
+                  "entity_is": "#/$defs/EntityIs",
+                  "holds_office": "#/$defs/HoldsOffice",
+                  "meter_at": "#/$defs/MeterAt"
+                },
+                "propertyName": "check"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/HoldsOffice"
+                },
+                {
+                  "$ref": "#/$defs/ControlsAsset"
+                },
+                {
+                  "$ref": "#/$defs/EntityIs"
+                },
+                {
+                  "$ref": "#/$defs/MeterAt"
+                },
+                {
+                  "$ref": "#/$defs/CommitmentInForce"
+                },
+                {
+                  "$ref": "#/$defs/DispositionAt"
+                },
+                {
+                  "$ref": "#/$defs/AllOf"
+                },
+                {
+                  "$ref": "#/$defs/AnyOf"
+                }
+              ]
+            },
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Conditions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "conditions"
+        ],
+        "title": "AllOf",
+        "type": "object"
+      },
+      "AnyOf": {
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "const": "any_of",
+            "default": "any_of",
+            "title": "Check",
+            "type": "string"
+          },
+          "conditions": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "all_of": "#/$defs/AllOf",
+                  "any_of": "#/$defs/AnyOf",
+                  "commitment_in_force": "#/$defs/CommitmentInForce",
+                  "controls_asset": "#/$defs/ControlsAsset",
+                  "disposition_at": "#/$defs/DispositionAt",
+                  "entity_is": "#/$defs/EntityIs",
+                  "holds_office": "#/$defs/HoldsOffice",
+                  "meter_at": "#/$defs/MeterAt"
+                },
+                "propertyName": "check"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/HoldsOffice"
+                },
+                {
+                  "$ref": "#/$defs/ControlsAsset"
+                },
+                {
+                  "$ref": "#/$defs/EntityIs"
+                },
+                {
+                  "$ref": "#/$defs/MeterAt"
+                },
+                {
+                  "$ref": "#/$defs/CommitmentInForce"
+                },
+                {
+                  "$ref": "#/$defs/DispositionAt"
+                },
+                {
+                  "$ref": "#/$defs/AllOf"
+                },
+                {
+                  "$ref": "#/$defs/AnyOf"
+                }
+              ]
+            },
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Conditions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "conditions"
+        ],
+        "title": "AnyOf",
+        "type": "object"
+      },
       "Asset": {
         "additionalProperties": false,
         "properties": {
@@ -3675,6 +4315,26 @@
         "title": "Commitment",
         "type": "object"
       },
+      "CommitmentInForce": {
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "const": "commitment_in_force",
+            "default": "commitment_in_force",
+            "title": "Check",
+            "type": "string"
+          },
+          "commitment": {
+            "title": "Commitment",
+            "type": "string"
+          }
+        },
+        "required": [
+          "commitment"
+        ],
+        "title": "CommitmentInForce",
+        "type": "object"
+      },
       "CommitmentStatus": {
         "enum": [
           "offered",
@@ -3693,6 +4353,67 @@
         ],
         "title": "Controller",
         "type": "string"
+      },
+      "ControlsAsset": {
+        "additionalProperties": false,
+        "properties": {
+          "asset": {
+            "title": "Asset",
+            "type": "string"
+          },
+          "check": {
+            "const": "controls_asset",
+            "default": "controls_asset",
+            "title": "Check",
+            "type": "string"
+          },
+          "holder": {
+            "title": "Holder",
+            "type": "string"
+          }
+        },
+        "required": [
+          "holder",
+          "asset"
+        ],
+        "title": "ControlsAsset",
+        "type": "object"
+      },
+      "DispositionAt": {
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "const": "disposition_at",
+            "default": "disposition_at",
+            "title": "Check",
+            "type": "string"
+          },
+          "op": {
+            "enum": [
+              "ge",
+              "le"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "relationship": {
+            "title": "Relationship",
+            "type": "string"
+          },
+          "value": {
+            "maximum": 5,
+            "minimum": -5,
+            "title": "Value",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "relationship",
+          "op",
+          "value"
+        ],
+        "title": "DispositionAt",
+        "type": "object"
       },
       "Entity": {
         "additionalProperties": false,
@@ -3752,6 +4473,30 @@
           "name"
         ],
         "title": "Entity",
+        "type": "object"
+      },
+      "EntityIs": {
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "const": "entity_is",
+            "default": "entity_is",
+            "title": "Check",
+            "type": "string"
+          },
+          "entity": {
+            "title": "Entity",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/$defs/EntityStatus"
+          }
+        },
+        "required": [
+          "entity",
+          "status"
+        ],
+        "title": "EntityIs",
         "type": "object"
       },
       "EntityKind": {
@@ -3846,6 +4591,150 @@
           "scope"
         ],
         "title": "Fact",
+        "type": "object"
+      },
+      "Goal": {
+        "additionalProperties": false,
+        "description": "One player seat's secret goal. Private to its owner (decision 37).",
+        "properties": {
+          "canary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Canary"
+          },
+          "clock_id": {
+            "title": "Clock Id",
+            "type": "string"
+          },
+          "condition": {
+            "discriminator": {
+              "mapping": {
+                "all_of": "#/$defs/AllOf",
+                "any_of": "#/$defs/AnyOf",
+                "commitment_in_force": "#/$defs/CommitmentInForce",
+                "controls_asset": "#/$defs/ControlsAsset",
+                "disposition_at": "#/$defs/DispositionAt",
+                "entity_is": "#/$defs/EntityIs",
+                "holds_office": "#/$defs/HoldsOffice",
+                "meter_at": "#/$defs/MeterAt"
+              },
+              "propertyName": "check"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/HoldsOffice"
+              },
+              {
+                "$ref": "#/$defs/ControlsAsset"
+              },
+              {
+                "$ref": "#/$defs/EntityIs"
+              },
+              {
+                "$ref": "#/$defs/MeterAt"
+              },
+              {
+                "$ref": "#/$defs/CommitmentInForce"
+              },
+              {
+                "$ref": "#/$defs/DispositionAt"
+              },
+              {
+                "$ref": "#/$defs/AllOf"
+              },
+              {
+                "$ref": "#/$defs/AnyOf"
+              }
+            ],
+            "title": "Condition"
+          },
+          "goal_id": {
+            "title": "Goal Id",
+            "type": "string"
+          },
+          "holding": {
+            "default": false,
+            "title": "Holding",
+            "type": "boolean"
+          },
+          "kind": {
+            "$ref": "#/$defs/GoalKind"
+          },
+          "met_tick": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Met Tick"
+          },
+          "scope": {
+            "$ref": "#/$defs/Scope"
+          },
+          "seat_id": {
+            "title": "Seat Id",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 280,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "goal_id",
+          "seat_id",
+          "text",
+          "condition",
+          "kind",
+          "clock_id",
+          "scope"
+        ],
+        "title": "Goal",
+        "type": "object"
+      },
+      "GoalKind": {
+        "enum": [
+          "lasting",
+          "undoable"
+        ],
+        "title": "GoalKind",
+        "type": "string"
+      },
+      "HoldsOffice": {
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "const": "holds_office",
+            "default": "holds_office",
+            "title": "Check",
+            "type": "string"
+          },
+          "holder": {
+            "title": "Holder",
+            "type": "string"
+          },
+          "office": {
+            "title": "Office",
+            "type": "string"
+          }
+        },
+        "required": [
+          "holder",
+          "office"
+        ],
+        "title": "HoldsOffice",
         "type": "object"
       },
       "Inertia": {
@@ -4006,6 +4895,40 @@
           "scope"
         ],
         "title": "Meter",
+        "type": "object"
+      },
+      "MeterAt": {
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "const": "meter_at",
+            "default": "meter_at",
+            "title": "Check",
+            "type": "string"
+          },
+          "meter": {
+            "title": "Meter",
+            "type": "string"
+          },
+          "op": {
+            "enum": [
+              "ge",
+              "le"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "meter",
+          "op",
+          "value"
+        ],
+        "title": "MeterAt",
         "type": "object"
       },
       "Mode": {
@@ -4504,6 +5427,13 @@
         "title": "Frozen",
         "type": "array"
       },
+      "goals": {
+        "additionalProperties": {
+          "$ref": "#/$defs/Goal"
+        },
+        "title": "Goals",
+        "type": "object"
+      },
       "last_seq": {
         "default": -1,
         "title": "Last Seq",
@@ -4584,6 +5514,132 @@
   },
   "view": {
     "$defs": {
+      "AllOf": {
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "const": "all_of",
+            "default": "all_of",
+            "title": "Check",
+            "type": "string"
+          },
+          "conditions": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "all_of": "#/$defs/AllOf",
+                  "any_of": "#/$defs/AnyOf",
+                  "commitment_in_force": "#/$defs/CommitmentInForce",
+                  "controls_asset": "#/$defs/ControlsAsset",
+                  "disposition_at": "#/$defs/DispositionAt",
+                  "entity_is": "#/$defs/EntityIs",
+                  "holds_office": "#/$defs/HoldsOffice",
+                  "meter_at": "#/$defs/MeterAt"
+                },
+                "propertyName": "check"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/HoldsOffice"
+                },
+                {
+                  "$ref": "#/$defs/ControlsAsset"
+                },
+                {
+                  "$ref": "#/$defs/EntityIs"
+                },
+                {
+                  "$ref": "#/$defs/MeterAt"
+                },
+                {
+                  "$ref": "#/$defs/CommitmentInForce"
+                },
+                {
+                  "$ref": "#/$defs/DispositionAt"
+                },
+                {
+                  "$ref": "#/$defs/AllOf"
+                },
+                {
+                  "$ref": "#/$defs/AnyOf"
+                }
+              ]
+            },
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Conditions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "conditions"
+        ],
+        "title": "AllOf",
+        "type": "object"
+      },
+      "AnyOf": {
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "const": "any_of",
+            "default": "any_of",
+            "title": "Check",
+            "type": "string"
+          },
+          "conditions": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "all_of": "#/$defs/AllOf",
+                  "any_of": "#/$defs/AnyOf",
+                  "commitment_in_force": "#/$defs/CommitmentInForce",
+                  "controls_asset": "#/$defs/ControlsAsset",
+                  "disposition_at": "#/$defs/DispositionAt",
+                  "entity_is": "#/$defs/EntityIs",
+                  "holds_office": "#/$defs/HoldsOffice",
+                  "meter_at": "#/$defs/MeterAt"
+                },
+                "propertyName": "check"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/HoldsOffice"
+                },
+                {
+                  "$ref": "#/$defs/ControlsAsset"
+                },
+                {
+                  "$ref": "#/$defs/EntityIs"
+                },
+                {
+                  "$ref": "#/$defs/MeterAt"
+                },
+                {
+                  "$ref": "#/$defs/CommitmentInForce"
+                },
+                {
+                  "$ref": "#/$defs/DispositionAt"
+                },
+                {
+                  "$ref": "#/$defs/AllOf"
+                },
+                {
+                  "$ref": "#/$defs/AnyOf"
+                }
+              ]
+            },
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Conditions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "conditions"
+        ],
+        "title": "AnyOf",
+        "type": "object"
+      },
       "Asset": {
         "additionalProperties": false,
         "properties": {
@@ -4927,6 +5983,26 @@
         "title": "Commitment",
         "type": "object"
       },
+      "CommitmentInForce": {
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "const": "commitment_in_force",
+            "default": "commitment_in_force",
+            "title": "Check",
+            "type": "string"
+          },
+          "commitment": {
+            "title": "Commitment",
+            "type": "string"
+          }
+        },
+        "required": [
+          "commitment"
+        ],
+        "title": "CommitmentInForce",
+        "type": "object"
+      },
       "CommitmentStatus": {
         "enum": [
           "offered",
@@ -4945,6 +6021,67 @@
         ],
         "title": "Controller",
         "type": "string"
+      },
+      "ControlsAsset": {
+        "additionalProperties": false,
+        "properties": {
+          "asset": {
+            "title": "Asset",
+            "type": "string"
+          },
+          "check": {
+            "const": "controls_asset",
+            "default": "controls_asset",
+            "title": "Check",
+            "type": "string"
+          },
+          "holder": {
+            "title": "Holder",
+            "type": "string"
+          }
+        },
+        "required": [
+          "holder",
+          "asset"
+        ],
+        "title": "ControlsAsset",
+        "type": "object"
+      },
+      "DispositionAt": {
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "const": "disposition_at",
+            "default": "disposition_at",
+            "title": "Check",
+            "type": "string"
+          },
+          "op": {
+            "enum": [
+              "ge",
+              "le"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "relationship": {
+            "title": "Relationship",
+            "type": "string"
+          },
+          "value": {
+            "maximum": 5,
+            "minimum": -5,
+            "title": "Value",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "relationship",
+          "op",
+          "value"
+        ],
+        "title": "DispositionAt",
+        "type": "object"
       },
       "Entity": {
         "additionalProperties": false,
@@ -5004,6 +6141,30 @@
           "name"
         ],
         "title": "Entity",
+        "type": "object"
+      },
+      "EntityIs": {
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "const": "entity_is",
+            "default": "entity_is",
+            "title": "Check",
+            "type": "string"
+          },
+          "entity": {
+            "title": "Entity",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/$defs/EntityStatus"
+          }
+        },
+        "required": [
+          "entity",
+          "status"
+        ],
+        "title": "EntityIs",
         "type": "object"
       },
       "EntityKind": {
@@ -5098,6 +6259,150 @@
           "scope"
         ],
         "title": "Fact",
+        "type": "object"
+      },
+      "Goal": {
+        "additionalProperties": false,
+        "description": "One player seat's secret goal. Private to its owner (decision 37).",
+        "properties": {
+          "canary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Canary"
+          },
+          "clock_id": {
+            "title": "Clock Id",
+            "type": "string"
+          },
+          "condition": {
+            "discriminator": {
+              "mapping": {
+                "all_of": "#/$defs/AllOf",
+                "any_of": "#/$defs/AnyOf",
+                "commitment_in_force": "#/$defs/CommitmentInForce",
+                "controls_asset": "#/$defs/ControlsAsset",
+                "disposition_at": "#/$defs/DispositionAt",
+                "entity_is": "#/$defs/EntityIs",
+                "holds_office": "#/$defs/HoldsOffice",
+                "meter_at": "#/$defs/MeterAt"
+              },
+              "propertyName": "check"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/HoldsOffice"
+              },
+              {
+                "$ref": "#/$defs/ControlsAsset"
+              },
+              {
+                "$ref": "#/$defs/EntityIs"
+              },
+              {
+                "$ref": "#/$defs/MeterAt"
+              },
+              {
+                "$ref": "#/$defs/CommitmentInForce"
+              },
+              {
+                "$ref": "#/$defs/DispositionAt"
+              },
+              {
+                "$ref": "#/$defs/AllOf"
+              },
+              {
+                "$ref": "#/$defs/AnyOf"
+              }
+            ],
+            "title": "Condition"
+          },
+          "goal_id": {
+            "title": "Goal Id",
+            "type": "string"
+          },
+          "holding": {
+            "default": false,
+            "title": "Holding",
+            "type": "boolean"
+          },
+          "kind": {
+            "$ref": "#/$defs/GoalKind"
+          },
+          "met_tick": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Met Tick"
+          },
+          "scope": {
+            "$ref": "#/$defs/Scope"
+          },
+          "seat_id": {
+            "title": "Seat Id",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 280,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "goal_id",
+          "seat_id",
+          "text",
+          "condition",
+          "kind",
+          "clock_id",
+          "scope"
+        ],
+        "title": "Goal",
+        "type": "object"
+      },
+      "GoalKind": {
+        "enum": [
+          "lasting",
+          "undoable"
+        ],
+        "title": "GoalKind",
+        "type": "string"
+      },
+      "HoldsOffice": {
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "const": "holds_office",
+            "default": "holds_office",
+            "title": "Check",
+            "type": "string"
+          },
+          "holder": {
+            "title": "Holder",
+            "type": "string"
+          },
+          "office": {
+            "title": "Office",
+            "type": "string"
+          }
+        },
+        "required": [
+          "holder",
+          "office"
+        ],
+        "title": "HoldsOffice",
         "type": "object"
       },
       "Inertia": {
@@ -5258,6 +6563,40 @@
           "scope"
         ],
         "title": "Meter",
+        "type": "object"
+      },
+      "MeterAt": {
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "const": "meter_at",
+            "default": "meter_at",
+            "title": "Check",
+            "type": "string"
+          },
+          "meter": {
+            "title": "Meter",
+            "type": "string"
+          },
+          "op": {
+            "enum": [
+              "ge",
+              "le"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "meter",
+          "op",
+          "value"
+        ],
+        "title": "MeterAt",
         "type": "object"
       },
       "Mode": {
@@ -5775,6 +7114,13 @@
           "$ref": "#/$defs/Fact"
         },
         "title": "Facts",
+        "type": "object"
+      },
+      "goals": {
+        "additionalProperties": {
+          "$ref": "#/$defs/Goal"
+        },
+        "title": "Goals",
         "type": "object"
       },
       "me": {
