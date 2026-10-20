@@ -138,6 +138,9 @@ class Clock(Model):
     name: str
     owner: SeatId | None = None
     """The seat whose slot this holds, for operations and objectives."""
+    target: EntityId | None = None
+    """For threat clocks: the entity the danger is ticking toward."""
+    opened_tick: int = Field(default=0, ge=0)
     intent_id: IntentId | None = None
     segments_total: int = Field(ge=1, le=12)
     segments_filled: int = Field(default=0, ge=0)
@@ -164,6 +167,7 @@ class Fact(Model):
     truth: bool = True
     """False facts exist: forgeries and disinformation are Facts with truth=False."""
     exposure: int = Field(default=0, ge=0, le=5)
+    asserted_tick: int = Field(default=0, ge=0)
     scope: Scope
     canary: str | None = None
     """Test-only unique marker scanned for in outbound text. Never set in play."""

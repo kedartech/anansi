@@ -65,6 +65,7 @@ E_SOUTH_AIDE = EntityId("01ARZ3NDEKTSV4RRFFQ69G5EB0")
 A_NORTH_ARMY = AssetId("01ARZ3NDEKTSV4RRFFQ69G5AN0")
 A_NORTH_SECRET_ARMY = AssetId("01ARZ3NDEKTSV4RRFFQ69G5AX0")
 A_SOUTH_TREASURY = AssetId("01ARZ3NDEKTSV4RRFFQ69G5AS0")
+A_SOUTH_GUARD = AssetId("01ARZ3NDEKTSV4RRFFQ69G5AT0")
 A_GUILD_NETWORK = AssetId("01ARZ3NDEKTSV4RRFFQ69G5AG0")
 
 R_NORTH_SOUTH = RelationshipId("01ARZ3NDEKTSV4RRFFQ69G5RN0")
@@ -136,6 +137,16 @@ def creation_payloads() -> list[ev.Payload]:
                 asset_id=A_SOUTH_TREASURY,
                 kind=AssetKind.WEALTH,
                 name="Southern Treasury",
+                tier=3,
+                controller=E_SOUTH,
+                scope=PUBLIC,
+            )
+        ),
+        ev.AssetCreated(
+            asset=Asset(
+                asset_id=A_SOUTH_GUARD,
+                kind=AssetKind.FORCE,
+                name="Southern Guard",
                 tier=3,
                 controller=E_SOUTH,
                 scope=PUBLIC,

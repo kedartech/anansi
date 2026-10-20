@@ -269,8 +269,10 @@ def _apply_delta(state: State, delta: d.Delta, tick: int) -> State:
                 kind=delta.clock_kind,
                 name=delta.name,
                 owner=delta.owner,
+                target=delta.target,
                 segments_total=delta.segments_total,
                 exposure=delta.exposure,
+                opened_tick=tick,
                 holds_slot=delta.clock_kind is ClockKind.OPERATION and delta.owner is not None,
                 scope=delta.scope,
             )
@@ -293,6 +295,7 @@ def _apply_delta(state: State, delta: d.Delta, tick: int) -> State:
                 obj=delta.obj,
                 truth=delta.truth,
                 exposure=delta.exposure,
+                asserted_tick=tick,
                 scope=delta.scope,
             )
             return state.model_copy(update={"facts": _put(state.facts, f.fact_id, f)})

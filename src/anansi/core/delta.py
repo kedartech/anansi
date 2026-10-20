@@ -101,6 +101,7 @@ class ClockCreate(_Delta):
     clock_kind: ClockKind
     name: str = Field(max_length=80)
     owner: SeatId | None = None
+    target: EntityId | None = None
     segments_total: int = Field(ge=1, le=12)
     exposure: int = Field(default=0, ge=0, le=5)
     scope: Scope

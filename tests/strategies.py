@@ -125,7 +125,9 @@ clocks = st.builds(
     kind=st.sampled_from(list(ClockKind)),
     name=short_text,
     owner=st.none() | seat_ids,
+    target=st.none() | entity_ids,
     intent_id=st.none() | intent_ids,
+    opened_tick=st.integers(0, 200),
     segments_total=st.integers(1, 12),
     segments_filled=st.integers(0, 12),
     eta_tick=st.none() | st.integers(0, 200),
@@ -142,6 +144,7 @@ facts = st.builds(
     obj=entity_ids | asset_ids | clock_ids | short_text,
     truth=st.booleans(),
     exposure=st.integers(0, 5),
+    asserted_tick=st.integers(0, 200),
     scope=scopes(),
     canary=st.none() | ulid,
 )

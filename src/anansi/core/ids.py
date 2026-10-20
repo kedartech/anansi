@@ -7,6 +7,7 @@ reads the clock; ``anansi.engine.ids.new_id`` does that and the event store
 rejects malformed IDs on append.
 """
 
+import hashlib
 from typing import NewType
 
 ULID_PATTERN = r"^[0-9A-HJKMNP-TV-Z]{26}$"
@@ -27,3 +28,22 @@ DeltaId = NewType("DeltaId", str)
 
 WorldObjectId = EntityId | AssetId | RelationshipId | MeterId | ClockId | FactId | CommitmentId
 """Anything an Intent may target."""
+
+
+_CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+
+
+def derived_id(*parts: str | int) -> str:
+    """A deterministic 26-char Crockford ID from its inputs.
+
+    The core may not read a clock, so anything it must name (a reveal grant,
+    a roll seed) gets an ID derived from the campaign, the tick and the
+    object it concerns. Same inputs, same ID, on every replay.
+    """
+    digest = hashlib.blake2b("\x1f".join(str(p) for p in parts).encode(), digest_size=17).digest()
+    n = int.from_bytes(digest, "big")
+    out = []
+    for _ in range(26):
+        out.append(_CROCKFORD[n & 31])
+        n >>= 5
+    return "".join(reversed(out))

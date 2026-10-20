@@ -605,6 +605,12 @@
             "title": "Name",
             "type": "string"
           },
+          "opened_tick": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Opened Tick",
+            "type": "integer"
+          },
           "owner": {
             "anyOf": [
               {
@@ -635,6 +641,18 @@
           "status": {
             "$ref": "#/$defs/ClockStatus",
             "default": "open"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Target"
           }
         },
         "required": [
@@ -742,6 +760,18 @@
             "minimum": 1,
             "title": "Segments Total",
             "type": "integer"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Target"
           }
         },
         "required": [
@@ -1480,6 +1510,12 @@
         "additionalProperties": false,
         "description": "A structured truth with an ACL. Never prose.",
         "properties": {
+          "asserted_tick": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Asserted Tick",
+            "type": "integer"
+          },
           "canary": {
             "anyOf": [
               {
@@ -2192,7 +2228,8 @@
           "tier_disallows",
           "lethality_disallows",
           "vote_cannot_cancel",
-          "duplicate"
+          "duplicate",
+          "seat_inactive"
         ],
         "title": "RejectionReason",
         "type": "string"
@@ -3374,6 +3411,12 @@
             "title": "Name",
             "type": "string"
           },
+          "opened_tick": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Opened Tick",
+            "type": "integer"
+          },
           "owner": {
             "anyOf": [
               {
@@ -3404,6 +3447,18 @@
           "status": {
             "$ref": "#/$defs/ClockStatus",
             "default": "open"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Target"
           }
         },
         "required": [
@@ -3582,6 +3637,12 @@
         "additionalProperties": false,
         "description": "A structured truth with an ACL. Never prose.",
         "properties": {
+          "asserted_tick": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Asserted Tick",
+            "type": "integer"
+          },
           "canary": {
             "anyOf": [
               {
@@ -4602,6 +4663,12 @@
             "title": "Name",
             "type": "string"
           },
+          "opened_tick": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Opened Tick",
+            "type": "integer"
+          },
           "owner": {
             "anyOf": [
               {
@@ -4632,6 +4699,18 @@
           "status": {
             "$ref": "#/$defs/ClockStatus",
             "default": "open"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Target"
           }
         },
         "required": [
@@ -4810,6 +4889,12 @@
         "additionalProperties": false,
         "description": "A structured truth with an ACL. Never prose.",
         "properties": {
+          "asserted_tick": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Asserted Tick",
+            "type": "integer"
+          },
           "canary": {
             "anyOf": [
               {

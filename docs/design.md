@@ -19,6 +19,7 @@ Module map:
 | `core/state.py` | `State` (truth) and `View` (one seat's knowledge) |
 | `core/fold.py` | `apply`, `replay`, `replay_to`, `state_hash` (Layer 2) |
 | `core/project.py` | `project(state, seat) -> View` (Layer 2) |
+| `core/referee.py` | `validate`, `rate`, `roll`, `clamp`, `reveal`, `slots` (Layer 3) |
 | `engine/store.py` | `EventStore` protocol, `MemoryStore`, `SqliteStore`, `load_state` (Layer 2) |
 | `schema/anansi.schema.json` | exported JSON Schema; CI fails on drift |
 
@@ -216,7 +217,16 @@ README §13, revised under H3/H15: **Structure lives in the agent**, so the refe
 6. Narrate     (narrator, LLM)       View + deltas-in-view -> text per seat     logs narration_written
 ```
 
-Starting odds (`core/resolution.py`): Impossible 0%, Long shot 20%, Contested 50%, Likely 75%, Assured 95% chance of a success tier; within success, Partial 40 / Success 45 / Opportunity 15. Exposure rolls independently against the clock's `exposure`; a hit grants knowledge to one investigator seat, not to the public. Escalation to public only through further investigate or leak intents.
+Starting odds (`core/resolution.py`): Impossible 0%, Long shot 20%, Contested 50%, Likely 75%, Assured 95% chance of a success tier; within success, Partial 40 / Success 45 / Opportunity 15. Exposure rolls independently against the clock's `exposure` (0 / 5 / 10 / 20 / 35 / 50 percent for exposure 0-5, `EXPOSURE_CHANCE`); a hit grants knowledge to one investigator seat, not to the public. Escalation to public only through further investigate or leak intents.
+
+### 8.1 The referee in code (`core/referee.py`) **[decided]**
+
+- **`validate(state, intent, safety=None) -> Rejection | None`.** In order: actor is a seat and not fallen; not a duplicate ID; outlets may only investigate, leak, declare, negotiate, wait; blinded seats may not use irreversible verbs; every target exists and is not dead, dissolved, lost or closed; every `means` asset is controlled by the actor's entity or a direct child (the "claim an army" case, README §10); transfer names an asset; accept names an offered commitment; a slot is free (operations plus queued intents, cap from the seat, 1 when blinded); finally the safety hook. The hook runs last so a classifier never sees an intent the rules already refused.
+- **`rate(world, intent) -> FeasibilityBand`** takes `State` or `View`. Impossible only for structural reasons (unknown target, means not held). Free verbs are Assured. Otherwise a score from 0: committed means tier minus opposition tier (clamped ±2; Force verbs count only Force assets), counterparty disposition ±1 at |disposition| ≥ 2, plausibility ±1 on force and information verbs. Score ≤ −2 Long shot, ≤ 0 Contested, 1 Likely, ≥ 2 Assured. A means verb with no means is capped at Long shot. The fixture test: South attacking North looks **Likely** from South's view and is **Contested** in truth, because the hill irregulars are covert.
+- **`roll(seed, band, exposure) -> Roll`.** `seed = blake2b(campaign_id, tick, intent_id)`; the outcome and exposure draws are bytes of `blake2b(seed)`, so the core never imports `random`. 2,000-seed tests hold every table within ±4 points.
+- **`clamp(state, intent, proposal, outcome) -> Clamped`.** Returns `kept` (applied as-is or trimmed to the limit) and `cut` (one entry per trim or drop, for `delta_rejected`). The table: tier ±1 on at most 2 assets; a failure only lowers the actor's own assets and touches no one else's; meter changes **summed per meter per tick** against `max_delta_per_tick`; disposition ±1, ±2 when the intent is public and names the pair; clock segments 0/1/2/2 by outcome with a new clock allowed only on failure (complication) or opportunity; operation clocks are opened by the engine, never proposed; `dead`/`dissolved` only under hard or brutal lethality and only when a threat clock targets the entity; captured/turned/dead on a seat's agent only when `agent_harm` is on; `make_public` grants only from leak or declare; slots ±1; at most 6 objects per intent. Property test: idempotent and never widens a magnitude.
+- **`reveal(state, policy, tick)`**: see §7. Candidates are covert facts and clocks older than `min_age_ticks`; `Partial` keeps `ceil(fraction · n)` of them ordered by a hash of (campaign, tick, id), so replay reveals the same set. Grant IDs are `derived_id(campaign, tick, "reveal", target)`.
+- **`slots(world, seat) -> Slots(used, queued, cap)`.** Operations and objectives hold slots by owner; outlets and NPCs have cap 0.
 
 Rules the referee keeps regardless of what the model proposes:
 
@@ -283,7 +293,8 @@ Two call sites, both in the referee, both pure protocols with a fixture implemen
 
 ## 13. Open after this layer
 
-- **[open]** Exact exposure-roll mapping from `Clock.exposure` 0-5 to a percentage. Proposed 0 / 5 / 10 / 20 / 35 / 50. Layer 3.
-- **[open]** Whether `Meter.max_delta_per_tick` applies per delta or summed across a tick. Proposed: summed, so two small deltas cannot beat the cap. Layer 3.
+- **[proposed]** Exposure mapping 0 / 5 / 10 / 20 / 35 / 50 percent for `Clock.exposure` 0-5 (`EXPOSURE_CHANCE`). In code as a starting number; retune after the solo slice.
+- **[decided]** `Meter.max_delta_per_tick` is summed per meter per intent in `clamp`, so two small deltas cannot beat the cap. Cross-intent summing within one tick is the orchestrator's job (Layer 4) via the same `meter_total` rule.
+- **[proposed]** The `rate` scoring weights (means−opposition ±2, disposition ±1, plausibility ±1) are first numbers. The shape (one function over `State` or `View`) is decided; the weights are not.
 - **[open]** `Label` cap (60 chars) and `reason` cap (200) are guesses; retune when the first recorded fixtures show what the resolver actually writes. Layer 5.
 - **[open]** Co-GM event lead time and season length default remain from README §21.

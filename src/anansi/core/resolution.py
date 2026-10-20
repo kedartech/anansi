@@ -34,6 +34,10 @@ SUCCESS_SPLIT: tuple[tuple[OutcomeTier, float], ...] = (
 )
 
 
+EXPOSURE_CHANCE: dict[int, int] = {0: 0, 1: 5, 2: 10, 3: 20, 4: 35, 5: 50}
+"""Percent chance per resolved intent that a clock at this exposure is noticed [proposed]."""
+
+
 class TickStage(StrEnum):
     FREEZE = "freeze"
     PROPOSE = "propose"
@@ -55,3 +59,4 @@ class RejectionReason(StrEnum):
     LETHALITY_DISALLOWS = "lethality_disallows"
     VOTE_CANNOT_CANCEL = "vote_cannot_cancel"
     DUPLICATE = "duplicate"
+    SEAT_INACTIVE = "seat_inactive"
