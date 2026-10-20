@@ -38,6 +38,7 @@ from tests import fixtures as fx
 CANARY = "CANARY-VARDA-LEDGER-1a2b3c"
 OTHER_CAMPAIGN = CampaignId("01ARZ3NDEKTSV4RRFFQ69G5FB0")
 SALT_STRAIT = Path(__file__).resolve().parents[1] / "worlds" / "salt-strait.yaml"
+DUO = SALT_STRAIT.with_name("salt-strait-duo.yaml")
 
 
 def _world() -> WorldFile:
@@ -382,3 +383,35 @@ def test_bundled_salt_strait_compiles_and_replays() -> None:
     assert len(canaries) == 4
     assert held == {"CANARY-VARDA-SKIM-55d0"}
     assert set(canaries_hidden_from(state, varda)) == canaries - held
+
+
+def test_the_duo_world_is_salt_strait_with_ostrel_played_by_a_human() -> None:
+    """Keeps worlds/salt-strait-duo.yaml in step with salt-strait.yaml."""
+    solo = yaml.safe_load(SALT_STRAIT.read_text())
+    duo = yaml.safe_load(DUO.read_text())
+    assert (duo.pop("world"), duo.pop("name")) == ("salt-strait-duo", "Salt Strait (two players)")
+    solo.pop("world"), solo.pop("name")
+    agent = next(e for e in duo["entities"] if e["key"] == "sefa")
+    duo["entities"].remove(agent)
+    assert agent["kind"] == "person" and agent["parent"] == "ostrel"
+    seat = next(s for s in duo["seats"] if s["key"] == "ostrel_seat")
+    assert seat.pop("kind") == "player" and seat.pop("controller") == "human"
+    assert seat.pop("agent")["entity"] == "sefa"
+    solo_seat = next(s for s in solo["seats"] if s["key"] == "ostrel_seat")
+    assert solo_seat.pop("kind") == "faction"
+    assert duo == solo
+
+    campaign = CampaignId("01ARZ3NDEKTSV4RRFFQ69G5DU0")
+    state = replay(compile_world(WorldFile.model_validate(duo_raw()), campaign, fx.VERSIONS))
+    humans = sorted(s.name for s in state.seats.values() if s.controller.value == "human")
+    assert humans == ["First Minister of Varda", "Ostrel War Council"]
+    ostrel = next(s for s in state.seats.values() if s.name == "Ostrel War Council")
+    varda = next(s for s in state.seats.values() if s.name == "First Minister of Varda")
+    assert canaries_hidden_from(state, ostrel.seat_id) != canaries_hidden_from(state, varda.seat_id)
+    assert "CANARY-OSTREL-HARROW-4c1e" in canaries_hidden_from(state, varda.seat_id)
+    assert "CANARY-OSTREL-HARROW-4c1e" not in canaries_hidden_from(state, ostrel.seat_id)
+
+
+def duo_raw() -> dict[str, object]:
+    loaded: dict[str, object] = yaml.safe_load(DUO.read_text())
+    return loaded

@@ -1,4 +1,4 @@
-"""Layer 9a: briefings by Discord DM over REST, and the routing deliverer.
+"""Layers 9a-9b: briefings by Discord DM over REST, and the routing deliverer.
 
 The REST API is ``FakeDiscord``; the real HTTP client is blocked for every
 test (``conftest.no_discord_network``).
@@ -20,6 +20,7 @@ from revisionist.core import events as ev
 from revisionist.core.ids import CampaignId, SeatId
 from revisionist.engine.discord import delivery
 from revisionist.engine.discord.rest import (
+    HELD_LABEL,
     PART_LIMIT,
     DiscordDeliverer,
     DiscordError,
@@ -44,11 +45,9 @@ CANARY = "CANARY-OSTREL-HARROW-4c1e"
 runner = CliRunner()
 
 
-def _deliverer(
-    fake: FakeDiscord, outbox: MemoryOutbox | None = None, fallback: str | None = None
-) -> DiscordDeliverer:
+def _deliverer(fake: FakeDiscord, outbox: MemoryOutbox | None = None) -> DiscordDeliverer:
     rest = DiscordRest(TOKEN, http=fake, sleep=lambda s: None)
-    return DiscordDeliverer(rest, outbox or MemoryOutbox(), {SEAT: USER}, fallback)
+    return DiscordDeliverer(rest, outbox or MemoryOutbox(), {SEAT: USER})
 
 
 # --- splitting ------------------------------------------------------------------
@@ -134,7 +133,7 @@ def test_a_crash_between_send_and_insert_resends_with_the_same_nonce() -> None:
     assert outbox.sent(KEY) == set(range(parts))
 
 
-# --- rate limits, errors, fallback ----------------------------------------------
+# --- rate limits, errors, closed DMs --------------------------------------------
 
 
 def test_a_rate_limit_is_waited_out() -> None:
@@ -153,24 +152,21 @@ def test_three_rate_limits_give_up() -> None:
     assert len(fake.requests) == 3
 
 
-def test_closed_dms_fall_back_to_the_private_channel() -> None:
-    fake = FakeDiscord(closed_dms={USER})
-    _deliverer(fake, fallback="999").deliver(SEAT, "The harbour is calm.", KEY)
-    assert [(m.channel_id, m.content) for m in fake.messages] == [("999", "The harbour is calm.")]
-
-
-def test_closed_dms_without_a_fallback_raise() -> None:
+def test_closed_dms_hold_the_briefing_and_send_it_nowhere() -> None:
     fake = FakeDiscord(closed_dms={USER})
     outbox = MemoryOutbox()
-    with pytest.raises(DiscordError, match="50007"):
-        _deliverer(fake, outbox).deliver(SEAT, "The harbour is calm.", KEY)
+    label = _deliverer(fake, outbox).deliver(SEAT, "The harbour is calm.", KEY)
+    assert label == HELD_LABEL
     assert fake.messages == [] and outbox.rows == {}
+    assert [url for _, url, _, _ in fake.requests if url.endswith("/messages")] == [
+        f"https://discord.com/api/v10/channels/dm-{USER}/messages"
+    ]  # the one refused attempt, at the player's own DM
 
 
-def test_other_errors_never_fall_back() -> None:
+def test_other_errors_propagate() -> None:
     fake = FakeDiscord(fail_with=(403, 50001))
     with pytest.raises(DiscordError, match="50001"):
-        _deliverer(fake, fallback="999").deliver(SEAT, "The harbour is calm.", KEY)
+        _deliverer(fake).deliver(SEAT, "The harbour is calm.", KEY)
     assert fake.messages == []
 
 
@@ -190,7 +186,7 @@ def test_the_token_never_appears_in_errors_reprs_or_logs(
 ) -> None:
     caplog.set_level(logging.DEBUG)
     rest = DiscordRest(TOKEN, http=http, sleep=lambda s: None)  # type: ignore[arg-type]
-    deliverer = DiscordDeliverer(rest, MemoryOutbox(), {SEAT: USER}, "999")
+    deliverer = DiscordDeliverer(rest, MemoryOutbox(), {SEAT: USER})
     with pytest.raises(DiscordError) as caught:
         deliverer.deliver(SEAT, "The harbour is calm.", KEY)
     exc = caught.value
@@ -272,16 +268,29 @@ def test_no_token_means_files_as_before(
     assert fake.requests == []
 
 
-def test_a_closed_dm_without_fallback_leaves_the_tick_resumable(
-    linked: tuple[PgDb, FakeDiscord],
+def test_a_closed_dm_holds_the_briefing_and_the_tick_closes(
+    linked: tuple[PgDb, FakeDiscord], tmp_path: Path
 ) -> None:
     db, fake = linked
     fake.closed_dms.add(USER)
     result = runner.invoke(cli.app, ["tick", "--offline"])
+    assert result.exit_code == 0, result.output
+    assert _deliveries(db)["First Minister of Varda"] == HELD_LABEL
+    assert fake.messages == []
+    files = {p.name for p in (tmp_path / "briefings").glob("*.md")}
+    assert "t000-first-minister-of-varda.md" not in files  # held, not written for the host
+
+
+def test_a_dm_failure_other_than_closed_leaves_the_tick_resumable(
+    linked: tuple[PgDb, FakeDiscord],
+) -> None:
+    db, fake = linked
+    fake.fail_with = (500, 0)
+    result = runner.invoke(cli.app, ["tick", "--offline"])
     assert result.exit_code != 0 and isinstance(result.exception, DiscordError)
     assert TOKEN not in str(result.exception)
     assert _deliveries(db).get("First Minister of Varda") is None
-    fake.closed_dms.clear()
+    fake.fail_with = None
     assert runner.invoke(cli.app, ["tick", "--offline"]).exit_code == 0  # resumes DELIVER
     assert _deliveries(db)["First Minister of Varda"] == "discord"
     assert len(fake.messages) == 1

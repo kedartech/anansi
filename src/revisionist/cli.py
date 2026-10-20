@@ -10,7 +10,7 @@ Postgres maintenance commands and ``revisionist scheduler`` the unattended ticks
 
 import os
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Annotated
 
 import typer
@@ -70,11 +70,23 @@ def _campaign(store: EventStore) -> CampaignId:
         raise _fail(str(exc)) from exc
 
 
-def _me(state: State) -> SeatId:
+def _me(state: State, seat: str | None = None) -> SeatId:
+    """``seat`` when given (by ID or name, and it must be human), else the one human seat."""
     try:
-        return cmp.human_seat(state)
+        if seat is None:
+            return cmp.human_seat(state)
+        found = state.seats[cmp.resolve_seat(state, seat)]
     except LookupError as exc:
         raise _fail(str(exc)) from exc
+    if found.controller is not Controller.HUMAN:
+        raise _fail(f"{found.name} is not a human seat", EXIT_REFUSED)
+    return found.seat_id
+
+
+PlayerSeat = Annotated[
+    str | None,
+    typer.Option("--seat", help="Your seat, by ID or name, when the campaign has several humans"),
+]
 
 
 @app.callback()
@@ -103,26 +115,33 @@ def new(world: Annotated[str, typer.Argument(help="World name or path to a YAML 
     except WorldError as exc:
         raise _fail("world has problems:\n" + "\n".join(exc.problems)) from exc
     state = load_state(store, campaign_id)
-    me = _me(state)
+    humans = cmp.human_seats(state)
+    if not humans:
+        raise _fail("this campaign has no human seat")
     typer.echo(f"campaign {campaign_id}: {decl.name}")
-    typer.echo(f"you are {state.seats[me].name}; {len(cmp.faction_seats(state))} AI factions")
+    factions = len(cmp.faction_seats(state))
+    if len(humans) == 1:
+        typer.echo(f"you are {state.seats[humans[0]].name}; {factions} AI factions")
+    else:
+        names = ", ".join(f"{state.seats[s].name} ({s})" for s in humans)
+        typer.echo(f"human seats: {names}; {factions} AI factions")
 
 
 @app.command()
-def status() -> None:
+def status(seat: PlayerSeat = None) -> None:
     """Where the campaign stands, as your seat sees it."""
     store = cmp.open_store()
     state = load_state(store, _campaign(store))
-    for line in play.status_lines(state, _me(state)):
+    for line in play.status_lines(state, _me(state, seat)):
         typer.echo(line)
 
 
 @app.command()
-def briefing() -> None:
+def briefing(seat: PlayerSeat = None) -> None:
     """Your agent's briefing: what happened, a dilemma and three moves."""
     store = cmp.open_store()
     campaign_id = _campaign(store)
-    me = _me(load_state(store, campaign_id))
+    me = _me(load_state(store, campaign_id), seat)
     try:
         brief = play.get_briefing(store, campaign_id, me, transport_factory())
     except TransportError as exc:
@@ -134,11 +153,14 @@ def briefing() -> None:
 
 
 @app.command()
-def order(text: Annotated[str, typer.Argument(help="What you want done, in your words")]) -> None:
+def order(
+    text: Annotated[str, typer.Argument(help="What you want done, in your words")],
+    seat: PlayerSeat = None,
+) -> None:
     """Give your agent an order. It files an intent or asks you a question."""
     store = cmp.open_store()
     campaign_id = _campaign(store)
-    me = _me(load_state(store, campaign_id))
+    me = _me(load_state(store, campaign_id), seat)
     try:
         result = play.give_order(store, campaign_id, me, text, transport_factory())
     except TransportError as exc:
@@ -408,7 +430,8 @@ discord_app = typer.Typer(no_args_is_help=True, help="Play from Discord (Postgre
 app.add_typer(discord_app, name="discord")
 
 SeatOpt = Annotated[
-    str | None, typer.Option("--seat", help="Seat ID (default: the campaign's human seat)")
+    str | None,
+    typer.Option("--seat", help="Seat ID or name (default: the campaign's one human seat)"),
 ]
 OneCampaignOpt = Annotated[
     str | None, typer.Option("--campaign", help="Campaign ID (default: the newest)")
@@ -435,9 +458,10 @@ def _bound_seat(
         raise _fail(str(exc)) from exc
     if seat is None:
         return campaign_id, _me(state)
-    found = state.seats.get(SeatId(seat))
-    if found is None:
-        raise _fail(f"no seat {seat} in {campaign_id}")
+    try:
+        found = state.seats[cmp.resolve_seat(state, seat)]
+    except LookupError as exc:
+        raise _fail(str(exc)) from exc
     if found.controller is not Controller.HUMAN:
         raise _fail(
             f"{found.name} is not a human seat; only human seats play from Discord", EXIT_REFUSED
@@ -484,6 +508,59 @@ def discord_unlink(campaign: OneCampaignOpt = None, seat: SeatOpt = None) -> Non
     typer.echo(f"unlinked {seat_id} in {campaign_id}")
 
 
+@discord_app.command("invite")
+def discord_invite(
+    campaign: OneCampaignOpt = None,
+    seat: SeatOpt = None,
+    hours: Annotated[int, typer.Option("--hours", min=1, max=720)] = 72,
+) -> None:
+    """Issue a single-use code a player redeems with ``/join`` to take a human seat."""
+    from revisionist.engine.discord.tables import Invites, SeatLinks
+
+    store = _pg_store(*_DISCORD)
+    try:
+        campaign_id, seat_id = _bound_seat(store, campaign, seat)
+        if seat_id in SeatLinks(store.conn).users(campaign_id):
+            raise _fail(f"{seat_id} is already linked; unlink it first", EXIT_REFUSED)
+        now = clock()
+        code = Invites(store.conn).issue(campaign_id, seat_id, now, hours)
+        name = load_state(store, campaign_id).seats[seat_id].name
+    finally:
+        store.close()
+    expires = (now + timedelta(hours=hours)).astimezone(UTC)
+    typer.echo(
+        f"invite for {name} ({seat_id}) in {campaign_id}, expires {expires:%Y-%m-%d %H:%MZ}:"
+    )
+    typer.echo(f"  {code}")
+    typer.echo(
+        "Send it to the player privately. They run /join with it in the server; it works once."
+    )
+
+
+@discord_app.command("invites")
+def discord_invites(campaign: OneCampaignOpt = None) -> None:
+    """Every invite issued for a campaign and whether it was used."""
+    from revisionist.engine.discord.tables import Invites
+
+    store = _pg_store(*_DISCORD)
+    try:
+        campaign_id = CampaignId(campaign) if campaign else _campaign(store)
+        invites = Invites(store.conn).all(campaign_id)
+    finally:
+        store.close()
+    if not invites:
+        typer.echo("no invites")
+    now = clock()
+    for i in invites:
+        if i.used_at is not None:
+            state = f"used by {i.used_by} {i.used_at.astimezone(UTC):%Y-%m-%d %H:%MZ}"
+        elif i.expires_at <= now:
+            state = "expired"
+        else:
+            state = f"open until {i.expires_at.astimezone(UTC):%Y-%m-%d %H:%MZ}"
+        typer.echo(f"{i.seat_id}  issued {i.issued_at.astimezone(UTC):%Y-%m-%d %H:%MZ}  {state}")
+
+
 @discord_app.command("seats")
 def discord_seats() -> None:
     """Every Discord binding."""
@@ -517,8 +594,9 @@ def discord_run() -> None:
         raise _fail(
             "the Discord bot needs the discord extra: install '.[postgres,discord]'"
         ) from exc
-    from revisionist.engine.discord.delivery import factory_from_env
+    from revisionist.engine.discord.delivery import routing_factory
     from revisionist.engine.discord.handlers import BotConfig, Handlers
+    from revisionist.engine.discord.rest import DiscordRest
 
     host = os.environ.get("REVISIONIST_DISCORD_HOST_ID") or None
     if host is None:
@@ -526,12 +604,14 @@ def discord_run() -> None:
             "REVISIONIST_DISCORD_HOST_ID is not set: /advance, /pause and /resume are refused",
             err=True,
         )
+    rest = DiscordRest(token)
     handlers = Handlers(
         BotConfig(cmp.db_target(), guild, host),
         transport_factory=lambda: transport_factory(),
         clock=lambda: clock(),
         briefings=cmp.briefings_dir(),
-        deliverer_factory=factory_from_env(),
+        deliverer_factory=routing_factory(rest),
+        rest=rest,
     )
     bot.run(handlers, token, int(guild))
 

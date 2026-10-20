@@ -107,6 +107,26 @@ def test_all_submitted_counts_only_new_intents_from_every_human() -> None:
     assert not sch.all_submitted(no_humans, sch.since_last_close(events))
 
 
+def test_all_submitted_waits_for_both_humans_in_a_duo() -> None:
+    store = MemoryStore()
+    campaign_id = cmp.new_campaign(store, cmp.load_world(cmp.world_path("salt-strait-duo")))
+    first, second = cmp.human_seats(load_state(store, campaign_id))
+    for n, seat in enumerate((first, second)):
+        assert not sch.all_submitted(
+            load_state(store, campaign_id), sch.since_last_close(list(store.read(campaign_id)))
+        )
+        wait = Intent(
+            intent_id=IntentId(f"01ARZ3NDEKTSV4RRFFQ69G5W1{n}"),
+            actor=seat,
+            verb=Verb.WAIT,
+            scope=private_to(seat),
+            filed_tick=0,
+        )
+        file_intent(store, campaign_id, wait, versions=cmp.versions())
+    events = list(store.read(campaign_id))
+    assert sch.all_submitted(load_state(store, campaign_id), sch.since_last_close(events))
+
+
 def test_cli_imports_without_psycopg() -> None:
     code = "import sys; sys.modules['psycopg'] = None; import revisionist.cli"
     assert subprocess.run([sys.executable, "-c", code], check=False).returncode == 0

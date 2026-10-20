@@ -156,9 +156,6 @@ Add to `~/.config/revisionist/revisionist.env` (already `chmod 600`):
 REVISIONIST_DISCORD_TOKEN=<bot token>
 REVISIONIST_DISCORD_GUILD_ID=<server ID>
 REVISIONIST_DISCORD_HOST_ID=<your user ID>
-# optional: where your briefings go if Discord refuses the DM.
-# It must be a channel private to you; never a shared one.
-# REVISIONIST_DISCORD_FALLBACK_CHANNEL=<channel ID>
 ```
 
 | Variable | Meaning |
@@ -166,7 +163,8 @@ REVISIONIST_DISCORD_HOST_ID=<your user ID>
 | `REVISIONIST_DISCORD_TOKEN` | the bot token. When set on Postgres, `revisionist tick`, `revisionist scheduler run` and `/advance` deliver bound seats' briefings by DM |
 | `REVISIONIST_DISCORD_GUILD_ID` | the one server the bot serves; slash commands are synced there |
 | `REVISIONIST_DISCORD_HOST_ID` | the user allowed `/advance`, `/pause`, `/resume`; unset means nobody |
-| `REVISIONIST_DISCORD_FALLBACK_CHANNEL` | optional private channel for briefings when DMs are closed; unset means the delivery fails and the tick retries on the next poll |
+
+If Discord refuses a DM because the player's DMs are closed to the bot, the briefing is **held**: nothing is sent anywhere, the tick closes, and the player reads it with `/dispatch`. There is no fallback channel, because a shared one would show one player's briefing to another (Layer 9b).
 
 With the token in `revisionist.env`, the scheduler (§5) delivers by DM too: it reads the same file.
 
@@ -191,17 +189,30 @@ journalctl --user -u revisionist-discord.service -f
 ### 9.4 First-run smoke check
 
 1. The journal shows the bot logged in, with no traceback.
-2. In the server, type `/` : `order`, `briefing`, `status`, `advance`, `pause`, `resume`, `bug`, `report`, `key` are listed. They exist only in this server, not in DMs.
+2. In the server, type `/` : `order`, `briefing`, `dispatch`, `status`, `join`, `advance`, `pause`, `resume`, `bug`, `report`, `key` are listed. They exist only in this server, not in DMs.
 3. Run `/status` in any channel of the server. The reply is ephemeral (only you see it) and matches `revisionist status`.
 4. DM the bot an order. It replies `filed ...` or with a question, and `revisionist status` shows it pending.
 5. `revisionist tick --offline` (or `/advance` for a live tick): your briefing arrives by DM, and no `t<tick>-<your seat>.md` file appears in `REVISIONIST_BRIEFINGS_DIR` (the outlet's still does).
 
-If `/status` says you hold no seat, the link is missing or `REVISIONIST_DISCORD_GUILD_ID` names another server. If the briefing never arrives and `revisionist scheduler status` shows `50007`, your DMs from server members are closed: open them for this server or set the fallback channel.
+If `/status` says you hold no seat, the link is missing or `REVISIONIST_DISCORD_GUILD_ID` names another server. If the briefing never arrives and `revisionist scheduler status` shows `50007`, or the delivery shows `held`, your DMs from server members are closed: open them for this server, and meanwhile read the briefing with `/dispatch`.
 
 ### 9.5 Still to do (Josh)
 
 - [ ] The live smoke check above.
 - [ ] The Layer 9a exit run: 10 ticks of the solo campaign played from Discord (briefings by DM, orders by `/order` or DM), then `revisionist leaks` reports 0 and `revisionist db verify` passes.
+
+### 9.6 A second player (Layer 9b)
+
+```
+set -a; . ~/.config/revisionist/revisionist-admin.env; set +a
+revisionist db migrate                                    # applies 0005_discord_invites
+set -a; . ~/.config/revisionist/revisionist.env; set +a
+revisionist new salt-strait-duo                           # two human seats: Varda and Ostrel
+revisionist discord link --user "$REVISIONIST_DISCORD_HOST_ID" --seat "First Minister of Varda"
+revisionist discord invite --seat "Ostrel War Council"    # prints a code once; valid 72 h
+```
+
+Send the code to the other player privately, never in a server channel. They join the Discord server by an ordinary server invite, then run `/join <code>` there. The bot binds them to the seat, spends the code and sends them a test DM; if their DMs are closed it says so, and their briefings wait for `/dispatch`. `revisionist discord invites` lists every code issued and whether it was used. A spent, expired or unknown code gets the same refusal. With two human seats, the CLI's `order`, `briefing` and `status` need `--seat`.
 
 ## 10. Upgrading a host set up under the old name
 

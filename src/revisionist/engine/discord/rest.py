@@ -34,6 +34,8 @@ MAX_ATTEMPTS = 3
 CANNOT_DM = 50007
 """Discord's "Cannot send messages to this user" (DMs closed, or no shared server)."""
 CHANNEL_LABEL = "discord"
+HELD_LABEL = "held"
+"""Logged as the channel when Discord refused the DM: nothing was sent, ``/dispatch`` shows it."""
 """What ``BriefingDelivered.channel`` says. Message IDs stay in ``discord_deliveries``."""
 
 
@@ -187,15 +189,16 @@ class MemoryOutbox:
 class DiscordDeliverer:
     """The Layer 4 ``Deliverer`` for seats bound to a Discord user: their briefing by DM.
 
-    If Discord refuses the DM (code 50007) the part goes to ``fallback_channel``,
-    which must be private to the player; without one the error propagates, so
-    the tick stays resumable and the scheduler counts a failure.
+    If Discord refuses the DM (code 50007, DMs closed to the bot) nothing is
+    sent anywhere and the label is ``held``: the tick still closes and the
+    player reads the briefing with ``/dispatch``. There is no shared fallback
+    channel, because with two humans it would show one player's briefing to
+    the other. Any other error propagates, so the tick stays resumable.
     """
 
     rest: DiscordRest
     outbox: Outbox
     users: Mapping[SeatId, str]
-    fallback_channel: str | None = None
     _dm: dict[str, str] = field(default_factory=dict, repr=False)
 
     def deliver(self, seat_id: SeatId, text: str, idempotency_key: str) -> str:
@@ -205,26 +208,24 @@ class DiscordDeliverer:
             if part in done or not content.strip():
                 continue
             nonce = nonce_for(idempotency_key, part)
-            channel_id, message_id = self._send(user_id, content, nonce)
+            try:
+                if user_id not in self._dm:
+                    self._dm[user_id] = self.rest.open_dm(user_id)
+                channel_id = self._dm[user_id]
+                message_id = self.rest.send(channel_id, content, nonce)
+            except DiscordError as exc:
+                if exc.code != CANNOT_DM:
+                    raise
+                return HELD_LABEL
             self.outbox.record(idempotency_key, part, channel_id, message_id)
         return CHANNEL_LABEL
-
-    def _send(self, user_id: str, content: str, nonce: str) -> tuple[str, str]:
-        try:
-            if user_id not in self._dm:
-                self._dm[user_id] = self.rest.open_dm(user_id)
-            channel_id = self._dm[user_id]
-            return channel_id, self.rest.send(channel_id, content, nonce)
-        except DiscordError as exc:
-            if exc.code != CANNOT_DM or not self.fallback_channel:
-                raise
-        return self.fallback_channel, self.rest.send(self.fallback_channel, content, nonce)
 
 
 __all__ = [
     "API",
     "CANNOT_DM",
     "CHANNEL_LABEL",
+    "HELD_LABEL",
     "PART_LIMIT",
     "DiscordDeliverer",
     "DiscordError",

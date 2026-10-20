@@ -110,7 +110,8 @@ class Game:
             transport_factory=lambda: self.transport,
             clock=self.clock,
             briefings=briefings,
-            deliverer_factory=routing_factory(rest, None),
+            deliverer_factory=routing_factory(rest),
+            rest=rest,
         )
         self.bot = bot.RevisionistBot(self.handlers, int(GUILD))
         self.replies: list[str] = []
