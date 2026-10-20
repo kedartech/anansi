@@ -100,7 +100,7 @@ Session Zero runs in five steps, in order. Steps 3-5 are private to each player.
    - **Roster:** a suggested list of 8-12 real people from that moment, each with a one-line pitch and their reach.
    - **Search:** the player describes what they want to play ("someone who can move money without being seen") and the GM suggests matching real people.
    - **Own pick:** any real person from that point in history, listed or not. The GM checks they existed and were placed to act at that date, then adds them to the world bible.
-   Characters are judged by **agency in history, not fame**. An unnamed spy, courier, banker's clerk or assassin is a valid character, and the roster includes such roles deliberately, as a named or composite person drawn from what the record shows such people did. Once a player claims a character, no one else can (decision 35).
+   Characters are judged by **agency in history, not fame**. An unnamed spy, courier, banker's clerk or assassin is a valid character, and the roster includes such roles deliberately, as a named or composite person drawn from what the record shows such people did. Where the record names no one, the character is a **composite**: given a name, built from what people in that role did, and labelled as composite in the brief. Once a player claims a character, no one else can (decision 35).
 4. **Goal.** Each player picks one secret goal (decision 37), again by one of three routes:
    - **As history went:** what the character really tried for, and whether they got it.
    - **As history could have gone:** plausible alternatives the character was placed to try.
@@ -275,7 +275,11 @@ Revised 2026-10-20 (decisions 36-38). This replaces the old per-seat scoring wit
 
 - **Win conditions are code.** A goal compiles at Session Zero into a typed condition over state, built from a closed set of checks: holds an Office, controls an Asset, an Entity's status (alive, dead, captured, exiled), a Meter at or past a value, a Commitment in force, a Relationship at or past a disposition, and AND / OR over these. No model ever decides whether a goal is met. A goal that cannot be written this way is reworded at Session Zero or refused.
 - **Progress** is the goal's objective clock: the engine advances it as sub-conditions come true, so the dashboard can show "2 of 3" to the owner only.
-- **Meeting a goal.** When the condition first holds at the end of a tick, the engine logs `GoalMet`, Private to the owner. The player keeps playing with full means, and may help or thwart the others. Whether a met goal stays met if the world later undoes it is an open question (§21).
+- **Meeting a goal.** When the condition first holds at the end of a tick, the engine logs `GoalMet`, Private to the owner. The player keeps playing with full means, and may help or thwart the others.
+- **Some goals can be undone (Josh, 2026-10-20).** Whether a met goal stays met depends on the goal. The engine, not a model, gives each goal one of two kinds at the goal step, from a fixed table keyed on the condition, and shows the kind to the player before they confirm:
+  - **Lasting:** the world cannot reverse it. A target dead, a polity dissolved. Once met, it stays met.
+  - **Undoable:** the world can reverse it or nullify its effect. An office can be lost, a treaty broken, a law repealed, a prisoner rescued, a fortune seized. When the condition stops holding, the engine logs `GoalUndone`, Private to the owner, and the goal counts as unmet until it holds again. It must hold at season end to win.
+  A player who meets an undoable goal early has to defend it until season end, and any rival who has uncovered it knows what to hit.
 - **Season end decides the winners.** Every player whose goal is met wins. Several winners, or none, are both valid endings. The full reveal shows every goal, who met it and when, and which pieces each rival had uncovered.
 - **No changing goals mid-season.** A goal is fixed at Session Zero. A player whose goal becomes impossible (their target dies at someone else's hand) may pick a new one at the next chapter break, from the same three routes, at a stated cost to progress. A fallen character's goal ends with them; the redesign gets a new one.
 - **Open mode** (sandbox, no set ending) returns after the first working game.
@@ -348,8 +352,8 @@ Share cards contain public information only, carry a one-line context, and carry
 1. Whether co-GM proposals may name a specific player's seat (currently allowed by decision 13; revisit after the first multiplayer slice).
 2. Exact lead time for co-GM events (1-2 ticks proposed).
 3. Season length default (about 3 weeks proposed) and chapter-break cadence.
-4. Does a met goal stay met? Proposed: goals of the form "achieve X" lock when met; goals of the form "hold X" must still be true at season end. The goal step labels each one.
-5. Unnamed historical figures (a spy or courier the record does not name): proposed as a named composite drawn from what such people did, labelled as composite in the brief.
+4. ~~Does a met goal stay met?~~ Decided 2026-10-20: depends on the goal. Lasting and undoable kinds, §15.
+5. ~~Unnamed historical figures.~~ Decided 2026-10-20: a named composite drawn from what such people did, labelled as composite in the brief (§5 step 3).
 6. Living people as targets of harm goals (assassination, capture, exile). **Allowed for now** (Josh, 2026-10-20). Must be reviewed before any public release; listed in the §19 pre-distribution checklist.
 
 ## 22. Build path
