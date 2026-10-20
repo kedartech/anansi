@@ -3315,6 +3315,36 @@
         "title": "Sealed",
         "type": "object"
       },
+      "SeasonEnded": {
+        "additionalProperties": false,
+        "description": "The season is over and its winners decided (README \u00a715, decision 36).\n\nLogged right after the full reveal's grants, ``revealed`` of them, and it\nmakes every goal public. ``winners`` is whatever ``season_winners`` says;\nthe fold checks it, so a log cannot crown anyone the engine did not.",
+        "properties": {
+          "kind": {
+            "const": "season_ended",
+            "default": "season_ended",
+            "title": "Kind",
+            "type": "string"
+          },
+          "revealed": {
+            "minimum": 0,
+            "title": "Revealed",
+            "type": "integer"
+          },
+          "winners": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Winners",
+            "type": "array"
+          }
+        },
+        "required": [
+          "winners",
+          "revealed"
+        ],
+        "title": "SeasonEnded",
+        "type": "object"
+      },
       "Seat": {
         "additionalProperties": false,
         "description": "Anything that holds a view of the world (README \u00a76, \u00a77, \u00a710).\n\nHumans, AI factions, press outlets and NPCs are all Seats, because they\nall need ``project(state, seat_id)``. Only ``PLAYER`` seats hold slots\nand an agent persona.",
@@ -3947,6 +3977,7 @@
             "rolled": "#/$defs/Rolled",
             "scheduled_event_fired": "#/$defs/ScheduledEventFired",
             "sealed": "#/$defs/Sealed",
+            "season_ended": "#/$defs/SeasonEnded",
             "seat_created": "#/$defs/SeatCreated",
             "seat_status_set": "#/$defs/SeatStatusSet",
             "session_zero_closed": "#/$defs/SessionZeroClosed",
@@ -4049,6 +4080,9 @@
           },
           {
             "$ref": "#/$defs/SessionZeroClosed"
+          },
+          {
+            "$ref": "#/$defs/SeasonEnded"
           },
           {
             "$ref": "#/$defs/GoalSet"

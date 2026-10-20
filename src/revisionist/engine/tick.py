@@ -27,7 +27,7 @@ from typing import Protocol
 from pydantic import Field
 
 from revisionist import __version__
-from revisionist.core import SCHEMA_VERSION, goals, intel, referee
+from revisionist.core import SCHEMA_VERSION, dashboard, goals, intel, referee
 from revisionist.core import delta as d
 from revisionist.core import events as ev
 from revisionist.core._base import Model
@@ -446,7 +446,7 @@ def run_tick(
             if seat_id in already:
                 continue
             key = derived_id(campaign_id, em.state.tick, "deliver", seat_id)
-            channel = providers.deliverer.deliver(seat_id, text, key)
+            channel = providers.deliverer.deliver(seat_id, _topped(em.state, seat_id, text), key)
             em.commit(
                 [
                     em.event(
@@ -649,6 +649,14 @@ def _scheduled(em: _Emitter) -> list[Event]:
         for s in sorted(state.scheduled.values(), key=lambda s: s.scheduled_id)
         if not s.fired and s.fire_at_tick <= state.tick
     ]
+
+
+def _topped(state: State, seat_id: SeatId, text: str) -> str:
+    """A player's briefing opens with their dashboard (README §15); the press's does not."""
+    if state.seats[seat_id].kind is not SeatKind.PLAYER:
+        return text
+    board = dashboard.render(dashboard.dashboard(project(state, seat_id)))
+    return "\n".join(board) + "\n\n" + text
 
 
 def _intel(

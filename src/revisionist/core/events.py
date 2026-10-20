@@ -8,8 +8,8 @@ State-mutating kinds (the fold in Layer 2 handles exactly these):
 MeterCreated, ClockCreated, FactAsserted, CommitmentCreated, SeatCreated,
 AgentAssigned, SeatStatusSet, IntentFiled, IntentRejected, DeltaApplied,
 ScheduledEventFired, SessionZeroOpened, CharacterListed, CharacterClaimed,
-SessionZeroClosed, GoalSet, GoalProgressed, GoalMet, GoalUndone, TickOpened,
-TickClosed``.
+SessionZeroClosed, SeasonEnded, GoalSet, GoalProgressed, GoalMet, GoalUndone,
+TickOpened, TickClosed``.
 
 Every other kind is a record: it is replayable, searchable and shown by
 ``/why``, but changes no state.
@@ -293,6 +293,19 @@ class SessionZeroClosed(Model):
     kind: Literal["session_zero_closed"] = "session_zero_closed"
 
 
+class SeasonEnded(Model):
+    """The season is over and its winners decided (README §15, decision 36).
+
+    Logged right after the full reveal's grants, ``revealed`` of them, and it
+    makes every goal public. ``winners`` is whatever ``season_winners`` says;
+    the fold checks it, so a log cannot crown anyone the engine did not.
+    """
+
+    kind: Literal["season_ended"] = "season_ended"
+    winners: tuple[SeatId, ...]
+    revealed: int = Field(ge=0)
+
+
 # --- Goals ---------------------------------------------------------------------
 
 
@@ -457,6 +470,7 @@ Payload = Annotated[
     | CharacterListed
     | CharacterClaimed
     | SessionZeroClosed
+    | SeasonEnded
     | GoalSet
     | GoalProgressed
     | GoalMet
@@ -495,6 +509,7 @@ MUTATING_KINDS: frozenset[str] = frozenset(
         "character_listed",
         "character_claimed",
         "session_zero_closed",
+        "season_ended",
         "goal_set",
         "goal_progressed",
         "goal_met",

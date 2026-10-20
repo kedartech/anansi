@@ -18,7 +18,7 @@ from collections.abc import Iterable, Mapping
 from revisionist.core import delta as d
 from revisionist.core import events as ev
 from revisionist.core.events import MUTATING_KINDS, Event
-from revisionist.core.goals import GoalKind
+from revisionist.core.goals import GoalKind, season_winners
 from revisionist.core.ids import CampaignId
 from revisionist.core.ontology import (
     Asset,
@@ -229,6 +229,13 @@ def _mutate(state: State, event: Event) -> State:
             if state.phase is not Phase.SESSION_ZERO:
                 raise FoldError("Session Zero is not open")
             return state.model_copy(update={"phase": Phase.PLAY})
+        case ev.SeasonEnded():
+            if state.phase is not Phase.PLAY or state.frozen:
+                raise FoldError("a season ends between ticks, in play")
+            if p.winners != tuple(sorted(season_winners(state))):
+                raise FoldError("season_ended names other winners than the goals do")
+            public = {k: g.model_copy(update={"scope": PUBLIC}) for k, g in state.goals.items()}
+            return state.model_copy(update={"phase": Phase.SEASON_OVER, "goals": public})
         case ev.GoalSet():
             g = p.goal
             _fresh(state.goals, g.goal_id, "goal")

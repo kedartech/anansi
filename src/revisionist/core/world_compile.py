@@ -22,6 +22,7 @@ from revisionist.core.goals import (
     goal_met,
     leaves,
     parts,
+    progress,
 )
 from revisionist.core.ids import (
     AssetId,
@@ -113,7 +114,19 @@ def compile_world(world: WorldFile, campaign_id: CampaignId, versions: Versions)
     met = [f"goal {g.key}: already met at tick 0" for g in world.goals if _met(state, g, ids)]
     if met:
         raise WorldError(met)
-    return events
+    return [_started(e, state) for e in events]
+
+
+def _started(event: Event, state: State) -> Event:
+    """A goal's objective clock starts at the parts the world already gives it."""
+    p = event.payload
+    if not isinstance(p, ev.ClockCreated) or p.clock.kind is not ClockKind.OBJECTIVE:
+        return event
+    goal = next((g for g in state.goals.values() if g.clock_id == p.clock.clock_id), None)
+    if goal is None:
+        return event
+    clock = p.clock.model_copy(update={"segments_filled": progress(state, goal.condition)})
+    return event.model_copy(update={"payload": ev.ClockCreated(clock=clock)})
 
 
 # --- keys and references ------------------------------------------------------

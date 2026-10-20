@@ -453,7 +453,9 @@ def test_goals_compile_with_their_own_private_objective_clock() -> None:
         assert clock.scope.known_by == goal.scope.known_by == {seat}
         assert goal.kind.value == "undoable" and goal.met_tick is None
     assert state.clocks[goals[varda].clock_id].segments_total == 2
+    assert state.clocks[goals[varda].clock_id].segments_filled == 1  # Varda holds the Saltworks
     assert state.clocks[goals[ostrel].clock_id].segments_total == 1
+    assert state.clocks[goals[ostrel].clock_id].segments_filled == 0
     assert goals[ostrel].condition.holder == EntityId(ids["ostrel"])  # type: ignore[union-attr]
 
 

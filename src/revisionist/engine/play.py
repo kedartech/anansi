@@ -8,6 +8,7 @@ print or send; none prints. Transport errors propagate.
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 
+from revisionist.core import dashboard
 from revisionist.core import events as ev
 from revisionist.core.canary import scan_deliveries
 from revisionist.core.events import Event
@@ -116,12 +117,17 @@ def get_briefing(
     text = "\n".join([brief.text, brief.dilemma or "", *moves])
     if scan_deliveries(state, [(seat, text)]):
         return BriefingOutcome(brief, withheld=True, lines=())
-    lines = [brief.text]
+    lines = [*dashboard_lines(state, seat), "", brief.text]
     if brief.dilemma:
         lines.append(f"\nDilemma: {brief.dilemma}")
     lines += [f"  {n}. {move}" for n, move in enumerate(moves, start=1)]
     lines += _last_cutoff(state, seat, list(store.read(campaign_id)))
     return BriefingOutcome(brief, withheld=False, lines=tuple(lines))
+
+
+def dashboard_lines(state: State, seat: SeatId) -> list[str]:
+    """The seat's dashboard (README §15), from its own view only. No model is asked."""
+    return dashboard.render(dashboard.dashboard(project(state, seat)))
 
 
 # --- perceived odds (README §7) ----------------------------------------------------
