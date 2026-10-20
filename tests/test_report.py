@@ -1,13 +1,12 @@
 import pytest
 
-from tests import fixtures as fx
-from wyrd.core import events as ev
-from wyrd.core.delta import AssetTierDelta
-from wyrd.core.events import CallCost, Event
-from wyrd.core.fold import replay
-from wyrd.core.ids import DeltaId, IntentId
-from wyrd.core.intent import Intent, Verb
-from wyrd.core.report import (
+from revisionist.core import events as ev
+from revisionist.core.delta import AssetTierDelta
+from revisionist.core.events import CallCost, Event
+from revisionist.core.fold import replay
+from revisionist.core.ids import DeltaId, IntentId
+from revisionist.core.intent import Intent, Verb
+from revisionist.core.report import (
     cost_report,
     leak_report,
     render_cost,
@@ -15,8 +14,9 @@ from wyrd.core.report import (
     render_why,
     why,
 )
-from wyrd.core.resolution import FeasibilityBand, OutcomeTier, RejectionReason, TickStage
-from wyrd.core.visibility import PUBLIC
+from revisionist.core.resolution import FeasibilityBand, OutcomeTier, RejectionReason, TickStage
+from revisionist.core.visibility import PUBLIC
+from tests import fixtures as fx
 
 I1 = IntentId("01ARZ3NDEKTSV4RRFFQ69INT01")
 I2 = IntentId("01ARZ3NDEKTSV4RRFFQ69INT02")

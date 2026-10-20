@@ -4,9 +4,9 @@ from typing import cast
 
 from hypothesis import strategies as st
 
-from wyrd.core import delta as d
-from wyrd.core import events as ev
-from wyrd.core.ids import (
+from revisionist.core import delta as d
+from revisionist.core import events as ev
+from revisionist.core.ids import (
     AssetId,
     CampaignId,
     ClockId,
@@ -21,8 +21,8 @@ from wyrd.core.ids import (
     ScheduledEventId,
     SeatId,
 )
-from wyrd.core.intent import Intent, Verb
-from wyrd.core.ontology import (
+from revisionist.core.intent import Intent, Verb
+from revisionist.core.ontology import (
     Asset,
     AssetKind,
     Clause,
@@ -41,8 +41,8 @@ from wyrd.core.ontology import (
     Seat,
     SeatKind,
 )
-from wyrd.core.settings import Settings
-from wyrd.core.visibility import Scope, Visibility
+from revisionist.core.settings import Settings
+from revisionist.core.visibility import Scope, Visibility
 
 CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 ulid = st.text(alphabet=CROCKFORD, min_size=26, max_size=26)

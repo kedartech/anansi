@@ -2,8 +2,8 @@ from collections.abc import Iterator, Mapping
 
 import pytest
 
+from revisionist.engine.discord import rest
 from tests import pg
-from wyrd.engine.discord import rest
 
 
 @pytest.fixture(scope="session")

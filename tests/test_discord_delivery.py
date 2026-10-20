@@ -15,14 +15,11 @@ from hypothesis import strategies as st
 from psycopg import errors
 from typer.testing import CliRunner
 
-from tests.discord_fakes import FakeDiscord
-from tests.pg import PgDb
-from tests.test_cli import FakeClaude
-from wyrd import cli
-from wyrd.core import events as ev
-from wyrd.core.ids import CampaignId, SeatId
-from wyrd.engine.discord import delivery
-from wyrd.engine.discord.rest import (
+from revisionist import cli
+from revisionist.core import events as ev
+from revisionist.core.ids import CampaignId, SeatId
+from revisionist.engine.discord import delivery
+from revisionist.engine.discord.rest import (
     PART_LIMIT,
     DiscordDeliverer,
     DiscordError,
@@ -31,9 +28,12 @@ from wyrd.engine.discord.rest import (
     nonce_for,
     split_message,
 )
-from wyrd.engine.discord.tables import PgOutbox, SeatLinks
-from wyrd.engine.pg_store import PostgresEventStore
-from wyrd.engine.store import load_state
+from revisionist.engine.discord.tables import PgOutbox, SeatLinks
+from revisionist.engine.pg_store import PostgresEventStore
+from revisionist.engine.store import load_state
+from tests.discord_fakes import FakeDiscord
+from tests.pg import PgDb
+from tests.test_cli import FakeClaude
 
 TOKEN = "MTIz.fake-bot-token.SECRET-do-not-log"
 SEAT = SeatId("01ARZ3NDEKTSV4RRFFQ69G5W0S")
@@ -209,10 +209,10 @@ def linked(
     pg_db: PgDb, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> Iterator[tuple[PgDb, FakeDiscord]]:
     """A Postgres campaign with the human seat bound to ``USER`` and a bot token set."""
-    monkeypatch.setenv("WYRD_DB", pg_db.app_dsn)
-    monkeypatch.setenv("WYRD_BRIEFINGS_DIR", str(tmp_path / "briefings"))
-    monkeypatch.setenv("WYRD_DISCORD_TOKEN", TOKEN)
-    monkeypatch.setenv("WYRD_DISCORD_GUILD_ID", "222")
+    monkeypatch.setenv("REVISIONIST_DB", pg_db.app_dsn)
+    monkeypatch.setenv("REVISIONIST_BRIEFINGS_DIR", str(tmp_path / "briefings"))
+    monkeypatch.setenv("REVISIONIST_DISCORD_TOKEN", TOKEN)
+    monkeypatch.setenv("REVISIONIST_DISCORD_GUILD_ID", "222")
     monkeypatch.setattr(cli, "transport_factory", FakeClaude)
     fake = FakeDiscord()
     monkeypatch.setattr(
@@ -266,7 +266,7 @@ def test_no_token_means_files_as_before(
     linked: tuple[PgDb, FakeDiscord], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     db, fake = linked
-    monkeypatch.delenv("WYRD_DISCORD_TOKEN")
+    monkeypatch.delenv("REVISIONIST_DISCORD_TOKEN")
     assert runner.invoke(cli.app, ["tick", "--offline"]).exit_code == 0
     assert set(_deliveries(db).values()) == {"file"}
     assert fake.requests == []

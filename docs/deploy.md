@@ -1,4 +1,4 @@
-# Running Wyrd Protocol on the home server
+# Running Revisionist on the home server
 
 Runbook for build plan Layer 8 (Postgres, the scheduler, nightly backups and the restore drill) and Layer 9a (solo play on Discord, §9). Design and reasons are in [design.md §14](design.md#14-postgres-and-the-scheduler-layer-8-decided) and [§15](design.md#15-the-discord-transport-layer-9a-proposed). Written 2026-10-20. Nothing here has been run on the real server yet.
 
@@ -10,18 +10,18 @@ Two roles. Create them yourself as a Postgres superuser; the migrations never cr
 
 | Role | Used by | Can |
 |---|---|---|
-| `wyrd_admin` | `wyrd db migrate`, backups, the restore drill | owns the database and its tables; creates scratch databases for the drill |
-| `wyrd_app` | every other `wyrd` command, the scheduler and the Discord bot | `SELECT, INSERT` on `events`, `snapshots`, `discord_deliveries` and `discord_bugs`; `SELECT, INSERT, UPDATE` on `schedule`; `SELECT, INSERT, UPDATE, DELETE` on `discord_seats`; nothing else |
+| `revisionist_admin` | `revisionist db migrate`, backups, the restore drill | owns the database and its tables; creates scratch databases for the drill |
+| `revisionist_app` | every other `revisionist` command, the scheduler and the Discord bot | `SELECT, INSERT` on `events`, `snapshots`, `discord_deliveries` and `discord_bugs`; `SELECT, INSERT, UPDATE` on `schedule`; `SELECT, INSERT, UPDATE, DELETE` on `discord_seats`; nothing else |
 
 ```
 sudo -u postgres psql
-CREATE ROLE wyrd_admin LOGIN CREATEDB;
-CREATE ROLE wyrd_app LOGIN;
-\password wyrd_admin
-\password wyrd_app
-CREATE DATABASE wyrd OWNER wyrd_admin;
-REVOKE ALL ON DATABASE wyrd FROM PUBLIC;
-GRANT CONNECT ON DATABASE wyrd TO wyrd_app;
+CREATE ROLE revisionist_admin LOGIN CREATEDB;
+CREATE ROLE revisionist_app LOGIN;
+\password revisionist_admin
+\password revisionist_app
+CREATE DATABASE revisionist OWNER revisionist_admin;
+REVOKE ALL ON DATABASE revisionist FROM PUBLIC;
+GRANT CONNECT ON DATABASE revisionist TO revisionist_app;
 ```
 
 `\password` keeps the passwords out of shell history. `CREATEDB` is only for the restore drill's scratch database.
@@ -30,53 +30,53 @@ GRANT CONNECT ON DATABASE wyrd TO wyrd_app;
 
 Two files, so the scheduler never holds the admin password. Both `chmod 600`. Percent-encode any special characters in a password inside a URL.
 
-`~/.config/wyrd/wyrd.env` (read by the scheduler and by you when playing):
+`~/.config/revisionist/revisionist.env` (read by the scheduler and by you when playing):
 
 ```
-WYRD_DB=postgresql://wyrd_app:<password>@localhost:5432/wyrd
-WYRD_BRIEFINGS_DIR=/home/<you>/.local/share/wyrd/briefings
+REVISIONIST_DB=postgresql://revisionist_app:<password>@localhost:5432/revisionist
+REVISIONIST_BRIEFINGS_DIR=/home/<you>/.local/share/revisionist/briefings
 ```
 
-`~/.config/wyrd/wyrd-admin.env` (read by the backup unit and the restore drill):
+`~/.config/revisionist/revisionist-admin.env` (read by the backup unit and the restore drill):
 
 ```
-WYRD_ADMIN_DSN=postgresql://wyrd_admin:<password>@localhost:5432/wyrd
-WYRD_BACKUP_DEST=<rsync target, e.g. user@nas:/backups/wyrd, or rclone:<remote>:<path>>
-# optional: WYRD_BACKUP_DIR (default ~/.local/share/wyrd/backups), WYRD_BACKUP_KEEP_DAYS (default 14)
+REVISIONIST_ADMIN_DSN=postgresql://revisionist_admin:<password>@localhost:5432/revisionist
+REVISIONIST_BACKUP_DEST=<rsync target, e.g. user@nas:/backups/revisionist, or rclone:<remote>:<path>>
+# optional: REVISIONIST_BACKUP_DIR (default ~/.local/share/revisionist/backups), REVISIONIST_BACKUP_KEEP_DAYS (default 14)
 ```
 
 | Variable | Meaning |
 |---|---|
-| `WYRD_DB` | `postgresql://` URL as `wyrd_app`, or a SQLite file path (solo play, no scheduler) |
-| `WYRD_ADMIN_DSN` | `postgresql://` URL as `wyrd_admin`, for `wyrd db migrate`, backups and the drill |
-| `WYRD_BRIEFINGS_DIR` | where briefings are written; default `./wyrd-briefings` on Postgres |
-| `WYRD_BACKUP_DEST` | off-box copy target. The backup fails if it is unset |
-| `WYRD_APP_ROLE` | role `wyrd db migrate` grants to; default `wyrd_app` |
-| `WYRD_DISCORD_*` | the Discord bot and DM delivery; see §9 |
+| `REVISIONIST_DB` | `postgresql://` URL as `revisionist_app`, or a SQLite file path (solo play, no scheduler) |
+| `REVISIONIST_ADMIN_DSN` | `postgresql://` URL as `revisionist_admin`, for `revisionist db migrate`, backups and the drill |
+| `REVISIONIST_BRIEFINGS_DIR` | where briefings are written; default `./revisionist-briefings` on Postgres |
+| `REVISIONIST_BACKUP_DEST` | off-box copy target. The backup fails if it is unset |
+| `REVISIONIST_APP_ROLE` | role `revisionist db migrate` grants to; default `revisionist_app` |
+| `REVISIONIST_DISCORD_*` | the Discord bot and DM delivery; see §9 |
 
-To load a file into a shell: `set -a; . ~/.config/wyrd/wyrd-admin.env; set +a`.
+To load a file into a shell: `set -a; . ~/.config/revisionist/revisionist-admin.env; set +a`.
 
 ## 3. Install and migrate
 
 ```
-git clone <the repo> ~/src/wyrd-protocol
-cd ~/src/wyrd-protocol
-uv tool install --editable '.[postgres,discord]'   # puts `wyrd` in ~/.local/bin
-set -a; . ~/.config/wyrd/wyrd-admin.env; set +a
-wyrd db migrate                                # "applied 0001_init, 0002_schedule, 0003_discord"
+git clone <the repo> ~/src/revisionist
+cd ~/src/revisionist
+uv tool install --editable '.[postgres,discord]'   # puts `revisionist` in ~/.local/bin
+set -a; . ~/.config/revisionist/revisionist-admin.env; set +a
+revisionist db migrate                                # "applied 0001_init, 0002_schedule, 0003_discord"
 ```
 
-`--editable` keeps `wyrd new salt-strait` finding the bundled `worlds/`. Rerunning `wyrd db migrate` is safe ("up to date"). After pulling new code, run it again before the next tick.
+`--editable` keeps `revisionist new salt-strait` finding the bundled `worlds/`. Rerunning `revisionist db migrate` is safe ("up to date"). After pulling new code, run it again before the next tick.
 
 Moving a SQLite campaign across, if you have one:
 
 ```
-set -a; . ~/.config/wyrd/wyrd.env; set +a
-wyrd db copy --from ~/wyrd.db --to "$WYRD_DB"     # copies, then verifies event for event
-wyrd db verify
+set -a; . ~/.config/revisionist/revisionist.env; set +a
+revisionist db copy --from ~/revisionist.db --to "$REVISIONIST_DB"     # copies, then verifies event for event
+revisionist db verify
 ```
 
-Or start fresh: `wyrd new salt-strait` with `WYRD_DB` set. Tick cadence is the world's `settings.tick_hours` (set `tick_hours: 12` in the YAML for 12-hour ticks).
+Or start fresh: `revisionist new salt-strait` with `REVISIONIST_DB` set. Tick cadence is the world's `settings.tick_hours` (set `tick_hours: 12` in the YAML for 12-hour ticks).
 
 ## 4. The Claude CLI
 
@@ -85,61 +85,61 @@ Live ticks call `claude -p` as this user. Log in once as this user (`claude`), a
 ## 5. Units
 
 ```
-mkdir -p ~/.config/systemd/user ~/.local/share/wyrd
+mkdir -p ~/.config/systemd/user ~/.local/share/revisionist
 cp deploy/systemd/*.service deploy/systemd/*.timer ~/.config/systemd/user/
-install -m 755 deploy/backup/wyrd-backup.sh ~/.local/bin/wyrd-backup
-install -m 755 deploy/backup/wyrd-restore-drill.sh ~/.local/bin/wyrd-restore-drill
+install -m 755 deploy/backup/revisionist-backup.sh ~/.local/bin/revisionist-backup
+install -m 755 deploy/backup/revisionist-restore-drill.sh ~/.local/bin/revisionist-restore-drill
 sudo loginctl enable-linger "$USER"            # user units run with nobody logged in
 systemctl --user daemon-reload
-systemctl --user enable --now wyrd-scheduler.timer wyrd-backup.timer
+systemctl --user enable --now revisionist-scheduler.timer revisionist-backup.timer
 systemctl --user list-timers
 ```
 
-- `wyrd-scheduler.timer` fires every 10 minutes (`Persistent=true`, up to 60 s random delay) and starts `wyrd-scheduler.service`, a oneshot running `wyrd scheduler run`. Each run ticks each due campaign at most once.
-- `wyrd-backup.timer` fires nightly at 03:30 (up to 15 min random delay) and runs `wyrd-backup`.
-- Logs: `journalctl --user -u wyrd-scheduler.service` and `-u wyrd-backup.service`.
+- `revisionist-scheduler.timer` fires every 10 minutes (`Persistent=true`, up to 60 s random delay) and starts `revisionist-scheduler.service`, a oneshot running `revisionist scheduler run`. Each run ticks each due campaign at most once.
+- `revisionist-backup.timer` fires nightly at 03:30 (up to 15 min random delay) and runs `revisionist-backup`.
+- Logs: `journalctl --user -u revisionist-scheduler.service` and `-u revisionist-backup.service`.
 
 ## 6. Operating the scheduler
 
 ```
-wyrd scheduler status                       # next due time, paused?, failures, last status
-wyrd scheduler advance [--campaign ID]      # tick on the next poll
-wyrd scheduler pause [--campaign ID] [--reason TEXT]
-wyrd scheduler resume [--campaign ID]       # also clears the failure count
-wyrd scheduler run --offline                # a dry run with the fixture providers
+revisionist scheduler status                       # next due time, paused?, failures, last status
+revisionist scheduler advance [--campaign ID]      # tick on the next poll
+revisionist scheduler pause [--campaign ID] [--reason TEXT]
+revisionist scheduler resume [--campaign ID]       # also clears the failure count
+revisionist scheduler run --offline                # a dry run with the fixture providers
 ```
 
 A campaign ticks when its due time passes, when you `advance`, or when every human seat has filed an order since the last tick. A new campaign is first due one tick after the scheduler first sees it. Missed ticks (server down) are skipped, not backfilled.
 
 When the unit shows **failed**:
 
-- **Three failures in a row** (model call errors, a crash): the campaign is paused with `3 consecutive failures`. The tick in progress is safe; it resumes where it stopped. Read the journal, fix the cause, `wyrd scheduler resume`.
-- **Canary leak** (exit 3): the campaign is paused at once with `canary leak at tick N`. Run `wyrd leaks` and `wyrd why <event>` with `WYRD_DB` set before resuming.
+- **Three failures in a row** (model call errors, a crash): the campaign is paused with `3 consecutive failures`. The tick in progress is safe; it resumes where it stopped. Read the journal, fix the cause, `revisionist scheduler resume`.
+- **Canary leak** (exit 3): the campaign is paused at once with `canary leak at tick N`. Run `revisionist leaks` and `revisionist why <event>` with `REVISIONIST_DB` set before resuming.
 
 ## 7. Backups and the restore drill
 
-The nightly backup writes `wyrd-<UTC timestamp>.dump` (`pg_dump -Fc`) to `WYRD_BACKUP_DIR`, checks the archive reads back, deletes local dumps older than `WYRD_BACKUP_KEEP_DAYS`, then copies the new dump to `WYRD_BACKUP_DEST` with `rsync` (or `rclone copy` for an `rclone:` target). Retention at the destination is the destination's business.
+The nightly backup writes `revisionist-<UTC timestamp>.dump` (`pg_dump -Fc`) to `REVISIONIST_BACKUP_DIR`, checks the archive reads back, deletes local dumps older than `REVISIONIST_BACKUP_KEEP_DAYS`, then copies the new dump to `REVISIONIST_BACKUP_DEST` with `rsync` (or `rclone copy` for an `rclone:` target). Retention at the destination is the destination's business.
 
 Run the drill after setup, after any Postgres upgrade, and monthly:
 
 ```
-set -a; . ~/.config/wyrd/wyrd-admin.env; set +a
-wyrd-restore-drill
+set -a; . ~/.config/revisionist/revisionist-admin.env; set +a
+revisionist-restore-drill
 ```
 
-It restores the newest local dump into a scratch database, runs `wyrd db verify` against it (replays every campaign from event 0, checks every tick's state hash and the latest snapshot), drops the scratch database, and exits non-zero on any failure. Pull a dump back from the off-box target into `WYRD_BACKUP_DIR` now and then and drill that one too, so the off-box copy is proven, not assumed.
+It restores the newest local dump into a scratch database, runs `revisionist db verify` against it (replays every campaign from event 0, checks every tick's state hash and the latest snapshot), drops the scratch database, and exits non-zero on any failure. Pull a dump back from the off-box target into `REVISIONIST_BACKUP_DIR` now and then and drill that one too, so the off-box copy is proven, not assumed.
 
-Real restore onto a new server: create the roles and an empty `wyrd` database as in §1, then `pg_restore --exit-on-error --no-owner --dbname="$WYRD_ADMIN_DSN" <dump>` and `WYRD_DB=... wyrd db verify`. Do not run `wyrd db migrate` before the restore; the dump carries `schema_migrations`.
+Real restore onto a new server: create the roles and an empty `revisionist` database as in §1, then `pg_restore --exit-on-error --no-owner --dbname="$REVISIONIST_ADMIN_DSN" <dump>` and `REVISIONIST_DB=... revisionist db verify`. Do not run `revisionist db migrate` before the restore; the dump carries `schema_migrations`.
 
 ## 8. Still to do on the real server (Josh)
 
-- [ ] The Layer 8 exit run: a solo campaign on `tick_hours: 12` running three days with no manual trigger. `wyrd scheduler status` and `wyrd db verify` at the end.
-- [ ] A real restore: the drill above against a dump fetched back from `WYRD_BACKUP_DEST`.
+- [ ] The Layer 8 exit run: a solo campaign on `tick_hours: 12` running three days with no manual trigger. `revisionist scheduler status` and `revisionist db verify` at the end.
+- [ ] A real restore: the drill above against a dump fetched back from `REVISIONIST_BACKUP_DEST`.
 - [ ] Confirm the units start under linger after a reboot (`systemctl --user list-timers`).
 
 ## 9. Discord (Layer 9a)
 
-Solo play from Discord: briefings arrive by DM, orders go in by `/order` or a plain DM to the bot. Only the human seat is on Discord; AI factions and the outlet keep writing files to `WYRD_BRIEFINGS_DIR`. Postgres only.
+Solo play from Discord: briefings arrive by DM, orders go in by `/order` or a plain DM to the bot. Only the human seat is on Discord; AI factions and the outlet keep writing files to `REVISIONIST_BRIEFINGS_DIR`. Postgres only.
 
 ### 9.1 Create the application and bot
 
@@ -150,55 +150,87 @@ Solo play from Discord: briefings arrive by DM, orders go in by `/order` or a pl
 
 ### 9.2 Environment
 
-Add to `~/.config/wyrd/wyrd.env` (already `chmod 600`):
+Add to `~/.config/revisionist/revisionist.env` (already `chmod 600`):
 
 ```
-WYRD_DISCORD_TOKEN=<bot token>
-WYRD_DISCORD_GUILD_ID=<server ID>
-WYRD_DISCORD_HOST_ID=<your user ID>
+REVISIONIST_DISCORD_TOKEN=<bot token>
+REVISIONIST_DISCORD_GUILD_ID=<server ID>
+REVISIONIST_DISCORD_HOST_ID=<your user ID>
 # optional: where your briefings go if Discord refuses the DM.
 # It must be a channel private to you; never a shared one.
-# WYRD_DISCORD_FALLBACK_CHANNEL=<channel ID>
+# REVISIONIST_DISCORD_FALLBACK_CHANNEL=<channel ID>
 ```
 
 | Variable | Meaning |
 |---|---|
-| `WYRD_DISCORD_TOKEN` | the bot token. When set on Postgres, `wyrd tick`, `wyrd scheduler run` and `/advance` deliver bound seats' briefings by DM |
-| `WYRD_DISCORD_GUILD_ID` | the one server the bot serves; slash commands are synced there |
-| `WYRD_DISCORD_HOST_ID` | the user allowed `/advance`, `/pause`, `/resume`; unset means nobody |
-| `WYRD_DISCORD_FALLBACK_CHANNEL` | optional private channel for briefings when DMs are closed; unset means the delivery fails and the tick retries on the next poll |
+| `REVISIONIST_DISCORD_TOKEN` | the bot token. When set on Postgres, `revisionist tick`, `revisionist scheduler run` and `/advance` deliver bound seats' briefings by DM |
+| `REVISIONIST_DISCORD_GUILD_ID` | the one server the bot serves; slash commands are synced there |
+| `REVISIONIST_DISCORD_HOST_ID` | the user allowed `/advance`, `/pause`, `/resume`; unset means nobody |
+| `REVISIONIST_DISCORD_FALLBACK_CHANNEL` | optional private channel for briefings when DMs are closed; unset means the delivery fails and the tick retries on the next poll |
 
-With the token in `wyrd.env`, the scheduler (§5) delivers by DM too: it reads the same file.
+With the token in `revisionist.env`, the scheduler (§5) delivers by DM too: it reads the same file.
 
 ### 9.3 Migrate, link, run
 
 ```
-cd ~/src/wyrd-protocol && git pull
+cd ~/src/revisionist && git pull
 uv tool install --editable '.[postgres,discord]' --force
-set -a; . ~/.config/wyrd/wyrd-admin.env; set +a
-wyrd db migrate                               # "applied 0003_discord"
-set -a; . ~/.config/wyrd/wyrd.env; set +a
-wyrd discord link --user "$WYRD_DISCORD_HOST_ID"   # binds the campaign's human seat to you
-wyrd discord seats
-cp deploy/systemd/wyrd-discord.service ~/.config/systemd/user/
+set -a; . ~/.config/revisionist/revisionist-admin.env; set +a
+revisionist db migrate                               # "applied 0003_discord"
+set -a; . ~/.config/revisionist/revisionist.env; set +a
+revisionist discord link --user "$REVISIONIST_DISCORD_HOST_ID"   # binds the campaign's human seat to you
+revisionist discord seats
+cp deploy/systemd/revisionist-discord.service ~/.config/systemd/user/
 systemctl --user daemon-reload
-systemctl --user enable --now wyrd-discord.service
-journalctl --user -u wyrd-discord.service -f
+systemctl --user enable --now revisionist-discord.service
+journalctl --user -u revisionist-discord.service -f
 ```
 
-`wyrd discord link` takes `--campaign` (default the newest) and `--seat` (default the human seat; a non-human seat is refused). `wyrd discord unlink` removes a binding. The bot is a long-running unit (`Restart=on-failure`); `wyrd discord run` runs it in the foreground for a look.
+`revisionist discord link` takes `--campaign` (default the newest) and `--seat` (default the human seat; a non-human seat is refused). `revisionist discord unlink` removes a binding. The bot is a long-running unit (`Restart=on-failure`); `revisionist discord run` runs it in the foreground for a look.
 
 ### 9.4 First-run smoke check
 
 1. The journal shows the bot logged in, with no traceback.
 2. In the server, type `/` : `order`, `briefing`, `status`, `advance`, `pause`, `resume`, `bug`, `report`, `key` are listed. They exist only in this server, not in DMs.
-3. Run `/status` in any channel of the server. The reply is ephemeral (only you see it) and matches `wyrd status`.
-4. DM the bot an order. It replies `filed ...` or with a question, and `wyrd status` shows it pending.
-5. `wyrd tick --offline` (or `/advance` for a live tick): your briefing arrives by DM, and no `t<tick>-<your seat>.md` file appears in `WYRD_BRIEFINGS_DIR` (the outlet's still does).
+3. Run `/status` in any channel of the server. The reply is ephemeral (only you see it) and matches `revisionist status`.
+4. DM the bot an order. It replies `filed ...` or with a question, and `revisionist status` shows it pending.
+5. `revisionist tick --offline` (or `/advance` for a live tick): your briefing arrives by DM, and no `t<tick>-<your seat>.md` file appears in `REVISIONIST_BRIEFINGS_DIR` (the outlet's still does).
 
-If `/status` says you hold no seat, the link is missing or `WYRD_DISCORD_GUILD_ID` names another server. If the briefing never arrives and `wyrd scheduler status` shows `50007`, your DMs from server members are closed: open them for this server or set the fallback channel.
+If `/status` says you hold no seat, the link is missing or `REVISIONIST_DISCORD_GUILD_ID` names another server. If the briefing never arrives and `revisionist scheduler status` shows `50007`, your DMs from server members are closed: open them for this server or set the fallback channel.
 
 ### 9.5 Still to do (Josh)
 
 - [ ] The live smoke check above.
-- [ ] The Layer 9a exit run: 10 ticks of the solo campaign played from Discord (briefings by DM, orders by `/order` or DM), then `wyrd leaks` reports 0 and `wyrd db verify` passes.
+- [ ] The Layer 9a exit run: 10 ticks of the solo campaign played from Discord (briefings by DM, orders by `/order` or DM), then `revisionist leaks` reports 0 and `revisionist db verify` passes.
+
+## 10. Upgrading a host set up under the old name
+
+The project was called Wyrd Protocol through Layer 9a. Everything it installed carried that name: roles `wyrd_app` and `wyrd_admin`, database `wyrd`, `~/.config/wyrd/wyrd.env` and `wyrd-admin.env`, `~/.local/share/wyrd`, the `wyrd` tool, units `wyrd-scheduler`, `wyrd-backup` and `wyrd-discord`, dumps `wyrd-*.dump` and `WYRD_*` variables. Skip this section if none of that exists. Do every step in one sitting: the per-campaign advisory lock key changed with the rename, so an old and a new process must never run side by side.
+
+1. Stop and disable everything old:
+   ```
+   systemctl --user disable --now wyrd-scheduler.timer wyrd-backup.timer wyrd-discord.service
+   rm ~/.config/systemd/user/wyrd-*.service ~/.config/systemd/user/wyrd-*.timer
+   rm ~/.local/bin/wyrd-backup ~/.local/bin/wyrd-restore-drill
+   ```
+2. Rename the database and roles as a Postgres superuser, with nobody connected:
+   ```
+   ALTER DATABASE wyrd RENAME TO revisionist;
+   ALTER ROLE wyrd_app RENAME TO revisionist_app;
+   ALTER ROLE wyrd_admin RENAME TO revisionist_admin;
+   ```
+   Postgres clears an MD5 password when a role is renamed; a SCRAM password survives. If a login fails afterwards, set the password again with `\password`.
+3. Move the configuration and data directories, then rename the files and every key in them:
+   ```
+   mv ~/.config/wyrd ~/.config/revisionist
+   mv ~/.config/revisionist/wyrd.env ~/.config/revisionist/revisionist.env
+   mv ~/.config/revisionist/wyrd-admin.env ~/.config/revisionist/revisionist-admin.env
+   sed -i 's/^WYRD_/REVISIONIST_/; s#/wyrd\b#/revisionist#g' ~/.config/revisionist/*.env
+   mv ~/.local/share/wyrd ~/.local/share/revisionist
+   ```
+   Check by eye that the DSNs now name the `revisionist` database and roles, and that the briefings and backup paths point at `~/.local/share/revisionist`.
+4. Swap the tool: `uv tool uninstall wyrd-protocol`, then from the checkout `uv tool install --editable '.[postgres,discord]'`.
+5. `set -a; . ~/.config/revisionist/revisionist-admin.env; set +a` and `revisionist db migrate`. It applies `0004_rename`, which renames the trigger function `wyrd_append_only` to `revisionist_append_only`.
+6. Install and enable the new units and scripts as in §5 and §9.3.
+7. Rename the existing dumps so the restore drill finds them: `cd ~/.local/share/revisionist/backups && for f in wyrd-*.dump; do mv "$f" "revisionist-${f#wyrd-}"; done`. Rename the off-box copies the same way, or leave them and remember the old prefix.
+8. Run the restore drill (§7) and `revisionist scheduler status`.

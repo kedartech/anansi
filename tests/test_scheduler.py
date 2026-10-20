@@ -16,19 +16,19 @@ import psycopg
 import pytest
 from typer.testing import CliRunner
 
+from revisionist import cli
+from revisionist.core.ids import CampaignId, IntentId
+from revisionist.core.intent import Intent, Verb
+from revisionist.core.resolution import TickStage
+from revisionist.core.visibility import private_to
+from revisionist.engine import campaign as cmp
+from revisionist.engine import scheduler as sch
+from revisionist.engine.llm import Reply, Request, TransportError
+from revisionist.engine.pg_store import PostgresEventStore
+from revisionist.engine.store import MemoryStore, load_state
+from revisionist.engine.tick import file_intent
 from tests.pg import PgDb
 from tests.test_cli import FakeClaude
-from wyrd import cli
-from wyrd.core.ids import CampaignId, IntentId
-from wyrd.core.intent import Intent, Verb
-from wyrd.core.resolution import TickStage
-from wyrd.core.visibility import private_to
-from wyrd.engine import campaign as cmp
-from wyrd.engine import scheduler as sch
-from wyrd.engine.llm import Reply, Request, TransportError
-from wyrd.engine.pg_store import PostgresEventStore
-from wyrd.engine.store import MemoryStore, load_state
-from wyrd.engine.tick import file_intent
 
 runner = CliRunner()
 
@@ -108,7 +108,7 @@ def test_all_submitted_counts_only_new_intents_from_every_human() -> None:
 
 
 def test_cli_imports_without_psycopg() -> None:
-    code = "import sys; sys.modules['psycopg'] = None; import wyrd.cli"
+    code = "import sys; sys.modules['psycopg'] = None; import revisionist.cli"
     assert subprocess.run([sys.executable, "-c", code], check=False).returncode == 0
 
 
@@ -134,8 +134,8 @@ def game(
         .read_text()
         .replace("tick_hours: 24", "tick_hours: 12")
     )
-    monkeypatch.setenv("WYRD_DB", pg_db.app_dsn)
-    monkeypatch.setenv("WYRD_BRIEFINGS_DIR", str(tmp_path / "briefings"))
+    monkeypatch.setenv("REVISIONIST_DB", pg_db.app_dsn)
+    monkeypatch.setenv("REVISIONIST_BRIEFINGS_DIR", str(tmp_path / "briefings"))
     monkeypatch.setattr(cli, "transport_factory", FakeClaude)
     clock = Clock()
     monkeypatch.setattr(cli, "clock", clock)
@@ -189,7 +189,7 @@ def test_three_days_of_twelve_hour_ticks(game: tuple[PgDb, Clock, CampaignId]) -
             # another run holds the campaign: this one must skip, not tick twice
             with psycopg.connect(db.app_dsn, autocommit=True) as other:
                 other.execute(
-                    "SELECT pg_advisory_lock(%s, hashtext(%s))", (0x77797264, campaign_id)
+                    "SELECT pg_advisory_lock(%s, hashtext(%s))", (0x7276736E, campaign_id)
                 )
                 code, out = _run("scheduler", "run", "--offline")
                 assert code == 0 and "locked" in out
@@ -293,9 +293,9 @@ def test_a_canary_leak_pauses_at_once(
 
 
 def test_the_scheduler_needs_postgres(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setenv("WYRD_DB", str(tmp_path / "solo.db"))
+    monkeypatch.setenv("REVISIONIST_DB", str(tmp_path / "solo.db"))
     code, out = _run("scheduler", "run")
-    assert code == cli.EXIT_ERROR and "wyrd tick" in out
+    assert code == cli.EXIT_ERROR and "revisionist tick" in out
 
 
 def test_unknown_campaign_is_an_error(game: tuple[PgDb, Clock, CampaignId]) -> None:

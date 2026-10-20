@@ -9,13 +9,13 @@ from hypothesis import given
 from hypothesis import settings as h_settings
 from pydantic import TypeAdapter, ValidationError
 
+from revisionist.core import delta as d
+from revisionist.core import events as ev
+from revisionist.core.events import Event
+from revisionist.core.ids import SeatId
+from revisionist.core.visibility import Scope, Visibility
+from revisionist.schema_export import SCHEMA_DIR, render
 from tests import strategies as s
-from wyrd.core import delta as d
-from wyrd.core import events as ev
-from wyrd.core.events import Event
-from wyrd.core.ids import SeatId
-from wyrd.core.visibility import Scope, Visibility
-from wyrd.schema_export import SCHEMA_DIR, render
 
 event_adapter: TypeAdapter[Event] = TypeAdapter(Event)
 delta_adapter: TypeAdapter[Any] = TypeAdapter(d.Delta)
@@ -83,10 +83,10 @@ def test_mutating_kinds_are_all_real_kinds() -> None:
 
 
 def test_committed_schema_is_current() -> None:
-    path = SCHEMA_DIR / "wyrd.schema.json"
-    assert path.exists(), "run: uv run python -m wyrd.schema_export"
+    path = SCHEMA_DIR / "revisionist.schema.json"
+    assert path.exists(), "run: uv run python -m revisionist.schema_export"
     assert json.loads(path.read_text()) == json.loads(render()), (
-        "schema drift: run uv run python -m wyrd.schema_export and commit the result"
+        "schema drift: run uv run python -m revisionist.schema_export and commit the result"
     )
 
 

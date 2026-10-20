@@ -1,0 +1,18 @@
+# Nightly pg_dump, kept locally with retention, then copied off the box.
+[Unit]
+Description=Revisionist: back up the database
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=%h/.config/revisionist/revisionist-admin.env
+ExecStart=%h/.local/bin/revisionist-backup
+TimeoutStartSec=30min
+Nice=10
+UMask=0077
+NoNewPrivileges=yes
+LockPersonality=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+SystemCallArchitectures=native

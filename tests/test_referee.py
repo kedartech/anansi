@@ -7,16 +7,14 @@ from hypothesis import given
 from hypothesis import settings as h_settings
 from hypothesis import strategies as st
 
-from tests import fixtures as fx
-from tests import strategies as s
-from wyrd.core import delta as d
-from wyrd.core import events as ev
-from wyrd.core.fold import apply, replay
-from wyrd.core.ids import ClockId, DeltaId, EntityId, IntentId, derived_id
-from wyrd.core.intent import FREE_VERBS, Intent, Verb
-from wyrd.core.ontology import ClockKind, EntityStatus, SeatStatus
-from wyrd.core.project import project
-from wyrd.core.referee import (
+from revisionist.core import delta as d
+from revisionist.core import events as ev
+from revisionist.core.fold import apply, replay
+from revisionist.core.ids import ClockId, DeltaId, EntityId, IntentId, derived_id
+from revisionist.core.intent import FREE_VERBS, Intent, Verb
+from revisionist.core.ontology import ClockKind, EntityStatus, SeatStatus
+from revisionist.core.project import project
+from revisionist.core.referee import (
     Clamped,
     Full,
     Partial,
@@ -28,16 +26,18 @@ from wyrd.core.referee import (
     slots,
     validate,
 )
-from wyrd.core.resolution import (
+from revisionist.core.resolution import (
     EXPOSURE_CHANCE,
     SUCCESS_CHANCE,
     FeasibilityBand,
     OutcomeTier,
     RejectionReason,
 )
-from wyrd.core.settings import Lethality, Plausibility, Settings
-from wyrd.core.state import State
-from wyrd.core.visibility import PUBLIC, Scope, private_to
+from revisionist.core.settings import Lethality, Plausibility, Settings
+from revisionist.core.state import State
+from revisionist.core.visibility import PUBLIC, Scope, private_to
+from tests import fixtures as fx
+from tests import strategies as s
 
 BANDS = list(FeasibilityBand)
 

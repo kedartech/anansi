@@ -5,27 +5,27 @@ from pathlib import Path
 
 import pytest
 
-from tests import fixtures as fx
-from wyrd.core import delta as d
-from wyrd.core import events as ev
-from wyrd.core.fold import replay, state_hash
-from wyrd.core.ids import DeltaId, IntentId, derived_id
-from wyrd.core.intent import Intent, Verb
-from wyrd.core.ontology import ClockKind, ClockStatus
-from wyrd.core.referee import Roll
-from wyrd.core.resolution import OutcomeTier, RejectionReason, TickStage
-from wyrd.core.state import State
-from wyrd.core.visibility import PUBLIC, private_to
-from wyrd.engine import tick as tick_mod
-from wyrd.engine.providers import (
+from revisionist.core import delta as d
+from revisionist.core import events as ev
+from revisionist.core.fold import replay, state_hash
+from revisionist.core.ids import DeltaId, IntentId, derived_id
+from revisionist.core.intent import Intent, Verb
+from revisionist.core.ontology import ClockKind, ClockStatus
+from revisionist.core.referee import Roll
+from revisionist.core.resolution import OutcomeTier, RejectionReason, TickStage
+from revisionist.core.state import State
+from revisionist.core.visibility import PUBLIC, private_to
+from revisionist.engine import tick as tick_mod
+from revisionist.engine.providers import (
     FailingResolver,
     KeywordSafety,
     RecordingDeliverer,
     ScriptedResolver,
     TemplateNarrator,
 )
-from wyrd.engine.store import EventStore, MemoryStore, SqliteStore, load_state
-from wyrd.engine.tick import Providers, file_intent, run_tick
+from revisionist.engine.store import EventStore, MemoryStore, SqliteStore, load_state
+from revisionist.engine.tick import Providers, file_intent, run_tick
+from tests import fixtures as fx
 
 STAGES = list(TickStage)
 

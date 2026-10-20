@@ -1,4 +1,4 @@
-"""Layer 8: ``wyrd db`` copy and verify, and the SQLite-to-Postgres migration test.
+"""Layer 8: ``revisionist db`` copy and verify, and the SQLite-to-Postgres migration test.
 
 No model is called: orders go through the scripted ``FakeClaude`` from the CLI
 tests and ticks run on the offline fixture providers.
@@ -10,16 +10,16 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
+from revisionist import cli
+from revisionist.core.fold import replay, state_hash
+from revisionist.core.resolution import TickStage
+from revisionist.engine import campaign as cmp
+from revisionist.engine.pg_store import PostgresEventStore
+from revisionist.engine.providers import KeywordSafety, ScriptedResolver, TemplateNarrator
+from revisionist.engine.store import SqliteStore, load_state
+from revisionist.engine.tick import Providers, run_tick
 from tests.pg import PgDb
 from tests.test_cli import FakeClaude
-from wyrd import cli
-from wyrd.core.fold import replay, state_hash
-from wyrd.core.resolution import TickStage
-from wyrd.engine import campaign as cmp
-from wyrd.engine.pg_store import PostgresEventStore
-from wyrd.engine.providers import KeywordSafety, ScriptedResolver, TemplateNarrator
-from wyrd.engine.store import SqliteStore, load_state
-from wyrd.engine.tick import Providers, run_tick
 
 runner = CliRunner()
 
@@ -39,8 +39,8 @@ def _ok(*args: str) -> str:
 def sqlite_campaign(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     """Three closed offline ticks with orders, then a fourth stopped after APPLY."""
     path = tmp_path / "solo.db"
-    monkeypatch.setenv("WYRD_DB", str(path))
-    monkeypatch.setenv("WYRD_BRIEFINGS_DIR", str(tmp_path / "briefings"))
+    monkeypatch.setenv("REVISIONIST_DB", str(path))
+    monkeypatch.setenv("REVISIONIST_BRIEFINGS_DIR", str(tmp_path / "briefings"))
     monkeypatch.setattr(cli, "transport_factory", FakeClaude)
     _ok("new", "salt-strait")
     for n in range(3):
@@ -84,7 +84,7 @@ def test_sqlite_campaign_moves_to_postgres_and_keeps_playing(
     )
 
     # play on: the tick left after APPLY resumes on Postgres and closes
-    monkeypatch.setenv("WYRD_DB", pg_db.app_dsn)
+    monkeypatch.setenv("REVISIONIST_DB", pg_db.app_dsn)
     assert "tick 3" in _ok("status")
     assert "tick 3 resolved" in _ok("tick", "--offline")
     events = list(pg.read(campaign_id))
@@ -145,27 +145,27 @@ def test_verify_catches_a_bad_snapshot(sqlite_campaign: Path) -> None:
 
 
 def test_verify_needs_a_campaign(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setenv("WYRD_DB", str(tmp_path / "empty.db"))
+    monkeypatch.setenv("REVISIONIST_DB", str(tmp_path / "empty.db"))
     code, out = _run("db", "verify")
     assert code == cli.EXIT_ERROR and "no campaigns" in out
 
 
 def test_migrate_needs_the_admin_dsn(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("WYRD_ADMIN_DSN", raising=False)
+    monkeypatch.delenv("REVISIONIST_ADMIN_DSN", raising=False)
     code, out = _run("db", "migrate")
-    assert code == cli.EXIT_ERROR and "WYRD_ADMIN_DSN" in out
+    assert code == cli.EXIT_ERROR and "REVISIONIST_ADMIN_DSN" in out
 
 
 def test_migrate_reports_up_to_date(pg_db: PgDb, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("WYRD_ADMIN_DSN", pg_db.admin_dsn)
+    monkeypatch.setenv("REVISIONIST_ADMIN_DSN", pg_db.admin_dsn)
     assert "up to date" in _ok("db", "migrate", "--app-role", pg_db.app_role)
 
 
 def test_postgres_briefings_default_beside_the_working_directory(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("WYRD_BRIEFINGS_DIR", raising=False)
-    assert cmp.briefings_dir("postgresql://h/db") == Path("wyrd-briefings")
+    monkeypatch.delenv("REVISIONIST_BRIEFINGS_DIR", raising=False)
+    assert cmp.briefings_dir("postgresql://h/db") == Path("revisionist-briefings")
     assert cmp.briefings_dir("/srv/game.db") == Path("/srv/game-briefings")
-    monkeypatch.setenv("WYRD_BRIEFINGS_DIR", "/srv/out")
+    monkeypatch.setenv("REVISIONIST_BRIEFINGS_DIR", "/srv/out")
     assert cmp.briefings_dir("postgresql://h/db") == Path("/srv/out")

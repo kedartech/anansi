@@ -11,15 +11,16 @@ from pathlib import Path
 
 import psycopg
 import pytest
-from psycopg import errors
+from psycopg import errors, sql
 
+from revisionist.core import events as ev
+from revisionist.core.fold import replay, state_hash
+from revisionist.core.ids import EventId
+from revisionist.engine import pg_store
+from revisionist.engine.pg_store import PostgresEventStore, migrate
+from revisionist.engine.store import EventStore, MemoryStore, SqliteStore, StoreError, load_state
 from tests import fixtures as fx
-from tests.pg import PgDb
-from wyrd.core import events as ev
-from wyrd.core.fold import replay, state_hash
-from wyrd.core.ids import EventId
-from wyrd.engine.pg_store import PostgresEventStore, migrate
-from wyrd.engine.store import EventStore, MemoryStore, SqliteStore, StoreError, load_state
+from tests.pg import Cluster, PgDb, url
 
 
 @pytest.fixture(params=["memory", "sqlite", "postgres"])
@@ -236,7 +237,40 @@ def test_postgres_migrations_are_idempotent(pg_db: PgDb) -> None:
     assert migrate(pg_db.admin_dsn, pg_db.app_role) == []
     with psycopg.connect(pg_db.admin_dsn) as conn:
         versions = [r[0] for r in conn.execute("SELECT version FROM schema_migrations ORDER BY 1")]
-    assert versions == ["0001_init", "0002_schedule", "0003_discord"]
+    assert versions == ["0001_init", "0002_schedule", "0003_discord", "0004_rename"]
+
+
+def _append_only_functions(dsn: str) -> list[str]:
+    with psycopg.connect(dsn) as conn:
+        rows = conn.execute("SELECT proname FROM pg_proc WHERE proname LIKE '%append_only'")
+        return sorted(r[0] for r in rows)
+
+
+def test_a_database_from_before_the_rename_converges(
+    pg_cluster: Cluster, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """0001 still creates the old trigger function; 0004 renames it in place."""
+    name = f"{pg_cluster.template}_upgrade"
+    dsn = url(pg_cluster.admin, dbname=name)
+    with psycopg.connect(pg_cluster.admin, autocommit=True) as conn:
+        conn.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(name)))
+    try:
+        before = [p for p in pg_store.migration_files() if p.stem < "0004"]
+        monkeypatch.setattr(pg_store, "migration_files", lambda: before)
+        migrate(dsn, pg_cluster.role)
+        assert _append_only_functions(dsn) == ["wyrd_append_only"]
+        monkeypatch.undo()
+        assert migrate(dsn, pg_cluster.role) == ["0004_rename"]
+        assert _append_only_functions(dsn) == ["revisionist_append_only"]
+        with psycopg.connect(dsn, autocommit=True) as conn:
+            conn.execute("INSERT INTO events VALUES ('c', 0, 'e', 0, 'k', '{}')")
+            with pytest.raises(errors.RaiseException, match="append-only"):
+                conn.execute("DELETE FROM events")
+    finally:
+        with psycopg.connect(pg_cluster.admin, autocommit=True) as conn:
+            conn.execute(
+                sql.SQL("DROP DATABASE IF EXISTS {} WITH (FORCE)").format(sql.Identifier(name))
+            )
 
 
 def test_postgres_app_role_may_update_only_the_schedule(pg_db: PgDb) -> None:
