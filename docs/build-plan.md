@@ -320,6 +320,17 @@ The exit criterion is **not met yet**: nothing has run against the real Discord 
 
 **Size.** One to two weekends.
 
+**Built (2026-10-20).** Invites and `/join`, `/dispatch` and held briefings, the duo world, seat faces in views, player-chosen visibility and spin, `statement_issued` and the `#chronicle` channel, the human-boundary canary and `revisionist leaks --humans`, perceived odds, sealing at rest with break-glass reads and erasure. Migrations 0005-0007, `SCHEMA_VERSION` 5. Design in [design.md §16](design.md#16-two-humans-layer-9b-decided-2026-10-20), runbook in [deploy.md §9.6-9.8](deploy.md#96-a-second-player-layer-9b). Where it differs from the list above, **[decided]** by Josh 2026-10-20:
+
+- **[decided]** Dispatch is the DM plus one public channel. No per-player dispatch channels or threads: the server owner, who also plays, can read all of them. A closed DM holds the briefing for `/dispatch`; the 9a fallback channel is gone.
+- **[decided]** Encryption is two-tier: a campaign key seals every event and snapshot, a seat key also seals that seat's own words. "Erasure = key deletion" is redefined: destroying a seat key erases the player's words and keeps the game replayable (design §16.6).
+- **[decided]** Spin is the player's own line, made public as a new record kind, `statement_issued`.
+- **[decided]** The 4 recordings whose prompts embed the View were re-keyed offline (marked `rekeyed_from`); Josh re-records them live.
+- Visibility and spin are `/order` options, not a modal, so the CLI can match them. Alliance threads move to Layer 10: nothing in the engine targets a restricted shared surface yet.
+- Perceived odds are shown once an order is locked at the cutoff, not when it is filed (README §7).
+
+The exit criterion is **not met yet**: nothing has run against the real Discord API with two people. Josh's steps are in deploy.md §9.6-9.9.
+
 ---
 
 ## Layer 10: Feature ladder to the friends-and-family playtest

@@ -288,8 +288,9 @@ def test_one_live_tick_from_recording(recorded: RecordedTransport) -> None:
     for _seat, text, _ in deliverer.sent:
         assert 40 < len(text.split()) < 320, text
         assert "intent_id" not in text and "01ARZ" not in text
-    # the resolver and both human narrations came from the recording, not a fallback
-    assert recorded.hits == 3 and recorded.recorded == 0
+    # the resolver and both human narrations came from the recording (or were just
+    # recorded live), never from the fixture fallback
+    assert recorded.hits + recorded.recorded == 3
 
 
 # --- what the CLI transport passes on and gives back (Layer 9b) ---------------------

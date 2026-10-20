@@ -304,4 +304,4 @@ def test_live_order_round_trip(recorded: RecordedTransport, state: State) -> Non
     briefing = Agent.for_seat(played, fx.NORTH, recorded).brief()
     assert briefing.moves is not None and len(briefing.moves) == 3
     assert fx.CANARY not in Agent.for_seat(played, fx.SOUTH, recorded).view.model_dump_json()
-    assert recorded.hits == 2 and recorded.recorded == 0  # structure and brief, both recorded
+    assert recorded.hits + recorded.recorded == 2  # structure and brief, never a fallback

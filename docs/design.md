@@ -25,14 +25,15 @@ Module map:
 | `engine/llm.py` | `ClaudeResolver`, `ClaudeNarrator`, `ClaudeCli` transport, `RecordedTransport` (Layer 5) |
 | `engine/agent.py` | `Agent`: `structure`, `brief`, `perceived_odds`, `deputy_turn`; `receive_order` (Layer 6) |
 | `engine/prompts/*.md` | versioned prompt files; content hash in `Versions.prompt` (Layers 5-6) |
-| `core/canary.py` | canary scan over narrations and deliveries (Layer 5) |
+| `core/canary.py` | canary scan over narrations and deliveries (Layer 5); the human-boundary scan (Layer 9b) |
 | `engine/store.py` | `EventStore` protocol, `MemoryStore`, `SqliteStore`, `load_state` (Layer 2) |
 | `engine/pg_store.py`, `engine/migrations/*.sql` | `PostgresEventStore`, `migrate` (Layer 8) |
 | `engine/maintenance.py` | `copy_campaign`, `verify_campaign` (Layer 8) |
 | `engine/runner.py` | `play_tick`: deputy turns, `run_tick`, leak scan; shared by `revisionist tick` and the scheduler (Layer 8) |
 | `engine/scheduler.py` | the tick scheduler: pure `due` / `next_due_after` / `all_submitted`, the `schedule` table, `run` (Layer 8) |
 | `engine/play.py` | `give_order`, `get_briefing`, `status_lines`: what a seat does between ticks, shared by the CLI and the bot (Layer 9a) |
-| `engine/discord/` | Discord transport: REST deliverer and outbox, routing deliverer, operational tables, command handlers, the gateway bot (Layer 9a) |
+| `engine/discord/` | Discord transport: REST deliverer and outbox, routing deliverer and public poster, operational tables (seats, invites, channels), command handlers, the gateway bot, the server template (Layers 9a-9b) |
+| `core/sealing.py`, `engine/seal.py` | which key seals an event and what needs an admin read (pure); AES-GCM sealing, keyrings, the master key (Layer 9b) |
 | `schema/revisionist.schema.json` | exported JSON Schema; CI fails on drift |
 
 ---
@@ -47,7 +48,7 @@ Consequences the code keeps:
 - Nothing is ever deleted from the ontology. Entities, assets, clocks and commitments change `status`; they do not vanish. A dead minister is `Entity(status=dead)`, still in the log, still in the state, still citable by a journalist.
 - Every event carries `versions` (engine, schema, prompt, model) so a replay can tell which rules produced it.
 - Two classes of event: **mutating** kinds that the fold reads, and **record** kinds (narration, rolls, proposals, rejections, admin reads) that exist for `/why`, replay and audit but change no state. `events.MUTATING_KINDS` is the list; a test keeps it a subset of the real kinds.
-- `payload_enc` is reserved on every envelope. Empty until Layer 9, when raw orders and Covert payloads are encrypted per player.
+- `payload_enc` is reserved on every envelope. Since Layer 9b it holds, at rest only, the ciphertext of a sealed event (§16.6); every event a reader sees has it empty.
 
 ### Event kinds in v1
 
@@ -124,7 +125,7 @@ README §7 and §10. The one rule that makes secrets possible:
 project(state: State, seat: SeatId) -> View     # Layer 2, pure
 ```
 
-`project` keeps an item when `item.scope.visible_to(seat)`. For intents, a view holds only the viewer's own pending intents (`View.own_pending`); other seats' intents are never in any view. Settings and the tick counter are always visible.
+`project` keeps an item when `item.scope.visible_to(seat)`. For intents, a view holds only the viewer's own pending intents (`View.own_pending`); other seats' intents are never in any view. Settings and the tick counter are always visible. Every seat appears in a view only as a `SeatFace` (ID, kind, name, the entity it embodies); the viewer's own seat is `View.me`, in full. How any other seat is run (human or AI, its agent, persona, status, slots, orders) is unreachable by type (Layer 9b, §16.2).
 
 The layering:
 
@@ -429,7 +430,7 @@ The bot turns a slash command or a DM into the call the CLI makes and sends back
 - **Parts.** Discord caps `content` at 2000 characters. A briefing is cut on paragraph boundaries, then lines, then anywhere, each part at most 1900, and the parts concatenate back to the exact text (property-tested).
 - **Idempotency, two layers.** The real guarantee is `discord_deliveries(idempotency_key, part, channel_id, message_id, sent_at)`: a part recorded there is never resent, so a second DELIVER with the same key sends nothing. For a crash after Discord accepts a part but before the row lands, every send carries `nonce` = the first 25 characters of base32 blake2b of `key:part`, with `enforce_nonce: true`. Discord checks that uniqueness only for a few minutes, so it covers a quick retry, not a resend hours later.
 - **The log stays free of Discord IDs.** `BriefingDelivered.channel` is the constant `discord`; message IDs live only in `discord_deliveries`.
-- **Closed DMs.** If Discord refuses the DM (code 50007), the part goes to `$REVISIONIST_DISCORD_FALLBACK_CHANNEL` when set, a channel that must be private to the player. Otherwise the error propagates: `BriefingDelivered` is not written, the tick stays resumable and the scheduler counts a failure. No other error falls back, and nothing ever falls back to any other channel.
+- **Closed DMs.** Superseded in 9b (§16.1): if Discord refuses the DM (code 50007) the briefing is `held`, sent nowhere, and the player reads it with `/dispatch`. The 9a fallback channel is gone; with two humans it would have shown one player's briefing to the other. Any other error propagates: `BriefingDelivered` is not written, the tick stays resumable and the scheduler counts a failure.
 - **Last canary check before text leaves the host.** The routing deliverer scans a bound seat's narration against the canaries hidden from that seat before sending. A hit is written to the host's briefings file instead, `BriefingDelivered.channel` is `withheld`, and the tick's leak scan then fails the tick (exit 3; the scheduler pauses the campaign). The bot's handlers run the same scan over every reply they send. The projection should make both checks dead code; they exist so a narrator or agent bug cannot reach a player.
 
 ### 15.5 Operational tables
@@ -443,3 +444,60 @@ Migration `0003_discord`: `discord_seats`, `discord_deliveries`, `discord_bugs`.
 ### 15.7 Not covered by the tests
 
 Everything against the real Discord API: the gateway connection, command sync, real DM delivery, closed-DM behaviour, rate limits and nonce deduplication as Discord actually applies them. The tests use fake gateway objects (interactions, messages) and a fake REST API that mimics the documented behaviour; the real HTTP client is blocked for every test.
+
+---
+
+## 16. Two humans (Layer 9b) **[decided 2026-10-20]**
+
+Josh chose the dispatch model, the encryption design, the recordings handling and the spin event on 2026-10-20; the rest follows from them. Nothing here changes the fold of an existing kind, the referee or the tick state machine.
+
+### 16.1 Seats, invites and dispatch
+
+- `worlds/salt-strait-duo.yaml` is salt-strait with Ostrel as a second human seat with its own agent; a test keeps the two files in step. The CLI's `order`, `briefing` and `status` take `--seat` when a campaign has several humans.
+- **Invites.** The host issues a single-use code bound to a seat (`revisionist discord invite`), valid 72 hours. Only its blake2b hash is stored (`discord_invites`, migration 0005). A player redeems it with `/join`: one transaction binds them and spends the code, and a refused link leaves it unspent. Unknown, spent and expired codes get the same answer. On success the bot sends a test DM, the README §17 onboarding check.
+- **Dispatch is the DM.** The server owner can read every channel and private thread, and the owner also plays, so per-player channels or threads would protect nothing. Briefings go by DM only. A closed DM holds the briefing (`BriefingDelivered(channel="held")`, nothing sent) and `/dispatch` reads the latest one back from the log. A human seat nobody holds yet is also held, never written to the host's briefings directory.
+
+### 16.2 What a view shows about other seats
+
+README §17: how a seat is run is never shown. `View.seats` holds a `SeatFace` (ID, kind, name, embodied entity) for every seat and `View.me` the viewer's own seat in full; `referee.own_seat` reads a seat in full only from `State` or as `View.me`. A property test changes another seat's controller, status, agent, persona, slots and orders and checks the view is byte-identical. `SCHEMA_VERSION` 3. The structure, brief and narrator prompts embed the View, so 4 recorded entries were re-keyed offline, each marked `rekeyed_from`; they are to be re-recorded live.
+
+### 16.3 Visibility and spin
+
+The player chooses an order's visibility (private by default, public or covert; restricted waits for alliances) and its spin, on the CLI (`--visibility`, `--spin`) and on `/order` alike; a DM order is private with no spin. Spin is the player's alone: whatever the model or the deputy writes there is dropped. When an order first freezes, its spin becomes `statement_issued` (a record kind, logged Public whatever the order's scope, once per intent even when an operation is frozen again; `SCHEMA_VERSION` 4).
+
+### 16.4 The public channel
+
+One channel, `#chronicle` (`engine/discord/template.py`), set with `revisionist discord channel public <id>` (`discord_channels`, migration 0006). The press outlet's narration is posted there instead of filed, and after each leak-free tick every statement and every admin read not yet posted goes up once, idempotent through the outbox. A statement is checked against canaries its author cannot know, not against everyone: a player may disclose their own secrets. No per-player channels, roles or threads, and the bot never gets Manage Channels, Roles or Threads.
+
+### 16.5 The human boundary
+
+README §7: the opacity boundary is the person. `core/canary.py` scans everything a person can read (their seats' narrations and questions, the press, every statement; in the test, every DM, reply and channel post they received) against the union of what all their seats may know. `revisionist leaks --humans` runs it from the Discord seat links, counting the host as holder of every unlinked human seat. `tests/test_human_boundary.py` plays 12 ticks of the duo world with a transport that echoes each prompt, View JSON and all, and also scans the host's briefings directory and the bot's log; a negative control shows it fails on a planted leak.
+
+The host's own surfaces were closed to match: a withheld narration is no longer written to a file; the CLI refuses `order`, `briefing` and `status` for a seat another player holds; the `claude` child gets no `REVISIONIST_*` variable; and transport errors quote neither the prompt nor the model's output, since they reach logs and `schedule.last_status`.
+
+### 16.6 Encryption at rest
+
+Two tiers of key per sealed campaign:
+
+- the **campaign key** seals every event and snapshot, so the fold can always read the game;
+- a **seat key** seals that seat's own words: what its player typed (`order_received`), its agent's questions, its private briefings, and its bug notes. None of these is folded.
+
+Each event is sealed whole with AES-256-GCM, bound to its campaign, seq, ID and key ID. At rest it is a stub (`Sealed` payload, no actor, Public scope; `SCHEMA_VERSION` 5) whose `payload_enc` is the nonce and ciphertext, so even its kind is hidden. The stores take a sealer and unseal on read, so the tick, the fold and every reader see plaintext; without the key a sealed record is refused with an error naming the setting. Data keys live in `seal_keys` (migration 0007), wrapped by a host master key that never enters the database or the environment: `REVISIONIST_MASTER_KEY_FILE` names a 0600 file. The app role can read and add keys and never destroy one. Sealing is per campaign and forward only, because plaintext snapshots already written can never be deleted.
+
+**Erasure, redefined.** "Erasure = key deletion" cannot hold for game data: the fold and every `state_hash` depend on covert facts and intents. So:
+
+- **Player erasure** (`revisionist admin erase`, destroys a seat key): the player's own words become unreadable at once in the live database, and in backups once the backup retention window has passed. What their play did to the world stays, and replay and `db verify` still work.
+- **Campaign erasure** (destroy the campaign key, at retirement; Layer 10 item 15): everything is gone and the campaign can no longer be replayed.
+
+**Admin reads.** Showing a person a record that is not public (`core/sealing.needs_admin_read`, which looks inside payloads because `delta_applied` is logged Public even for a covert fact) first appends a Public `admin_read` with a reason; if that fails nothing is shown. `revisionist why` hides such records unless `--break-glass --reason`; `revisionist admin show` reads one. Each admin read is announced in `#chronicle` without content.
+
+None of this protects players from the host, who holds the master key and the bot token. It protects data at rest and in backups, and makes the host's reads visible.
+
+### 16.7 Perceived odds
+
+README §7: shown only once an order is filed and locked. `/status` and `revisionist status` show the perceived band of each locked pending order, from `feasibility_rated` at the cutoff, and a briefing ends with how the agent read last tick's orders. Never the true band, never before the cutoff (so odds cannot be shopped for by re-filing), nothing for a blinded seat.
+
+### 16.8 Not covered by the tests
+
+Everything against the real Discord API: invites redeemed by a real second account, a real closed DM, the `#chronicle` posts, permissions as Discord applies them. The re-keyed recordings have not been re-recorded live. Master-key custody, a restore onto a new host with the off-box key, and the 10-tick two-person play.
+

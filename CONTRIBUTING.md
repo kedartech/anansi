@@ -15,7 +15,7 @@ Builders: Josh and Vera (README §3 #17).
 
 ```
 uv lock --check
-uv sync --frozen
+uv sync --frozen            # the dev group carries every extra: postgres, discord, seal
 uv run --frozen ruff check .
 uv run --frozen ruff format --check .
 uv run --frozen mypy

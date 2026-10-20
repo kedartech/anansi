@@ -1,6 +1,6 @@
 # Running Revisionist on the home server
 
-Runbook for build plan Layer 8 (Postgres, the scheduler, nightly backups and the restore drill) and Layer 9a (solo play on Discord, §9). Design and reasons are in [design.md §14](design.md#14-postgres-and-the-scheduler-layer-8-decided) and [§15](design.md#15-the-discord-transport-layer-9a-proposed). Written 2026-10-20. Nothing here has been run on the real server yet.
+Runbook for build plan Layer 8 (Postgres, the scheduler, nightly backups and the restore drill), Layer 9a (solo play on Discord, §9) and Layer 9b (a second player, the public channel and sealing, §9.6-9.9). Design and reasons are in [design.md §14](design.md#14-postgres-and-the-scheduler-layer-8-decided) and [§15](design.md#15-the-discord-transport-layer-9a-proposed). Written 2026-10-20. Nothing here has been run on the real server yet.
 
 Everything runs as one ordinary Linux user (not root): the Claude CLI login that live ticks use lives in that user's home, so the units are systemd **user** units.
 
@@ -52,6 +52,7 @@ REVISIONIST_BACKUP_DEST=<rsync target, e.g. user@nas:/backups/revisionist, or rc
 | `REVISIONIST_BRIEFINGS_DIR` | where briefings are written; default `./revisionist-briefings` on Postgres |
 | `REVISIONIST_BACKUP_DEST` | off-box copy target. The backup fails if it is unset |
 | `REVISIONIST_APP_ROLE` | role `revisionist db migrate` grants to; default `revisionist_app` |
+| `REVISIONIST_MASTER_KEY_FILE` | path to the 0600 master-key file that seals new campaigns (§9.8); a path, never the key |
 | `REVISIONIST_DISCORD_*` | the Discord bot and DM delivery; see §9 |
 
 To load a file into a shell: `set -a; . ~/.config/revisionist/revisionist-admin.env; set +a`.
@@ -235,6 +236,15 @@ From then on every **new** campaign is sealed: its events and snapshots are AES-
 **Reading private records (break glass).** On a sealed campaign, `revisionist why` shows only public records and says how many it hid. `revisionist why <id> --break-glass --reason "<why>"` and `revisionist admin show <event id> --reason "<why>"` show private ones, after first appending a Public `admin_read` with your reason. The players see "Admin read: the host opened N private records" in `#chronicle` after the next tick. If the log cannot be written, nothing is shown. The CLI refuses `order`, `briefing` and `status` for a seat another player holds on Discord.
 
 **Erasing a player's words.** `revisionist admin erase --seat "<seat>" --reason "<why>"` (needs `REVISIONIST_ADMIN_DSN`) destroys that seat's key. Its orders, its agent's questions, its private briefings and its bug notes become unreadable at once in the live database, and in backups once your local retention (`REVISIONIST_BACKUP_KEEP_DAYS`) and the off-box copies' have passed, because old dumps still carry the wrapped key. What their play did to the world stays; replay and `db verify` keep working. Restart the bot afterwards so it drops the key from memory. None of this protects players from the host, who holds the master key and the bot token; it protects the data at rest and makes the host's reads visible.
+
+### 9.9 Still to do for Layer 9b (Josh)
+
+- [ ] Re-record the 4 re-keyed recordings live, on a host where `claude` is logged in: delete `tests/recordings/two-rivers-agent.json` and the two `rekeyed_from` entries in `two-rivers-tick-1.json`, then `REVISIONIST_RECORD=1 uv run pytest tests/test_agent.py tests/test_llm.py -k live`. Review the diff before committing.
+- [ ] Generate the master key (§9.8) and copy it off the box, separately from the dumps.
+- [ ] `revisionist db migrate` (0005-0007), create `#chronicle` and set it (§9.7).
+- [ ] `revisionist new salt-strait-duo`, link your seat, invite the other player (§9.6); they `/join` and confirm the test DM arrives. Try a closed DM: the briefing is `held` and `/dispatch` shows it.
+- [ ] Tell the other player the threat model: the host can break glass, and every such read is logged and announced.
+- [ ] The Layer 9b exit run: 10 ticks with both players, perceived odds visible, then `revisionist leaks` and `revisionist leaks --humans` report 0, `revisionist db verify` passes with "sealed", and the restore drill passes with the master key.
 
 ## 10. Upgrading a host set up under the old name
 
