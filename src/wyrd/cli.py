@@ -16,17 +16,14 @@ from typing import TYPE_CHECKING, Annotated
 import typer
 
 from wyrd import __version__
-from wyrd.core.canary import scan_deliveries
 from wyrd.core.fold import replay_to, state_hash
 from wyrd.core.ids import CampaignId, SeatId
-from wyrd.core.intent import Intent
-from wyrd.core.project import project
 from wyrd.core.report import cost_report, leak_report, render_cost, render_leaks, render_why, why
 from wyrd.core.state import State
 from wyrd.core.world_compile import WorldError
 from wyrd.engine import campaign as cmp
+from wyrd.engine import play
 from wyrd.engine import scheduler as sch
-from wyrd.engine.agent import Agent, receive_order
 from wyrd.engine.llm import Transport, TransportError
 from wyrd.engine.maintenance import copy_campaign, verify_campaign
 from wyrd.engine.runner import play_tick
@@ -71,14 +68,6 @@ def _me(state: State) -> SeatId:
         raise _fail(str(exc)) from exc
 
 
-def _name(state: State, object_id: str) -> str:
-    for table in (state.entities, state.assets, state.clocks, state.meters, state.seats):
-        found = table.get(object_id)  # type: ignore[call-overload]  # IDs are str NewTypes
-        if found is not None:
-            return str(found.name)
-    return object_id
-
-
 @app.callback()
 def main() -> None:
     """Wyrd Protocol game engine."""
@@ -115,17 +104,8 @@ def status() -> None:
     """Where the campaign stands, as your seat sees it."""
     store = cmp.open_store()
     state = load_state(store, _campaign(store))
-    me = _me(state)
-    view = project(state, me)
-    typer.echo(f"tick {view.tick}  seat {view.seats[me].name}  slots {view.seats[me].slots}")
-    for intent in view.own_pending:
-        targets = ", ".join(_name(state, t) for t in intent.targets) or "-"
-        typer.echo(f"  pending {intent.intent_id} {intent.verb.value} -> {targets}")
-    for clock in sorted(view.clocks.values(), key=lambda c: c.name):
-        if clock.status.value == "open":
-            typer.echo(f"  clock {clock.name}: {clock.segments_filled}/{clock.segments_total}")
-    for meter in sorted(view.meters.values(), key=lambda m: (m.owner, m.name)):
-        typer.echo(f"  {_name(state, meter.owner)} {meter.name}: {meter.value}")
+    for line in play.status_lines(state, _me(state)):
+        typer.echo(line)
 
 
 @app.command()
@@ -133,23 +113,15 @@ def briefing() -> None:
     """Your agent's briefing: what happened, a dilemma and three moves."""
     store = cmp.open_store()
     campaign_id = _campaign(store)
-    state = load_state(store, campaign_id)
-    me = _me(state)
+    me = _me(load_state(store, campaign_id))
     try:
-        brief = Agent.for_seat(state, me, transport_factory()).brief()
+        brief = play.get_briefing(store, campaign_id, me, transport_factory())
     except TransportError as exc:
         raise _fail(f"model call failed: {exc}") from exc
-    if brief.cost is not None:
-        cmp.log_cost(store, campaign_id, "briefing", [brief.cost], me)
-    moves = brief.moves or ()
-    text = "\n".join([brief.text, brief.dilemma or "", *moves])
-    if scan_deliveries(state, [(me, text)]):
-        raise _fail("briefing withheld: it named something your seat cannot know", EXIT_LEAK)
-    typer.echo(brief.text)
-    if brief.dilemma:
-        typer.echo(f"\nDilemma: {brief.dilemma}")
-    for n, move in enumerate(moves, start=1):
-        typer.echo(f"  {n}. {move}")
+    if brief.withheld:
+        raise _fail(play.WITHHELD, EXIT_LEAK)
+    for line in brief.lines:
+        typer.echo(line)
 
 
 @app.command()
@@ -157,24 +129,14 @@ def order(text: Annotated[str, typer.Argument(help="What you want done, in your 
     """Give your agent an order. It files an intent or asks you a question."""
     store = cmp.open_store()
     campaign_id = _campaign(store)
-    state = load_state(store, campaign_id)
-    me = _me(state)
+    me = _me(load_state(store, campaign_id))
     try:
-        result = receive_order(store, state, me, text, transport_factory(), versions=cmp.versions())
+        result = play.give_order(store, campaign_id, me, text, transport_factory())
     except TransportError as exc:
         raise _fail(f"model call failed: {exc}") from exc
-    if result.cost is not None:
-        cmp.log_cost(store, campaign_id, "structure", [result.cost], me)
-    outcome = result.outcome
-    if not isinstance(outcome, Intent):
-        typer.echo(f"question: {outcome.question}")
-        return
-    if result.rejection is not None:
-        raise _fail(
-            f"refused: {result.rejection.reason.value}: {result.rejection.detail}", EXIT_REFUSED
-        )
-    targets = ", ".join(_name(state, t) for t in outcome.targets) or "-"
-    typer.echo(f"filed {outcome.intent_id}: {outcome.verb.value} -> {targets}")
+    if result.refused:
+        raise _fail(result.line, EXIT_REFUSED)
+    typer.echo(result.line)
 
 
 @app.command()
