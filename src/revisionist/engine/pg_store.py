@@ -19,7 +19,7 @@ from psycopg import errors, sql
 from revisionist.core.events import Event
 from revisionist.core.ids import CampaignId
 from revisionist.core.state import State
-from revisionist.engine.store import StoreError, check_next
+from revisionist.engine.store import Sealer, StoreError, check_next, opened, state_body, state_from
 
 MIGRATIONS = Path(__file__).parent / "migrations"
 
@@ -29,8 +29,9 @@ _MIGRATE_LOCK = 0x7276736E  # "rvsn": one migrator at a time
 class PostgresEventStore:
     """One connection per store, autocommit outside explicit transactions."""
 
-    def __init__(self, dsn: str) -> None:
+    def __init__(self, dsn: str, sealer: Sealer | None = None) -> None:
         self.conn = psycopg.connect(dsn, autocommit=True)
+        self.sealer = sealer
 
     def close(self) -> None:
         self.conn.close()
@@ -42,6 +43,9 @@ class PostgresEventStore:
         if not events:
             raise StoreError("nothing to append")
         campaign_id = events[0].campaign_id
+        # Seal first, outside the transaction: a seat key created here commits on
+        # its own, so a refused append never leaves a key cached that is not stored.
+        events = self.sealer.seal(events) if self.sealer else events
         try:
             with self.conn.transaction():
                 expected = self.last_seq(campaign_id) + 1
@@ -72,7 +76,7 @@ class PostgresEventStore:
             (campaign_id, from_seq),
         ).fetchall()
         for (body,) in rows:
-            yield Event.model_validate_json(body)
+            yield opened(self.sealer, Event.model_validate_json(body))
 
     def last_seq(self, campaign_id: CampaignId) -> int:
         row = self.conn.execute(
@@ -85,15 +89,15 @@ class PostgresEventStore:
         self.conn.execute(
             "INSERT INTO snapshots (campaign_id, seq, body) VALUES (%s, %s, %s)"
             " ON CONFLICT DO NOTHING",
-            (state.campaign_id, state.last_seq, state.model_dump_json()),
+            (state.campaign_id, state.last_seq, state_body(self.sealer, state)),
         )
 
     def latest_snapshot(self, campaign_id: CampaignId) -> State | None:
         row = self.conn.execute(
-            "SELECT body FROM snapshots WHERE campaign_id = %s ORDER BY seq DESC LIMIT 1",
+            "SELECT seq, body FROM snapshots WHERE campaign_id = %s ORDER BY seq DESC LIMIT 1",
             (campaign_id,),
         ).fetchone()
-        return State.model_validate_json(row[0]) if row else None
+        return state_from(self.sealer, campaign_id, int(row[0]), row[1]) if row else None
 
     def campaign_ids(self) -> list[CampaignId]:
         rows = self.conn.execute(

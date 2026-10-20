@@ -309,6 +309,24 @@ class AdminRead(Model):
     purpose: str = Field(max_length=200)
 
 
+# --- At rest -------------------------------------------------------------------
+
+
+class Sealed(Model):
+    """What a sealed event looks like at rest (Layer 9b): the real event, whole,
+    is encrypted into the envelope's ``payload_enc``.
+
+    The store unseals on read, so the tick, the fold and every reader see the
+    plaintext event. A ``seat``-held event whose key was destroyed (erasure)
+    stays sealed: it is prose the fold never needed. A ``campaign``-held one
+    that reaches the fold is an error: its key is missing.
+    """
+
+    kind: Literal["sealed"] = "sealed"
+    key_id: str = Field(max_length=64)
+    holder: Literal["campaign", "seat"]
+
+
 Payload = Annotated[
     CampaignCreated
     | SettingsSet
@@ -341,7 +359,8 @@ Payload = Annotated[
     | TickStageCompleted
     | TickClosed
     | CostLogged
-    | AdminRead,
+    | AdminRead
+    | Sealed,
     Field(discriminator="kind"),
 ]
 
@@ -384,7 +403,8 @@ class Event(Model):
     payload: Payload
     versions: Versions
     payload_enc: bytes | None = None
-    """Reserved for Layer 9: ciphertext of ``payload`` for Covert and raw-text kinds."""
+    """At rest only: nonce and AES-GCM ciphertext of the whole event when ``payload``
+    is ``Sealed`` (Layer 9b). Empty on every event a reader sees."""
 
     @property
     def kind(self) -> str:
