@@ -508,22 +508,62 @@ Residual risk: with targeting unlimited, a majority bloc can vote events onto on
 
 ---
 
-## Updated decision status (after H14 to H18)
+## H19. Remaining open items [decided: Josh accepted Vera's suggestions, 2026-10-19]
 
-1. Capacity: visible operation slots (B1). **Open**
-2. Endings (B2). **Decided:** Goals mode and Open mode (H6)
-3. Co-GM (B4). **Decided:** proposals unlimited (H9), simple majority, off at 2 or fewer players (H14). Quorum is **open**; proposed default is half the seats.
+### H19.1 Operation slots (closes B1)
+- Every seat starts with **3 slots**. An operation holds a slot until it resolves. Extra orders wait in a queue the player can see.
+- Statements, talks and diplomacy never use a slot.
+- **Cap: 5.** A seat gains slots in the fiction by hiring staff, fixers or a network (an acquisition action, A4). It loses them through scandal or lost assets.
+- **Losing the agent drops the seat to 1 slot** until a replacement is found (H15).
+- Slots are never spent, saved or traded, so decision 9 (no capital) holds. Exposure is still rolled per operation, with no modifier for how many operations a seat runs (decision 10).
+
+### H19.2 Voting quorum (closes the H14 open item)
+- **Quorum:** half the human seats, rounded up, must vote within one tick.
+- **Pass:** a simple majority of votes cast. A tie fails.
+- Abstaining counts toward quorum. If quorum is not met, the proposal lapses.
+- At 3 players this means 2 must vote, so no single player can pass a proposal alone. Group votes are still off at 2 or fewer players (H14).
+
+### H19.3 Budget cap (closes H18 open item)
+- **Solo playtest:** $10 a month.
+- **10-player campaign:** $30 a week, with an alert at $20. On reaching the cap, the budget governor (E) cuts back in order: fewer persona calls, then merged press, then agents on standing orders only, then a longer tick. The game slows down rather than stopping.
+- **Backstop:** a $150 monthly spend limit on the Anansi API key in the Anthropic console. Josh sets this; it is not set from code.
+- These numbers are provisional. Reset them once the minimum slice has measured real cost per tick.
+
+### H19.4 Multiple seats (closes C7, part)
+- **Multiplayer:** one human, one seat. One person holding two seats would see two knowledge layers and cast two votes, which breaks both opacity and voting.
+- **Solo:** the player holds one seat and the AI runs the rest. The player may switch seats at chapter breaks.
+
+### H19.5 Joining mid-campaign (closes C7, part)
+- Allowed by invite, up to the 10-player cap (H13). A new player starts at the next tick.
+- A newcomer chooses one of two routes:
+  - take over a seat the AI is running, inheriting that seat's knowledge layer, or
+  - build a new character through the elimination redesign path (H8), starting with public knowledge only.
+- Their agent gives them a catch-up briefing drawn from the seat's log.
+- A joiner can vote from their **second** tick.
+- If a joiner takes the table from 2 players to 3, group votes switch on (H14).
+
+### H19.6 Scope of "cutthroat" (closes the H16 interpretation)
+- Josh's "default should be cutthroat" was an answer to the lethality question, so cutthroat covers lethality as well as betrayal.
+- **Defaults:**
+  - betrayal intensity: cutthroat
+  - lethality: Hard
+  - **elimination: on**
+- A seat can be lost to world events or to other players. The player then returns as a new character they design (H8).
+- This replaces the H16 reading that kept elimination as an opt-in. A table can soften any of these settings at Session Zero.
+
+---
+
+## Decision status (after H19)
+
+1. Capacity (B1). **Decided:** 3 slots, cap 5, earned in the fiction (H19.1)
+2. Endings (B2). **Decided:** Goals mode or Open mode (H6)
+3. Co-GM (B4). **Decided:** unlimited proposals (H9), simple majority, quorum of half the seats, off at 2 or fewer players (H14, H19.2)
 4. v1 scope (B6). **Decided:** 1 to 10 players plus solo (H13)
-5. Betrayal (B5). **Decided:** cutthroat by default (H16), elimination opt-in (H8)
-6. First playtest (B5, D1). **Decided:** Josh holds a seat, solo first (H11). No rating unless set (H17).
+5. Betrayal (B5). **Decided:** cutthroat with elimination on by default (H16, H19.6)
+6. First playtest (B5, D1). **Decided:** Josh holds a seat and plays solo first (H11). No content rating unless one is set (H17).
 7. Real people (D3). **Decided:** names allowed, no invented allegations (H10)
-8. Model and account (A5, E). **Decided:** Josh's Claude API on a hybrid split (H18). Budget cap amount is **open**.
-9. Seats, switching and joining (C7). **Partly decided:** eliminated players redesign (H8). Multi-seat and mid-campaign joining are **open**.
+8. Model and account (A5, E). **Decided:** Josh's Claude API, hybrid split, provisional caps (H18, H19.3)
+9. Seats, switching and joining (C7). **Decided:** one seat per human; solo players switch at chapter breaks; invite-only joining mid-campaign (H19.4, H19.5)
 10. First format (C12). **Decided for the playtest:** solo first (H11)
 
-Still open:
-- operation slots (B1)
-- co-GM quorum
-- budget cap
-- multi-seat and mid-campaign joining
-- whether "cutthroat" also implies elimination and Hard lethality by default (H16)
+**All ten decisions are closed.** Next step under section G: put the core schema and the resolution pipeline on paper (A1, A2), then build the minimum slice.
