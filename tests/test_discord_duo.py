@@ -17,6 +17,7 @@ from typer.testing import CliRunner
 from revisionist import cli
 from revisionist.core import events as ev
 from revisionist.core.ids import SeatId
+from revisionist.core.project import project
 from revisionist.engine import campaign as cmp
 from revisionist.engine.discord import handlers
 from revisionist.engine.discord.rest import HELD_LABEL
@@ -177,3 +178,19 @@ def test_a_held_briefing_reaches_only_its_owner(duo: Duo) -> None:
 
 def test_dispatch_before_any_tick(duo: Duo) -> None:
     assert duo.game.command("dispatch", HOST) == handlers.NO_DISPATCH
+
+
+def test_a_covert_order_stays_with_its_seat(duo: Duo) -> None:
+    game = duo.game
+    game.command("join", FRIEND, code=duo.code)
+    reply = game.command("order", FRIEND, text=ORDER, visibility="covert", spin="Nothing moves.")
+    assert reply.endswith("(covert)")
+    store = game.store()
+    state = load_state(store, game.campaign())
+    [filed] = [e for e in store.read(game.campaign()) if isinstance(e.payload, ev.IntentFiled)]
+    store.close()
+    assert filed.scope.visibility.value == "covert"
+    assert filed.scope.known_by == {duo.seat(OSTREL)}
+    intent_id = filed.payload.intent.intent_id  # type: ignore[union-attr]
+    assert intent_id not in project(state, duo.seat(VARDA)).model_dump_json()
+    assert intent_id not in game.command("status", HOST)

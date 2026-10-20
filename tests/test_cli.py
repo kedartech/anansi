@@ -180,3 +180,14 @@ def test_a_duo_campaign_needs_the_seat_named(fake: FakeClaude) -> None:
     assert ai.exit_code == cli.EXIT_REFUSED and "not a human seat" in ai.output
     unknown = runner.invoke(cli.app, ["briefing", "--seat", "Atlantis"])
     assert unknown.exit_code == cli.EXIT_ERROR and "no seat" in unknown.output
+
+
+def test_spin_is_the_players_and_only_theirs(fake: FakeClaude) -> None:
+    _ok("new", "salt-strait")
+    _ok("order", "Declare the strait open.")  # FakeClaude's reply carries a spin of its own
+    store = cmp.open_store()
+    [intent] = load_state(store, cmp.current_campaign(store)).pending.values()
+    assert intent.spin is None and intent.scope.visibility.value == "private"
+    too_long = runner.invoke(cli.app, ["order", "Declare it.", "--spin", "x" * 281])
+    assert too_long.exit_code == cli.EXIT_ERROR and "280" in too_long.output
+    assert "(public)" in _ok("order", "Declare it.", "--visibility", "public", "--spin", "Open.")

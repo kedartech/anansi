@@ -10,6 +10,7 @@ bot has no tools, no memory and no model call of its own.
 import asyncio
 import logging
 from collections.abc import Callable
+from typing import Literal
 
 import discord
 from discord import app_commands
@@ -52,12 +53,19 @@ def register(
     tree: app_commands.CommandTree[discord.Client], h: Handlers, guild: discord.Object
 ) -> None:
     @tree.command(name="order", description="Give your agent an order", guild=guild)
-    @app_commands.describe(text="What you want done, in your words")
+    @app_commands.describe(
+        text="What you want done, in your words",
+        visibility="Who may learn of this order (default: private)",
+        spin="A public line on the order, published when the tick freezes",
+    )
     async def order(
-        interaction: discord.Interaction, text: app_commands.Range[str, 1, 4000]
+        interaction: discord.Interaction,
+        text: app_commands.Range[str, 1, 4000],
+        visibility: Literal["private", "public", "covert"] = "private",
+        spin: app_commands.Range[str, 1, 280] | None = None,
     ) -> None:
         user = str(interaction.user.id)
-        await answer(interaction, lambda: h.order(user, text))
+        await answer(interaction, lambda: h.order(user, text, visibility, spin))
 
     @tree.command(name="briefing", description="Your agent's briefing", guild=guild)
     async def briefing(interaction: discord.Interaction) -> None:

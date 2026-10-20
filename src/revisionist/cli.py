@@ -11,6 +11,7 @@ Postgres maintenance commands and ``revisionist scheduler`` the unattended ticks
 import os
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
+from enum import StrEnum
 from typing import TYPE_CHECKING, Annotated
 
 import typer
@@ -28,6 +29,7 @@ from revisionist.core.report import (
     why,
 )
 from revisionist.core.state import State
+from revisionist.core.visibility import Visibility
 from revisionist.core.world_compile import WorldError
 from revisionist.engine import campaign as cmp
 from revisionist.engine import play
@@ -152,19 +154,41 @@ def briefing(seat: PlayerSeat = None) -> None:
         typer.echo(line)
 
 
+class OrderVisibility(StrEnum):
+    PRIVATE = "private"
+    PUBLIC = "public"
+    COVERT = "covert"
+
+
 @app.command()
 def order(
     text: Annotated[str, typer.Argument(help="What you want done, in your words")],
     seat: PlayerSeat = None,
+    visibility: Annotated[
+        OrderVisibility, typer.Option("--visibility", help="Who may learn of this order")
+    ] = OrderVisibility.PRIVATE,
+    spin: Annotated[
+        str | None, typer.Option("--spin", help="A public line on the order, at most 280 chars")
+    ] = None,
 ) -> None:
     """Give your agent an order. It files an intent or asks you a question."""
     store = cmp.open_store()
     campaign_id = _campaign(store)
     me = _me(load_state(store, campaign_id), seat)
     try:
-        result = play.give_order(store, campaign_id, me, text, transport_factory())
+        result = play.give_order(
+            store,
+            campaign_id,
+            me,
+            text,
+            transport_factory(),
+            visibility=Visibility(visibility.value),
+            spin=spin,
+        )
     except TransportError as exc:
         raise _fail(f"model call failed: {exc}") from exc
+    except ValueError as exc:
+        raise _fail(str(exc)) from exc
     if result.refused:
         raise _fail(result.line, EXIT_REFUSED)
     typer.echo(result.line)

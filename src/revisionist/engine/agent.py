@@ -28,7 +28,7 @@ from revisionist.core.project import project
 from revisionist.core.referee import Rejection, rate
 from revisionist.core.resolution import FeasibilityBand
 from revisionist.core.state import State, View
-from revisionist.core.visibility import private_to
+from revisionist.core.visibility import Scope, private_to
 from revisionist.engine.llm import Request, Transport, prompt_text
 from revisionist.engine.store import EventStore, load_state
 from revisionist.engine.tick import _Emitter, file_intent
@@ -144,7 +144,10 @@ def _intent_schema(ids: dict[str, list[str]]) -> dict[str, Any]:
 
 
 def _intent_from_model(view: View, raw: Any, n: int = 0) -> Intent:
-    """Fill the fields the model must not choose: id, actor, scope, tick.
+    """Fill the fields the model must not choose: id, actor, scope, tick, spin.
+
+    Spin is the player's own public line (Layer 9b), so whatever the model or
+    the deputy wrote there is dropped; ``receive_order`` sets the player's.
 
     IDs the seat cannot see are refused here, not left to the schema: a reply can
     come from a recording or a model that ignored ``--json-schema``.
@@ -170,6 +173,7 @@ def _intent_from_model(view: View, raw: Any, n: int = 0) -> Intent:
             "actor": view.viewer,
             "scope": private_to(view.viewer),
             "filed_tick": view.tick,
+            "spin": None,
         }
     )
     return intent
@@ -354,11 +358,15 @@ def receive_order(
     transport: Transport,
     *,
     versions: Versions | None = None,
+    scope: Scope | None = None,
+    spin: str | None = None,
 ) -> StructureResult:
     """Log the raw text privately, structure it, file what validates, ask otherwise.
 
     ``order_received`` lands before structuring so ``/why`` can show what was
-    typed against what was filed, even when the model call fails.
+    typed against what was filed, even when the model call fails. ``scope`` and
+    ``spin`` are the player's choices and replace whatever the agent filled in;
+    the default is Private with no spin.
     """
     em = _Emitter(store, state, versions or Versions(engine="0.0.1", schema_version="1"))
     received = em.event(
@@ -368,10 +376,14 @@ def receive_order(
     agent = Agent.for_seat(load_state(store, state.campaign_id), seat, transport)
     result = agent.structure(text)
     if isinstance(result.outcome, Intent):
+        chosen = _INTENT_ADAPTER.validate_python(
+            {**result.outcome.model_dump(), "scope": scope or result.outcome.scope, "spin": spin}
+        )
+        result = result.model_copy(update={"outcome": chosen})
         rejection = file_intent(
             store,
             state.campaign_id,
-            result.outcome,
+            chosen,
             versions=versions,
             from_order=received.event_id,
         )

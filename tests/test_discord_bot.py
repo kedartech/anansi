@@ -192,8 +192,17 @@ def test_the_client_asks_for_default_intents_only(tmp_path: Path) -> None:
 # --- parity with the CLI --------------------------------------------------------
 
 
+@pytest.mark.parametrize(
+    ("visibility", "spin"),
+    [
+        ("private", None),
+        ("public", "The strait stays open."),
+        ("covert", None),
+        ("covert", "Calm."),
+    ],
+)
 def test_an_order_from_discord_files_what_the_cli_files(
-    pg_db: PgDb, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    pg_db: PgDb, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, visibility: str, spin: str | None
 ) -> None:
     """One campaign, two copies: the CLI orders on one, the bot on the other."""
     sqlite = tmp_path / "solo.db"
@@ -207,22 +216,27 @@ def test_an_order_from_discord_files_what_the_cli_files(
     assert copy_campaign(source, cmp.open_store(twin), source.campaign_ids()[0]).verified.ok
 
     monkeypatch.setenv("REVISIONIST_DB", str(twin))
-    assert runner.invoke(cli.app, ["order", ORDER]).exit_code == 0
+    extra = ["--spin", spin] if spin else []
+    ordered = runner.invoke(cli.app, ["order", ORDER, "--visibility", visibility, *extra])
+    assert ordered.exit_code == 0, ordered.output
     cli_store = cmp.open_store(twin)
 
     game = Game(pg_db, FakeClaude(), tmp_path / "briefings")
     pg = game.store()
     campaign_id = pg.campaign_ids()[0]
     SeatLinks(pg.conn).link(campaign_id, cmp.human_seat(load_state(pg, campaign_id)), PLAYER, GUILD)
-    reply = game.command("order", text=ORDER)
-    assert reply.startswith("filed ")
+    options = {"spin": spin} if spin else {}
+    reply = game.command("order", text=ORDER, visibility=visibility, **options)
+    assert reply.startswith("filed ") and reply.endswith(f"({visibility})")
+    assert reply == ordered.output.strip()
 
     def outcome(store: EventStore) -> tuple[list[dict[str, Any]], str]:
         state = load_state(store, campaign_id)
         return [i.model_dump() for i in state.pending.values()], state_hash(state)
 
     assert outcome(pg) == outcome(cli_store)
-    assert outcome(pg)[0]  # an intent was filed
+    [filed] = load_state(pg, campaign_id).pending.values()
+    assert filed.scope.visibility.value == visibility and filed.spin == spin
     pg.close()
 
 
