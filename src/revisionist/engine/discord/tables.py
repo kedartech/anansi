@@ -1,13 +1,16 @@
 """The Discord operational tables (migration 0003).
 
-Seat bindings, the delivery outbox and bug reports are operational state,
+Seat bindings, invite codes, the delivery outbox and bug reports are operational state,
 not game state, so like the Layer 8 ``schedule`` table they never enter the
 event log (design §14.4, §15). ``psycopg`` is the optional ``postgres``
 extra; this module is only used on a Postgres store.
 """
 
+import base64
+import hashlib
+import secrets
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 from revisionist.core.ids import CampaignId, SeatId
@@ -85,6 +88,81 @@ class SeatLinks:
         return {SeatId(seat): str(user) for seat, user in rows}
 
 
+INVITE_HOURS = 72
+
+
+def code_hash(code: str) -> str:
+    """What is stored for a code: dashes, spaces and case do not matter."""
+    normal = "".join(c for c in code.upper() if c.isalnum())
+    return hashlib.blake2b(normal.encode(), digest_size=16).hexdigest()
+
+
+def new_code() -> str:
+    """160 random bits as eight groups of four base32 characters."""
+    raw = base64.b32encode(secrets.token_bytes(20)).decode()
+    return "-".join(raw[i : i + 4] for i in range(0, len(raw), 4))
+
+
+@dataclass(frozen=True)
+class Invite:
+    campaign_id: CampaignId
+    seat_id: SeatId
+    issued_at: datetime
+    expires_at: datetime
+    used_at: datetime | None
+    used_by: str | None
+
+
+class Invites:
+    """``discord_invites`` (migration 0005): single-use codes that bind a user to a seat."""
+
+    def __init__(self, conn: "Connection[Any]") -> None:
+        self.conn = conn
+
+    def issue(
+        self, campaign_id: CampaignId, seat_id: SeatId, now: datetime, hours: int = INVITE_HOURS
+    ) -> str:
+        code = new_code()
+        self.conn.execute(
+            "INSERT INTO discord_invites (code_hash, campaign_id, seat_id, issued_at, expires_at)"
+            " VALUES (%s, %s, %s, %s, %s)",
+            (code_hash(code), campaign_id, seat_id, now, now + timedelta(hours=hours)),
+        )
+        return code
+
+    def redeem(
+        self, code: str, user_id: str, guild_id: str, now: datetime
+    ) -> tuple[CampaignId, SeatId] | None:
+        """Bind the user to the code's seat and spend the code, or neither.
+
+        ``None`` for an unknown, spent or expired code. A ``LinkError`` rolls the
+        whole thing back, so a refused link does not burn the code.
+        """
+        with self.conn.transaction():
+            row = self.conn.execute(
+                "SELECT campaign_id, seat_id FROM discord_invites"
+                " WHERE code_hash = %s AND used_at IS NULL AND expires_at > %s FOR UPDATE",
+                (code_hash(code), now),
+            ).fetchone()
+            if row is None:
+                return None
+            campaign_id, seat_id = CampaignId(row[0]), SeatId(row[1])
+            SeatLinks(self.conn).link(campaign_id, seat_id, user_id, guild_id)
+            self.conn.execute(
+                "UPDATE discord_invites SET used_at = %s, used_by = %s WHERE code_hash = %s",
+                (now, user_id, code_hash(code)),
+            )
+        return campaign_id, seat_id
+
+    def all(self, campaign_id: CampaignId) -> list[Invite]:
+        rows = self.conn.execute(
+            "SELECT campaign_id, seat_id, issued_at, expires_at, used_at, used_by"
+            " FROM discord_invites WHERE campaign_id = %s ORDER BY issued_at",
+            (campaign_id,),
+        ).fetchall()
+        return [Invite(CampaignId(r[0]), SeatId(r[1]), *r[2:]) for r in rows]
+
+
 class PgOutbox:
     """``discord_deliveries``: one row per part Discord accepted."""
 
@@ -122,4 +200,15 @@ def file_bug(
     return int(row[0])
 
 
-__all__ = ["Link", "LinkError", "PgOutbox", "SeatLinks", "file_bug"]
+__all__ = [
+    "INVITE_HOURS",
+    "Invite",
+    "Invites",
+    "Link",
+    "LinkError",
+    "PgOutbox",
+    "SeatLinks",
+    "code_hash",
+    "file_bug",
+    "new_code",
+]

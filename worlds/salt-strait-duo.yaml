@@ -1,0 +1,241 @@
+# Salt Strait for two players (build plan Layer 9b).
+#
+# salt-strait.yaml with one change: Ostrel's War Council is a second human
+# seat, with its own agent (Sefa Marr), instead of an AI faction. Kesh and the
+# Lune Isles stay AI factions. tests/test_world_compile.py keeps the two in step.
+#
+# Every secret below carries a canary: a string that must never reach a seat
+# outside the fact's scope. `revisionist leaks` scans every narration for them.
+
+world: salt-strait-duo
+name: Salt Strait (two players)
+
+settings:
+  plausibility: plausible
+  inertia: tendencies
+  lethality: hard
+  betrayal: cutthroat
+  mode: goals
+  tone: grounded
+  tick_hours: 24
+  world_days_per_tick: 7
+  starting_slots: 3
+  veils: [atrocity, execution, torture]
+
+entities:
+  # polities
+  - {key: varda, kind: polity, name: Varda, tags: [hinge, mercantile]}
+  - {key: ostrel, kind: polity, name: Ostrel, tags: [continental, military]}
+  - {key: kesh, kind: polity, name: Kesh, tags: [theocratic, insular]}
+  - {key: lune, kind: polity, name: Lune Isles, tags: [maritime, federated]}
+  # places
+  - {key: strait, kind: location, name: The Salt Strait}
+  - {key: harrow, kind: location, name: Harrow Pass, parent: ostrel}
+  - {key: saltworks, kind: location, name: Varda Saltworks, parent: varda}
+  # people
+  - {key: mira, kind: person, name: Mira Toll, parent: varda, tags: [chief_of_staff]}
+  - {key: general_aske, kind: person, name: General Aske, parent: ostrel}
+  - {key: sefa, kind: person, name: Sefa Marr, parent: ostrel, tags: [chief_of_staff]}
+  - {key: abbess_ren, kind: person, name: Abbess Ren, parent: kesh}
+  - {key: admiral_quell, kind: person, name: Admiral Quell, parent: lune}
+  # the press
+  - {key: courier, kind: org, name: The Strait Courier, location: strait}
+
+assets:
+  # Varda
+  - {key: varda_guard, kind: force, name: Varda Harbour Guard, tier: 2, controller: varda}
+  - {key: varda_treasury, kind: wealth, name: Varda Exchequer, tier: 3, controller: varda}
+  - {key: varda_saltworks, kind: facility, name: The Saltworks, tier: 3, controller: varda, location: saltworks}
+  - key: varda_whisperers
+    kind: network
+    name: The Ledger Clerks
+    tier: 1
+    controller: varda
+    scope: {visibility: covert, known_by: [varda_seat]}
+  # Ostrel
+  - {key: ostrel_army, kind: force, name: Ostrel Field Army, tier: 4, controller: ostrel}
+  - {key: ostrel_granary, kind: wealth, name: Ostrel Granaries, tier: 2, controller: ostrel}
+  - key: ostrel_harrow_column
+    kind: force
+    name: Harrow Column
+    tier: 2
+    controller: ostrel
+    location: harrow
+    scope: {visibility: covert, known_by: [ostrel_seat]}
+  # Kesh
+  - {key: kesh_temple_guard, kind: force, name: Temple Guard, tier: 2, controller: kesh}
+  - {key: kesh_tithe, kind: wealth, name: The Tithe, tier: 3, controller: kesh}
+  - {key: kesh_pulpit, kind: office, name: The High Pulpit, tier: 3, controller: kesh}
+  - key: kesh_salt_buyers
+    kind: network
+    name: Kesh Salt Buyers
+    tier: 2
+    controller: kesh
+    scope: {visibility: private, known_by: [kesh_seat]}
+  # Lune
+  - {key: lune_fleet, kind: force, name: Lune Fleet, tier: 3, controller: lune, location: strait}
+  - {key: lune_harbours, kind: facility, name: Free Harbours, tier: 2, controller: lune}
+  - key: lune_charts
+    kind: info
+    name: The Deep Charts
+    tier: 2
+    controller: lune
+    scope: {visibility: covert, known_by: [lune_seat]}
+  # the press
+  - {key: courier_presses, kind: info, name: Courier Presses, tier: 2, controller: courier}
+
+relationships:
+  - {key: varda_ostrel, a: varda, b: ostrel, disposition: -1, leverage_tags: [salt_dependence]}
+  - {key: varda_kesh, a: varda, b: kesh, disposition: 1, price_tags: [tithe_exemption]}
+  - {key: varda_lune, a: varda, b: lune, disposition: 2, price_tags: [harbour_rights]}
+  - {key: ostrel_kesh, a: ostrel, b: kesh, disposition: -2}
+  - {key: ostrel_lune, a: ostrel, b: lune, disposition: -1}
+  - {key: kesh_lune, a: kesh, b: lune, disposition: 0}
+  - key: ostrel_kesh_backchannel
+    a: ostrel
+    b: kesh
+    disposition: 2
+    scope: {visibility: covert, known_by: [ostrel_seat, kesh_seat]}
+
+meters:
+  - {key: varda_stability, owner: varda, name: Stability, value: 62}
+  - {key: varda_salt_revenue, owner: varda, name: Salt Revenue, value: 70}
+  - {key: ostrel_stability, owner: ostrel, name: Stability, value: 55}
+  - {key: ostrel_war_fever, owner: ostrel, name: War Fever, value: 40}
+  - {key: kesh_stability, owner: kesh, name: Stability, value: 68}
+  - {key: kesh_piety, owner: kesh, name: Piety, value: 75}
+  - {key: lune_stability, owner: lune, name: Stability, value: 58}
+  - {key: lune_trade, owner: lune, name: Trade Volume, value: 64}
+
+clocks:
+  # objectives (one per seat)
+  - key: varda_hold_strait
+    kind: objective
+    name: Keep the strait open and Varda's
+    owner: varda_seat
+    segments_total: 8
+    scope: {visibility: private, known_by: [varda_seat]}
+  - key: ostrel_take_saltworks
+    kind: objective
+    name: Bring the Saltworks under Ostrel
+    owner: ostrel_seat
+    target: varda
+    segments_total: 8
+    scope: {visibility: private, known_by: [ostrel_seat]}
+  - key: kesh_purify_trade
+    kind: objective
+    name: Make Kesh the only salt buyer
+    owner: kesh_seat
+    segments_total: 6
+    scope: {visibility: private, known_by: [kesh_seat]}
+  - key: lune_free_passage
+    kind: objective
+    name: No toll on the strait
+    owner: lune_seat
+    segments_total: 6
+    scope: {visibility: private, known_by: [lune_seat]}
+  # the threats in motion
+  - key: ostrel_harrow_march
+    kind: operation
+    name: March the Harrow Column
+    owner: ostrel_seat
+    target: varda
+    segments_total: 4
+    segments_filled: 1
+    exposure: 2
+    holds_slot: true
+    scope: {visibility: covert, known_by: [ostrel_seat]}
+  - key: strait_storm_season
+    kind: threat
+    name: Storm season closes the strait
+    segments_total: 6
+
+facts:
+  - key: ostrel_plans_march
+    subject: ostrel
+    predicate: prepares_to_march_on
+    obj: saltworks
+    exposure: 2
+    scope: {visibility: covert, known_by: [ostrel_seat]}
+    canary: CANARY-OSTREL-HARROW-4c1e
+  - key: kesh_ostrel_pact
+    subject: kesh
+    predicate: secretly_pledged_to
+    obj: ostrel
+    exposure: 1
+    scope: {visibility: covert, known_by: [ostrel_seat, kesh_seat]}
+    canary: CANARY-KESH-PACT-9b27
+  - key: lune_deep_channel
+    subject: lune
+    predicate: charts_hidden_channel_past
+    obj: strait
+    exposure: 1
+    scope: {visibility: covert, known_by: [lune_seat]}
+    canary: CANARY-LUNE-CHANNEL-e803
+  - key: varda_skims_tolls
+    subject: varda
+    predicate: skims_salt_tolls_through
+    obj: varda_whisperers
+    exposure: 2
+    scope: {visibility: covert, known_by: [varda_seat]}
+    canary: CANARY-VARDA-SKIM-55d0
+  - key: strait_toll_treaty
+    subject: varda
+    predicate: collects_toll_on
+    obj: strait
+
+commitments:
+  - key: varda_lune_harbour_pact
+    parties: [varda, lune]
+    clauses:
+      - {kind: support, party: lune, beneficiary: varda, verb: defend}
+      - {kind: payment, party: varda, beneficiary: lune, amount: 1}
+
+seats:
+  - key: varda_seat
+    kind: player
+    name: First Minister of Varda
+    embodies: varda
+    controller: human
+    objectives: [varda_hold_strait]
+    agent:
+      entity: mira
+      name: Mira Toll
+      role: chief of staff
+      voice: dry, exact, loyal to the office more than the minister
+      backstory: Ran the Exchequer's salt ledgers for a decade before the ministry
+  - key: ostrel_seat
+    kind: player
+    name: Ostrel War Council
+    embodies: ostrel
+    controller: human
+    objectives: [ostrel_take_saltworks]
+    agent:
+      entity: sefa
+      name: Sefa Marr
+      role: adjutant to the War Council
+      voice: blunt, patient, counts everything twice
+      backstory: Quartermaster of the Harrow march before the Council took her indoors
+    standing_orders:
+      - press Varda over the salt price; fund the army; investigate Varda's harbour
+      - keep the Harrow Column hidden; conceal the march
+  - key: kesh_seat
+    kind: faction
+    name: Synod of Kesh
+    embodies: kesh
+    objectives: [kesh_purify_trade]
+    standing_orders:
+      - lobby for exclusive salt contracts; fund the salt buyers
+      - negotiate quietly with Ostrel; never be seen to side with it
+  - key: lune_seat
+    kind: faction
+    name: Lune Admiralty
+    embodies: lune
+    objectives: [lune_free_passage]
+    standing_orders:
+      - defend the fleet and the free harbours; negotiate against any toll
+      - investigate Ostrel troop movements
+  - key: courier_seat
+    kind: outlet
+    name: The Strait Courier
+    embodies: courier

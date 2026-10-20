@@ -16,13 +16,15 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+from revisionist.core import events as ev
 from revisionist.core.canary import scan_text
 from revisionist.core.fold import state_hash
 from revisionist.core.ids import CampaignId
 from revisionist.engine import campaign as cmp
 from revisionist.engine import play
 from revisionist.engine import scheduler as sch
-from revisionist.engine.discord.tables import Link, SeatLinks, file_bug
+from revisionist.engine.discord.rest import CANNOT_DM, DiscordError, DiscordRest, nonce_for
+from revisionist.engine.discord.tables import Invites, Link, LinkError, SeatLinks, file_bug
 from revisionist.engine.llm import Transport, TransportError
 from revisionist.engine.pg_store import PostgresEventStore
 from revisionist.engine.runner import DelivererFactory
@@ -37,6 +39,10 @@ MODEL_DOWN = "Your agent can't be reached just now. Try again in a few minutes."
 BROKEN = "Something went wrong on the host's side. The host has the details."
 WITHHELD = "That reply was withheld: it named something your seat cannot know."
 NOT_YET = "Not available yet."
+BAD_CODE = "That code doesn't work. Ask the host for a new one."
+ALREADY_SEATED = "You already hold a seat here."
+NO_DISPATCH = "No briefing yet. One arrives after each tick."
+WELCOME = "This is your dispatch for {seat}. Your briefings arrive here after each tick."
 
 
 @dataclass(frozen=True)
@@ -57,12 +63,15 @@ class Handlers:
         clock: Callable[[], datetime],
         briefings: Path,
         deliverer_factory: DelivererFactory | None,
+        rest: DiscordRest | None = None,
     ) -> None:
         self.config = config
         self.transport_factory = transport_factory
         self.clock = clock
         self.briefings = briefings
         self.deliverer_factory = deliverer_factory
+        self.rest = rest
+        """Sends the welcome DM after ``/join``; without it the join just links."""
 
     # --- seat commands ------------------------------------------------------
 
@@ -111,6 +120,67 @@ class Handlers:
             return f"Bug {n} filed at tick {state.tick}. Thank you."
 
         return self._as_seat(user_id, "bug", work)
+
+    def dispatch(self, user_id: str) -> str:
+        """The seat's latest tick briefing, read back from the log. No model call."""
+
+        def work(store: PostgresEventStore, link: Link) -> str:
+            latest: ev.Event | None = None
+            for e in store.read(link.campaign_id):
+                if isinstance(e.payload, ev.NarrationWritten) and e.payload.seat_id == link.seat_id:
+                    latest = e
+            if latest is None:
+                return NO_DISPATCH
+            assert isinstance(latest.payload, ev.NarrationWritten)
+            return f"Tick {latest.tick}:\n{latest.payload.text}"
+
+        return self._as_seat(user_id, "dispatch", work)
+
+    def join(self, user_id: str, code: str) -> str:
+        """Redeem a host's invite code: bind this user to its seat, then say hello by DM.
+
+        Unknown, spent and expired codes get the same answer.
+        """
+        try:
+            store = self._open()
+        except Exception:
+            log.exception("/join: cannot open the store")
+            return BROKEN
+        try:
+            if SeatLinks(store.conn).for_user(user_id, self.config.guild_id) is not None:
+                return ALREADY_SEATED
+            try:
+                got = Invites(store.conn).redeem(code, user_id, self.config.guild_id, self.clock())
+            except LinkError:
+                got = None
+            if got is None:
+                return BAD_CODE
+            campaign_id, seat_id = got
+            name = load_state(store, campaign_id).seats[seat_id].name
+            log.info("/join: user %s now holds %s in %s", user_id, seat_id, campaign_id)
+            return f"You hold {name}. " + self._welcome(user_id, campaign_id, name)
+        except Exception:
+            log.exception("/join failed")
+            return BROKEN
+        finally:
+            store.close()
+
+    def _welcome(self, user_id: str, campaign_id: CampaignId, seat_name: str) -> str:
+        if self.rest is None:
+            return "Use /dispatch after each tick to read your briefing."
+        try:
+            channel = self.rest.open_dm(user_id)
+            nonce = nonce_for(f"welcome:{campaign_id}:{user_id}", 0)
+            self.rest.send(channel, WELCOME.format(seat=seat_name), nonce)
+        except DiscordError as exc:
+            if exc.code == CANNOT_DM:
+                return (
+                    "Your DMs are closed to me, so your briefings will wait for you: "
+                    "use /dispatch after each tick."
+                )
+            log.warning("/join: welcome DM failed: %s", exc)
+            return "I couldn't send you a test DM; use /dispatch after each tick."
+        return "I've sent you a test DM; your briefings arrive there."
 
     # --- host commands ------------------------------------------------------
 
@@ -211,12 +281,16 @@ class Handlers:
 
 
 __all__ = [
+    "ALREADY_SEATED",
+    "BAD_CODE",
     "BROKEN",
     "EMPTY_ORDER",
     "HOST_ONLY",
     "MODEL_DOWN",
     "NOT_LINKED",
     "NOT_YET",
+    "NO_DISPATCH",
+    "WELCOME",
     "WITHHELD",
     "BotConfig",
     "Handlers",

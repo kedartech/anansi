@@ -18,7 +18,6 @@ from revisionist.engine.store import EventStore, load_state
 from revisionist.engine.tick import Deliverer
 
 TOKEN_ENV = "REVISIONIST_DISCORD_TOKEN"
-FALLBACK_ENV = "REVISIONIST_DISCORD_FALLBACK_CHANNEL"
 WITHHELD_LABEL = "withheld"
 
 
@@ -41,17 +40,14 @@ class RoutingDeliverer:
         return self.discord.deliver(seat_id, text, idempotency_key)
 
 
-def routing_factory(rest: DiscordRest, fallback_channel: str | None) -> DelivererFactory:
+def routing_factory(rest: DiscordRest) -> DelivererFactory:
     def build(store: EventStore, campaign_id: CampaignId, briefings: Path) -> Deliverer:
         from revisionist.engine.pg_store import PostgresEventStore
 
         if not isinstance(store, PostgresEventStore):
             raise TypeError("Discord delivery needs the Postgres store")
         discord = DiscordDeliverer(
-            rest,
-            PgOutbox(store.conn),
-            SeatLinks(store.conn).users(campaign_id),
-            fallback_channel,
+            rest, PgOutbox(store.conn), SeatLinks(store.conn).users(campaign_id)
         )
         return RoutingDeliverer(
             store, campaign_id, discord, file_deliverer(store, campaign_id, briefings)
@@ -68,11 +64,10 @@ def factory_from_env() -> DelivererFactory | None:
     token = os.environ.get(TOKEN_ENV)
     if not token:
         return None
-    return routing_factory(DiscordRest(token), os.environ.get(FALLBACK_ENV) or None)
+    return routing_factory(DiscordRest(token))
 
 
 __all__ = [
-    "FALLBACK_ENV",
     "TOKEN_ENV",
     "WITHHELD_LABEL",
     "RoutingDeliverer",

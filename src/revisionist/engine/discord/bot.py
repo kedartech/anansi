@@ -19,7 +19,19 @@ from revisionist.engine.discord.rest import split_message
 
 log = logging.getLogger("revisionist.discord")
 
-COMMANDS = ("order", "briefing", "status", "advance", "pause", "resume", "bug", "report", "key")
+COMMANDS = (
+    "order",
+    "briefing",
+    "dispatch",
+    "status",
+    "join",
+    "advance",
+    "pause",
+    "resume",
+    "bug",
+    "report",
+    "key",
+)
 
 
 async def _run(work: Callable[[], str]) -> str:
@@ -51,6 +63,19 @@ def register(
     async def briefing(interaction: discord.Interaction) -> None:
         user = str(interaction.user.id)
         await answer(interaction, lambda: h.briefing(user))
+
+    @tree.command(name="dispatch", description="Your latest tick briefing", guild=guild)
+    async def dispatch(interaction: discord.Interaction) -> None:
+        user = str(interaction.user.id)
+        await answer(interaction, lambda: h.dispatch(user))
+
+    @tree.command(
+        name="join", description="Take your seat with the host's invite code", guild=guild
+    )
+    @app_commands.describe(code="The code the host gave you")
+    async def join(interaction: discord.Interaction, code: app_commands.Range[str, 1, 64]) -> None:
+        user = str(interaction.user.id)
+        await answer(interaction, lambda: h.join(user, code))
 
     @tree.command(
         name="status", description="Where things stand, as your seat sees it", guild=guild

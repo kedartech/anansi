@@ -87,12 +87,32 @@ def current_campaign(store: EventStore) -> CampaignId:
     return ids[-1]
 
 
+def human_seats(state: State) -> list[SeatId]:
+    """Every human seat, in a stable order."""
+    return sorted(s.seat_id for s in state.seats.values() if s.controller is Controller.HUMAN)
+
+
 def human_seat(state: State) -> SeatId:
-    """The one human seat of a solo campaign."""
-    humans = sorted(s.seat_id for s in state.seats.values() if s.controller is Controller.HUMAN)
-    if len(humans) != 1:
-        raise LookupError(f"expected one human seat, found {len(humans)}")
+    """The one human seat. With several, the caller has to say which (``--seat``)."""
+    humans = human_seats(state)
+    if not humans:
+        raise LookupError("this campaign has no human seat")
+    if len(humans) > 1:
+        names = ", ".join(f"{state.seats[s].name} ({s})" for s in humans)
+        raise LookupError(
+            f"this campaign has {len(humans)} human seats: {names}; pick one with --seat"
+        )
     return humans[0]
+
+
+def resolve_seat(state: State, ref: str) -> SeatId:
+    """A seat by ID, or by its name ignoring case."""
+    if ref in state.seats:
+        return SeatId(ref)
+    named = [s.seat_id for s in state.seats.values() if s.name.casefold() == ref.casefold()]
+    if len(named) != 1:
+        raise LookupError(f"no seat {ref!r} in {state.campaign_id}")
+    return named[0]
 
 
 def faction_seats(state: State) -> list[SeatId]:
@@ -173,12 +193,14 @@ __all__ = [
     "db_target",
     "faction_seats",
     "human_seat",
+    "human_seats",
     "is_postgres",
     "live_transport",
     "load_world",
     "log_cost",
     "new_campaign",
     "open_store",
+    "resolve_seat",
     "versions",
     "world_path",
 ]

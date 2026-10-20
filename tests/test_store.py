@@ -237,7 +237,8 @@ def test_postgres_migrations_are_idempotent(pg_db: PgDb) -> None:
     assert migrate(pg_db.admin_dsn, pg_db.app_role) == []
     with psycopg.connect(pg_db.admin_dsn) as conn:
         versions = [r[0] for r in conn.execute("SELECT version FROM schema_migrations ORDER BY 1")]
-    assert versions == ["0001_init", "0002_schedule", "0003_discord", "0004_rename"]
+    assert versions == [p.stem for p in pg_store.migration_files()]
+    assert versions[:4] == ["0001_init", "0002_schedule", "0003_discord", "0004_rename"]
 
 
 def _append_only_functions(dsn: str) -> list[str]:
@@ -260,7 +261,8 @@ def test_a_database_from_before_the_rename_converges(
         migrate(dsn, pg_cluster.role)
         assert _append_only_functions(dsn) == ["wyrd_append_only"]
         monkeypatch.undo()
-        assert migrate(dsn, pg_cluster.role) == ["0004_rename"]
+        after = [p.stem for p in pg_store.migration_files() if p.stem >= "0004"]
+        assert migrate(dsn, pg_cluster.role) == after and after[0] == "0004_rename"
         assert _append_only_functions(dsn) == ["revisionist_append_only"]
         with psycopg.connect(dsn, autocommit=True) as conn:
             conn.execute("INSERT INTO events VALUES ('c', 0, 'e', 0, 'k', '{}')")

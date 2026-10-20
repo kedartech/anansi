@@ -165,3 +165,18 @@ def test_a_leaked_canary_fails_the_tick(monkeypatch: pytest.MonkeyPatch, tmp_pat
     assert result.exit_code == cli.EXIT_LEAK
     assert "LEAK" in result.output
     assert runner.invoke(cli.app, ["leaks"]).exit_code == cli.EXIT_LEAK
+
+
+def test_a_duo_campaign_needs_the_seat_named(fake: FakeClaude) -> None:
+    out = _ok("new", "salt-strait-duo")
+    assert "human seats:" in out and "Ostrel War Council" in out and "2 AI factions" in out
+    result = runner.invoke(cli.app, ["order", "Declare the strait open."])
+    assert result.exit_code == cli.EXIT_ERROR and "pick one with --seat" in result.output
+    assert _ok("order", "Declare the strait open.", "--seat", "ostrel war council").startswith(
+        "filed "
+    )
+    assert "seat Ostrel War Council" in _ok("status", "--seat", "Ostrel War Council")
+    ai = runner.invoke(cli.app, ["status", "--seat", "Synod of Kesh"])
+    assert ai.exit_code == cli.EXIT_REFUSED and "not a human seat" in ai.output
+    unknown = runner.invoke(cli.app, ["briefing", "--seat", "Atlantis"])
+    assert unknown.exit_code == cli.EXIT_ERROR and "no seat" in unknown.output
