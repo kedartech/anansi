@@ -20,6 +20,7 @@ from revisionist.core import events as ev
 from revisionist.core.canary import scan_text
 from revisionist.core.fold import state_hash
 from revisionist.core.ids import CampaignId
+from revisionist.core.ontology import Persona
 from revisionist.core.settings import Settings
 from revisionist.core.visibility import Visibility
 from revisionist.engine import campaign as cmp
@@ -43,12 +44,18 @@ WITHHELD = "That reply was withheld: it named something your seat cannot know."
 NOT_YET = "Not available yet."
 BAD_CODE = "That code doesn't work. Ask the host for a new one."
 ALREADY_SEATED = "You already hold a seat here."
+PICK_FIRST = "Session Zero is open: pick your character first with /character."
+JOINED_ZERO = "You are in. Session Zero is open: see who you could play with /character roster."
 ESTABLISHED = "Session Zero is open at {place}. {n} characters to choose from: {names}."
 DRAFT_REFUSED = (
     "The GM's draft of that moment did not hold together. Try again, or name it more precisely."
 )
 NO_DISPATCH = "No briefing yet. One arrives after each tick."
 WELCOME = "This is your dispatch for {seat}. Your briefings arrive here after each tick."
+
+
+ZERO_COMMANDS = frozenset({"character", "goal", "history", "agent"})
+"""Seat commands that work before the seat exists: it appears at the claim."""
 
 
 @dataclass(frozen=True)
@@ -178,9 +185,11 @@ class Handlers:
             if got is None:
                 return BAD_CODE
             campaign_id, seat_id = got
-            name = load_state(store, campaign_id).seats[seat_id].name
             log.info("/join: user %s now holds %s in %s", user_id, seat_id, campaign_id)
-            return f"You hold {name}. " + self._welcome(user_id, campaign_id, name)
+            seat = load_state(store, campaign_id).seats.get(seat_id)
+            if seat is None:  # Session Zero: the seat appears when they claim a character
+                return JOINED_ZERO + " " + self._welcome(user_id, campaign_id, "your seat")
+            return f"You hold {seat.name}. " + self._welcome(user_id, campaign_id, seat.name)
         except Exception:
             log.exception("/join failed")
             return BROKEN
@@ -227,6 +236,70 @@ class Handlers:
             return ESTABLISHED.format(place=place.strip(), n=len(names), names=", ".join(names))
 
         return self._host_store(user_id, "establish", work)
+
+    # --- Session Zero (Layer 10 item 1) -----------------------------------------
+
+    def character(self, user_id: str, action: str, text: str = "") -> str:
+        """``roster``, ``search <what you want>``, ``claim <name>`` or ``pick <name>``."""
+
+        def work(store: PostgresEventStore, link: Link) -> str:
+            c, seat = link.campaign_id, link.seat_id
+            match action:
+                case "roster":
+                    return "\n".join(session_zero.roster_lines(load_state(store, c)))
+                case "search":
+                    found = session_zero.search(store, c, seat, text, self.transport_factory())
+                    return "\n".join(found) or "No one on the roster fits. Try other words."
+                case "claim":
+                    return f"You play {session_zero.claim(store, c, seat, text)}."
+                case "pick":
+                    who = session_zero.pick(store, c, seat, text, self.transport_factory())
+                    return f"You play {who}."
+            return "Choose roster, search, claim or pick."
+
+        return self._as_seat(user_id, "character", work)
+
+    def goal(self, user_id: str, action: str, text: str = "") -> str:
+        """``history``, ``could_have``, ``own <your goal>`` or ``confirm <number>``."""
+
+        def work(store: PostgresEventStore, link: Link) -> str:
+            c, seat = link.campaign_id, link.seat_id
+            match action:
+                case "history" | "could_have" | "own":
+                    lines = session_zero.propose_goals(
+                        store, c, seat, action, self.transport_factory(), text
+                    )
+                    return "\n".join(lines) + "\nChoose one with /goal confirm <number>."
+                case "confirm":
+                    if not text.strip().isdigit():
+                        return "Give the number of the goal you choose."
+                    return session_zero.confirm_goal(store, c, seat, int(text))
+            return "Choose history, could_have, own or confirm."
+
+        return self._as_seat(user_id, "goal", work)
+
+    def history(self, user_id: str) -> str:
+        def work(store: PostgresEventStore, link: Link) -> str:
+            return session_zero.history_brief(
+                store, link.campaign_id, link.seat_id, self.transport_factory()
+            )
+
+        return self._as_seat(user_id, "history", work)
+
+    def agent(self, user_id: str, persona: Persona) -> str:
+        def work(store: PostgresEventStore, link: Link) -> str:
+            return session_zero.design_agent(store, link.campaign_id, link.seat_id, persona)
+
+        return self._as_seat(user_id, "agent", work)
+
+    def begin(self, user_id: str) -> str:
+        def work(store: PostgresEventStore, campaign_id: CampaignId) -> str:
+            try:
+                return session_zero.begin(store, campaign_id)
+            except session_zero.StepRefusedError as exc:
+                return str(exc)
+
+        return self._as_host(user_id, "begin", work)
 
     def advance(self, user_id: str) -> str:
         def work(store: PostgresEventStore, campaign_id: CampaignId) -> str:
@@ -290,7 +363,15 @@ class Handlers:
             link = SeatLinks(store.conn).for_user(user_id, self.config.guild_id)
             if link is None:
                 return NOT_LINKED
-            reply = work(store, link)
+            if (
+                name not in ZERO_COMMANDS
+                and link.seat_id not in load_state(store, link.campaign_id).seats
+            ):
+                return PICK_FIRST
+            try:
+                reply = work(store, link)
+            except session_zero.StepRefusedError as exc:
+                return str(exc)
             # Nothing should reach here that the seat cannot see; check anyway.
             if scan_text(load_state(store, link.campaign_id), link.seat_id, reply):
                 log.warning("/%s reply for %s withheld: canary hit", name, link.seat_id)

@@ -7,8 +7,9 @@ State-mutating kinds (the fold in Layer 2 handles exactly these):
 ``CampaignCreated, SettingsSet, EntityCreated, AssetCreated, RelationshipSet,
 MeterCreated, ClockCreated, FactAsserted, CommitmentCreated, SeatCreated,
 AgentAssigned, SeatStatusSet, IntentFiled, IntentRejected, DeltaApplied,
-ScheduledEventFired, SessionZeroOpened, CharacterListed, GoalSet, GoalProgressed,
-GoalMet, GoalUndone, TickOpened, TickClosed``.
+ScheduledEventFired, SessionZeroOpened, CharacterListed, CharacterClaimed,
+SessionZeroClosed, GoalSet, GoalProgressed, GoalMet, GoalUndone, TickOpened,
+TickClosed``.
 
 Every other kind is a record: it is replayable, searchable and shown by
 ``/why``, but changes no state.
@@ -20,7 +21,7 @@ from pydantic import ConfigDict, Field
 
 from revisionist.core._base import Model
 from revisionist.core.delta import Delta
-from revisionist.core.goals import Goal
+from revisionist.core.goals import Goal, GoalKind, WinCondition
 from revisionist.core.ids import (
     CampaignId,
     ClockId,
@@ -273,6 +274,25 @@ class CharacterListed(Model):
     character: Character
 
 
+class CharacterClaimed(Model):
+    """A player takes a character from the roster (README §5 step 3).
+
+    The fold creates the player's seat here, embodying the character. The
+    engine gives this event an ID derived from the campaign and the character,
+    so a second claim of the same person fails at the store, not just here.
+    """
+
+    kind: Literal["character_claimed"] = "character_claimed"
+    seat_id: SeatId
+    entity_id: EntityId
+
+
+class SessionZeroClosed(Model):
+    """Every player has a character, a goal and an agent: play begins."""
+
+    kind: Literal["session_zero_closed"] = "session_zero_closed"
+
+
 # --- Goals ---------------------------------------------------------------------
 
 
@@ -302,6 +322,30 @@ class GoalUndone(Model):
     """An Undoable goal stopped holding. It counts as unmet until it holds again."""
 
     kind: Literal["goal_undone"] = "goal_undone"
+    goal_id: GoalId
+
+
+class GoalOption(Model):
+    text: str = Field(max_length=280)
+    condition: WinCondition
+    kind: GoalKind
+
+
+class GoalProposed(Model):
+    """The goals a player's agent offered on one route (README §5 step 4). A record,
+    Private to the seat and sealed with its key: these are the player's own words."""
+
+    kind: Literal["goal_proposed"] = "goal_proposed"
+    seat_id: SeatId
+    route: Literal["history", "could_have", "own"]
+    options: tuple[GoalOption, ...] = Field(max_length=3)
+
+
+class GoalApproved(Model):
+    """The host let a goal the balance check flagged stand. The host sees the scores
+    and the flag, never the goal. A record."""
+
+    kind: Literal["goal_approved"] = "goal_approved"
     goal_id: GoalId
 
 
@@ -411,10 +455,14 @@ Payload = Annotated[
     | StatementIssued
     | SessionZeroOpened
     | CharacterListed
+    | CharacterClaimed
+    | SessionZeroClosed
     | GoalSet
     | GoalProgressed
     | GoalMet
     | GoalUndone
+    | GoalProposed
+    | GoalApproved
     | BriefingDelivered
     | TickOpened
     | TickStageCompleted
@@ -445,6 +493,8 @@ MUTATING_KINDS: frozenset[str] = frozenset(
         "scheduled_event_fired",
         "session_zero_opened",
         "character_listed",
+        "character_claimed",
+        "session_zero_closed",
         "goal_set",
         "goal_progressed",
         "goal_met",

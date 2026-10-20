@@ -22,7 +22,7 @@ from revisionist.core.visibility import Scope, Visibility
 def seal_holder(event: Event) -> SeatId | None:
     """The seat whose key seals this event, or ``None`` for the campaign key."""
     p = event.payload
-    if isinstance(p, ev.OrderReceived | ev.ClarificationAsked):
+    if isinstance(p, ev.OrderReceived | ev.ClarificationAsked | ev.GoalProposed):
         return p.seat_id
     if isinstance(p, ev.NarrationWritten) and event.scope.visibility is not Visibility.PUBLIC:
         return p.seat_id

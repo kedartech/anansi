@@ -27,6 +27,7 @@ from revisionist.core.intent import Intent, Verb
 from revisionist.core.ontology import (
     Asset,
     AssetKind,
+    Character,
     Clause,
     ClauseKind,
     Clock,
@@ -406,10 +407,37 @@ payloads = st.one_of(
         from_deltas=st.lists(delta_ids, max_size=4).map(tuple),
     ),
     st.builds(ev.StatementIssued, seat_id=seat_ids, intent_id=intent_ids, text=short_text),
+    st.builds(
+        ev.SessionZeroOpened, start=short_text, notes=st.lists(short_text, max_size=2).map(tuple)
+    ),
+    st.builds(
+        ev.CharacterListed,
+        character=st.builds(
+            Character,
+            entity_id=entity_ids,
+            pitch=short_text,
+            reach=short_text,
+            composite=st.booleans(),
+            means=st.frozensets(asset_ids, max_size=3),
+            claimed_by=st.none() | seat_ids,
+        ),
+    ),
+    st.builds(ev.CharacterClaimed, seat_id=seat_ids, entity_id=entity_ids),
+    st.builds(ev.SessionZeroClosed),
     st.builds(ev.GoalSet, goal=goals()),
     st.builds(ev.GoalProgressed, goal_id=goal_ids, parts_met=st.integers(0, 8)),
     st.builds(ev.GoalMet, goal_id=goal_ids),
     st.builds(ev.GoalUndone, goal_id=goal_ids),
+    st.builds(
+        ev.GoalProposed,
+        seat_id=seat_ids,
+        route=st.sampled_from(["history", "could_have", "own"]),
+        options=st.lists(
+            conditions.map(lambda c: ev.GoalOption(text="goal", condition=c, kind=g.goal_kind(c))),
+            max_size=3,
+        ).map(tuple),
+    ),
+    st.builds(ev.GoalApproved, goal_id=goal_ids),
     st.builds(
         ev.BriefingDelivered,
         seat_id=seat_ids,

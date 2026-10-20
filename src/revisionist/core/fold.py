@@ -32,6 +32,8 @@ from revisionist.core.ontology import (
     Fact,
     Phase,
     ScheduledEvent,
+    Seat,
+    SeatKind,
     SeatStatus,
 )
 from revisionist.core.state import State
@@ -197,6 +199,36 @@ def _mutate(state: State, event: Event) -> State:
                 if _need(state.assets, asset_id, "asset").controller != ch.entity_id:
                     raise FoldError(f"character {ch.entity_id} does not control {asset_id}")
             return state.model_copy(update={"roster": _put(state.roster, ch.entity_id, ch)})
+        case ev.CharacterClaimed():
+            if state.phase is not Phase.SESSION_ZERO:
+                raise FoldError("a character is claimed during Session Zero")
+            ch = _need(state.roster, p.entity_id, "character")
+            if ch.claimed_by is not None:
+                raise FoldError(f"character {p.entity_id} is already claimed")
+            _fresh(state.seats, p.seat_id, "seat")
+            taken = sum(x.controller is Controller.HUMAN for x in state.seats.values())
+            if taken >= state.settings.max_human_seats:
+                raise FoldError("every human seat is taken")
+            seat = Seat(
+                seat_id=p.seat_id,
+                kind=SeatKind.PLAYER,
+                name=state.entities[p.entity_id].name,
+                embodies=p.entity_id,
+                controller=Controller.HUMAN,
+                slots=state.settings.starting_slots,
+                joined_tick=state.tick,
+            )
+            ch = ch.model_copy(update={"claimed_by": p.seat_id})
+            return state.model_copy(
+                update={
+                    "seats": _put(state.seats, seat.seat_id, seat),
+                    "roster": _put(state.roster, ch.entity_id, ch),
+                }
+            )
+        case ev.SessionZeroClosed():
+            if state.phase is not Phase.SESSION_ZERO:
+                raise FoldError("Session Zero is not open")
+            return state.model_copy(update={"phase": Phase.PLAY})
         case ev.GoalSet():
             g = p.goal
             _fresh(state.goals, g.goal_id, "goal")

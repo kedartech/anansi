@@ -255,3 +255,133 @@ def check(state: State) -> list[GoalProgressed | GoalMet | GoalUndone]:
 def season_winners(state: State) -> frozenset[SeatId]:
     """Every seat whose goal counts as met at season end (decision 36)."""
     return frozenset(g.seat_id for g in state.goals.values() if g.holding)
+
+
+# --- Session Zero: vetting and balance ----------------------------------------------
+
+_REFS: tuple[tuple[str, str], ...] = (
+    ("holder", "entities"),
+    ("office", "assets"),
+    ("asset", "assets"),
+    ("entity", "entities"),
+    ("meter", "meters"),
+    ("commitment", "commitments"),
+    ("relationship", "relationships"),
+)
+_FINAL = frozenset({EntityStatus.DEAD, EntityStatus.DISSOLVED})
+
+
+def vet(view: View, state: State, c: WinCondition) -> list[str]:
+    """Why ``c`` cannot be this seat's goal, or nothing (README §5 step 4).
+
+    A goal names only what the seat knows of, is not met already, and is not
+    impossible from the start: no reviving the dead, no holding a lost office,
+    no keeping a treaty already broken.
+    """
+    problems: list[str] = []
+    if depth(c) > MAX_DEPTH or len(leaves(c)) > MAX_PARTS:
+        problems.append(f"at most {MAX_PARTS} checks, {MAX_DEPTH} deep")
+    for leaf in leaves(c):
+        for name, table in _REFS:
+            ref = getattr(leaf, name, None)
+            if ref is not None and ref not in getattr(view, table):
+                problems.append(f"{leaf.check}: {name} {ref} is not something you know of")
+        match leaf:
+            case HoldsOffice() if leaf.office in state.assets:
+                if state.assets[leaf.office].kind is not AssetKind.OFFICE:
+                    problems.append(f"holds_office: {leaf.office} is not an office")
+                elif state.assets[leaf.office].status is AssetStatus.LOST:
+                    problems.append(f"holds_office: {leaf.office} is lost")
+            case ControlsAsset() if leaf.asset in state.assets:
+                if state.assets[leaf.asset].status is AssetStatus.LOST:
+                    problems.append(f"controls_asset: {leaf.asset} is lost")
+            case EntityIs() if leaf.entity in state.entities:
+                now = state.entities[leaf.entity].status
+                if now in _FINAL and now is not leaf.status:
+                    problems.append(f"entity_is: {leaf.entity} is already {now.value}")
+            case CommitmentInForce() if leaf.commitment in state.commitments:
+                status = state.commitments[leaf.commitment].status
+                if status not in (CommitmentStatus.OFFERED, CommitmentStatus.ACCEPTED):
+                    problems.append(f"commitment_in_force: it is already {status.value}")
+            case _:
+                pass
+    if not problems and goal_met(state, c):
+        problems.append("already met: a goal has to be worked for")
+    return problems
+
+
+POWERFUL, WEAK = 8, 3
+"""Power at or above, or at or below, these is flagged against an easy or hard goal."""
+EASY, HARD = 3, 8
+
+
+class Balance(Model):
+    """One character and goal scored on a fixed rubric (README §5). Private: never logged."""
+
+    power: int
+    difficulty: int
+    flag: Literal["too_easy", "too_hard"] | None = None
+    suggestion: str = ""
+
+
+def power(state: State, seat: SeatId) -> int:
+    """Means and reach: the tiers the character controls, plus the warm ties it has."""
+    me = state.seats[seat].embodies
+    tiers = sum(
+        a.tier
+        for a in state.assets.values()
+        if a.controller == me and a.status is not AssetStatus.LOST
+    )
+    ties = sum(1 for r in state.relationships.values() if me in (r.a, r.b) and r.disposition >= 2)
+    return tiers + ties
+
+
+def _rival_held(state: State, seat: SeatId, holder: EntityId) -> bool:
+    return any(s.embodies == holder and s.seat_id != seat for s in state.seats.values())
+
+
+def difficulty(state: State, seat: SeatId, c: WinCondition) -> int:
+    """How far the goal is from holding now, from the same state for everyone."""
+    match c:
+        case AllOf():
+            return sum(difficulty(state, seat, x) for x in c.conditions)
+        case AnyOf():
+            return min(difficulty(state, seat, x) for x in c.conditions)
+        case _ if goal_met(state, c):
+            return 0
+        case HoldsOffice() | ControlsAsset():
+            ref = c.office if isinstance(c, HoldsOffice) else c.asset
+            asset = state.assets.get(ref)
+            if asset is None:
+                return 2
+            return 2 + asset.tier + (2 if _rival_held(state, seat, asset.controller) else 0)
+        case EntityIs():
+            return 2 + (2 if _rival_held(state, seat, c.entity) else 0)
+        case MeterAt():
+            meter = state.meters.get(c.meter)
+            gap = abs(meter.value - c.value) if meter is not None else 0
+            return 2 + -(-gap // 10)
+        case DispositionAt():
+            rel = state.relationships.get(c.relationship)
+            return 2 + (abs(rel.disposition - c.value) if rel is not None else 0)
+        case CommitmentInForce():
+            return 2
+
+
+def balance(state: State, seat: SeatId, c: WinCondition) -> Balance:
+    p, diff = power(state, seat), difficulty(state, seat, c)
+    if p >= POWERFUL and diff <= EASY:
+        return Balance(
+            power=p,
+            difficulty=diff,
+            flag="too_easy",
+            suggestion="A strong character with an easy goal: add a second part, or aim higher.",
+        )
+    if p <= WEAK and diff >= HARD:
+        return Balance(
+            power=p,
+            difficulty=diff,
+            flag="too_hard",
+            suggestion="A weak character with a hard goal: keep one part, or aim nearer.",
+        )
+    return Balance(power=p, difficulty=diff)
