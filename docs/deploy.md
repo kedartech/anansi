@@ -232,6 +232,10 @@ From then on every **new** campaign is sealed: its events and snapshots are AES-
 
 **Copy the master key off the box now, somewhere other than the backups.** Without it every sealed campaign is unreadable, by you included, and nothing can recover it.
 
+**Reading private records (break glass).** On a sealed campaign, `revisionist why` shows only public records and says how many it hid. `revisionist why <id> --break-glass --reason "<why>"` and `revisionist admin show <event id> --reason "<why>"` show private ones, after first appending a Public `admin_read` with your reason. The players see "Admin read: the host opened N private records" in `#chronicle` after the next tick. If the log cannot be written, nothing is shown. The CLI refuses `order`, `briefing` and `status` for a seat another player holds on Discord.
+
+**Erasing a player's words.** `revisionist admin erase --seat "<seat>" --reason "<why>"` (needs `REVISIONIST_ADMIN_DSN`) destroys that seat's key. Its orders, its agent's questions, its private briefings and its bug notes become unreadable at once in the live database, and in backups once your local retention (`REVISIONIST_BACKUP_KEEP_DAYS`) and the off-box copies' have passed, because old dumps still carry the wrapped key. What their play did to the world stays; replay and `db verify` keep working. Restart the bot afterwards so it drops the key from memory. None of this protects players from the host, who holds the master key and the bot token; it protects the data at rest and makes the host's reads visible.
+
 ## 10. Upgrading a host set up under the old name
 
 The project was called Wyrd Protocol through Layer 9a. Everything it installed carried that name: roles `wyrd_app` and `wyrd_admin`, database `wyrd`, `~/.config/wyrd/wyrd.env` and `wyrd-admin.env`, `~/.local/share/wyrd`, the `wyrd` tool, units `wyrd-scheduler`, `wyrd-backup` and `wyrd-discord`, dumps `wyrd-*.dump` and `WYRD_*` variables. Skip this section if none of that exists. Do every step in one sitting: the per-campaign advisory lock key changed with the rename, so an old and a new process must never run side by side.

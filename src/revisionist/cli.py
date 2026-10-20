@@ -20,7 +20,7 @@ import typer
 from revisionist import __version__
 from revisionist.core.canary import HumanLeak, scan_humans, surfaces_from_log
 from revisionist.core.fold import replay_to, state_hash
-from revisionist.core.ids import CampaignId, SeatId
+from revisionist.core.ids import CampaignId, EventId, SeatId
 from revisionist.core.ontology import Controller
 from revisionist.core.report import (
     cost_report,
@@ -30,6 +30,7 @@ from revisionist.core.report import (
     render_why,
     why,
 )
+from revisionist.core.sealing import needs_admin_read
 from revisionist.core.state import State
 from revisionist.core.visibility import Visibility
 from revisionist.core.world_compile import WorldError
@@ -39,7 +40,7 @@ from revisionist.engine import scheduler as sch
 from revisionist.engine.llm import Transport, TransportError
 from revisionist.engine.maintenance import copy_campaign, verify_campaign
 from revisionist.engine.runner import DelivererFactory, play_tick
-from revisionist.engine.store import EventStore, StoreError, load_state
+from revisionist.engine.store import EventStore, Sealer, StoreError, load_state
 
 if TYPE_CHECKING:
     from revisionist.engine.pg_store import PostgresEventStore
@@ -251,11 +252,55 @@ def tick(offline: Offline = False) -> None:
         raise _fail(render_leaks(run.leaks), EXIT_LEAK)
 
 
+BreakGlass = Annotated[
+    bool,
+    typer.Option(
+        "--break-glass", help="Read private records of a sealed campaign; logged and announced"
+    ),
+]
+Reason = Annotated[str | None, typer.Option("--reason", help="Why; kept in the log")]
+
+
 @app.command(name="why")
-def why_cmd(target: Annotated[str, typer.Argument(help="An event ID or an intent ID")]) -> None:
-    """Trace an intent through the log: the order, the roll, the deltas, the narration."""
+def why_cmd(
+    target: Annotated[str, typer.Argument(help="An event ID or an intent ID")],
+    break_glass: BreakGlass = False,
+    reason: Reason = None,
+) -> None:
+    """Trace an intent through the log: the order, the roll, the deltas, the narration.
+
+    On a sealed campaign, private records stay hidden unless you break glass,
+    which first logs an admin read the players are told about.
+    """
     store = cmp.open_store()
-    typer.echo(render_why(why(list(store.read(_campaign(store))), target)))
+    campaign_id = _campaign(store)
+    events = list(store.read(campaign_id))
+    lines = why(events, target)
+    sealer: Sealer | None = getattr(store, "sealer", None)
+    if sealer is None or not sealer.sealed(campaign_id):
+        typer.echo(render_why(lines))
+        return
+    by_seq = {e.seq: e for e in events}
+    private = [w for w in lines if needs_admin_read(by_seq[w.seq])]
+    if private and not break_glass:
+        public = [w for w in lines if w not in private]
+        typer.echo(render_why(public) if public else "nothing public found")
+        typer.echo(
+            f"{len(private)} private records hidden; --break-glass --reason reads them "
+            "(logged and announced)"
+        )
+        return
+    if private:
+        _admin_read(store, campaign_id, [by_seq[w.seq].event_id for w in private], reason)
+    typer.echo(render_why(lines))
+
+
+def _admin_read(
+    store: EventStore, campaign_id: CampaignId, events: list[EventId], reason: str | None
+) -> None:
+    if not reason or not reason.strip():
+        raise _fail("--break-glass needs --reason")
+    cmp.log_admin_read(store, campaign_id, events, reason.strip())
 
 
 @app.command(name="replay")
@@ -407,6 +452,64 @@ def db_verify(campaign: CampaignOpt = None) -> None:
 
 admin_app = typer.Typer(no_args_is_help=True, help="Host tools: keys, erasure, audited reads.")
 app.add_typer(admin_app, name="admin")
+
+
+@admin_app.command("show")
+def admin_show(
+    event_id: Annotated[str, typer.Argument(help="The event to read")],
+    reason: Reason = None,
+) -> None:
+    """Print one event in full. A private one in a sealed campaign is an admin read:
+    it is logged, with your reason, before anything is shown."""
+    store = cmp.open_store()
+    campaign_id = _campaign(store)
+    found = next((e for e in store.read(campaign_id) if e.event_id == event_id), None)
+    if found is None:
+        raise _fail(f"no event {event_id} in {campaign_id}")
+    sealer: Sealer | None = getattr(store, "sealer", None)
+    if sealer is not None and sealer.sealed(campaign_id) and needs_admin_read(found):
+        _admin_read(store, campaign_id, [found.event_id], reason)
+    typer.echo(found.model_dump_json(indent=2, exclude={"payload_enc"}))
+
+
+@admin_app.command("erase")
+def admin_erase(
+    seat: Annotated[str, typer.Option("--seat", help="Seat ID or name")],
+    reason: Annotated[str, typer.Option("--reason", help="Why; kept with the destroyed key")],
+    campaign: Annotated[
+        str | None, typer.Option("--campaign", help="Campaign ID (default: the newest)")
+    ] = None,
+) -> None:
+    """Erase a seat's own words in a sealed campaign by destroying its key.
+
+    Its orders, its agent's questions, its private briefings and its bug notes
+    become unreadable; the game's consequences of its play stay, and replay
+    still works. Needs ``$REVISIONIST_ADMIN_DSN``: the app role cannot destroy keys.
+    """
+    import psycopg
+
+    from revisionist.engine.seal import destroy_key
+
+    admin = _env("REVISIONIST_ADMIN_DSN")
+    store = cmp.open_store()
+    campaign_id = CampaignId(campaign) if campaign else _campaign(store)
+    try:
+        seat_id = cmp.resolve_seat(load_state(store, campaign_id), seat)
+    except LookupError as exc:
+        raise _fail(str(exc)) from exc
+    with psycopg.connect(admin, autocommit=True) as conn:
+        rows = conn.execute(
+            "SELECT key_id FROM seal_keys"
+            " WHERE campaign_id = %s AND holder = %s AND destroyed_at IS NULL",
+            (campaign_id, seat_id),
+        ).fetchall()
+        if not rows:
+            raise _fail(f"{seat_id} has no live key in {campaign_id}: nothing sealed to erase")
+        for (key_id,) in rows:
+            destroy_key(conn, key_id, reason)
+    typer.echo(
+        f"erased the words of {seat_id} in {campaign_id}. Restart the bot so it forgets the key."
+    )
 
 
 @admin_app.command("new-master-key")
