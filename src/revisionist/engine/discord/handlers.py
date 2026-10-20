@@ -123,13 +123,16 @@ class Handlers:
     def bug(self, user_id: str, notes: str) -> str:
         def work(store: PostgresEventStore, link: Link) -> str:
             state = load_state(store, link.campaign_id)
+            text = notes[:4000]
+            if store.sealer is not None:  # a seat's own words, like its orders
+                text = store.sealer.seal_text(link.campaign_id, link.seat_id, text)
             n = file_bug(
                 store.conn,
                 link.campaign_id,
                 link.seat_id,
                 state.last_seq,
                 state_hash(state),
-                notes,
+                text,
             )
             return f"Bug {n} filed at tick {state.tick}. Thank you."
 
@@ -244,7 +247,9 @@ class Handlers:
     # --- plumbing -----------------------------------------------------------
 
     def _open(self) -> PostgresEventStore:
-        return PostgresEventStore(self.config.dsn)
+        store = cmp.open_store(self.config.dsn)
+        assert isinstance(store, PostgresEventStore)
+        return store
 
     def _as_seat(
         self, user_id: str, name: str, work: Callable[[PostgresEventStore, Link], str]

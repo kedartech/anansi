@@ -22,7 +22,7 @@ from typing import Protocol
 from revisionist.core import events as ev
 from revisionist.core.events import Event
 from revisionist.core.fold import replay
-from revisionist.core.ids import CampaignId
+from revisionist.core.ids import CampaignId, SeatId
 from revisionist.core.state import State
 
 
@@ -55,6 +55,14 @@ class EventStore(Protocol):
 
 
 class Sealer(Protocol):
+    def sealed(self, campaign_id: CampaignId) -> bool: ...
+
+    def begin(self, campaign_id: CampaignId) -> None:
+        """Seal this new campaign from its first event."""
+        ...
+
+    def seal_text(self, campaign_id: CampaignId, seat_id: SeatId, text: str) -> str: ...
+
     def seal(self, events: Sequence[Event]) -> list[Event]: ...
 
     def unseal(self, event: Event) -> Event: ...

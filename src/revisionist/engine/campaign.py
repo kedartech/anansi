@@ -8,6 +8,7 @@ import os
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import yaml
 
@@ -23,7 +24,10 @@ from revisionist.core.world import WorldFile
 from revisionist.core.world_compile import compile_world
 from revisionist.engine.ids import new_id
 from revisionist.engine.llm import ClaudeCli, Transport, prompt_versions
-from revisionist.engine.store import EventStore, SqliteStore, load_state
+from revisionist.engine.store import EventStore, Sealer, SqliteStore, load_state
+
+if TYPE_CHECKING:
+    from revisionist.engine.pg_store import PostgresEventStore
 
 WORLDS_DIR = Path(__file__).resolve().parents[3] / "worlds"
 """Bundled world bibles. ``revisionist new salt-strait`` reads ``worlds/salt-strait.yaml``."""
@@ -49,13 +53,32 @@ def db_path() -> Path:
 
 
 def open_store(target: Path | str | None = None) -> EventStore:
+    """The store ``$REVISIONIST_DB`` names. On Postgres with a master key set
+    (``$REVISIONIST_MASTER_KEY_FILE``), it seals new campaigns and reads sealed
+    ones (Layer 9b)."""
     target = str(target) if target is not None else db_target()
     if is_postgres(target):
         # Imported here so SQLite play never needs the ``postgres`` extra.
         from revisionist.engine.pg_store import PostgresEventStore
 
-        return PostgresEventStore(target)
+        store = PostgresEventStore(target)
+        store.sealer = _sealer(store)
+        return store
     return SqliteStore(target)
+
+
+def _sealer(store: "PostgresEventStore") -> "Sealer | None":
+    if not os.environ.get("REVISIONIST_MASTER_KEY_FILE") and not os.environ.get(
+        "CREDENTIALS_DIRECTORY"
+    ):
+        return None
+    # The seal extra (cryptography) is needed only when a master key is configured.
+    from revisionist.engine.seal import KeyringSealer, PgKeyring, load_master_key, master_key_path
+
+    path = master_key_path()
+    if path is None:
+        return None
+    return KeyringSealer(PgKeyring(store.conn, load_master_key(path)))
 
 
 def world_path(name: str) -> Path:
@@ -75,6 +98,9 @@ def load_world(path: Path) -> WorldFile:
 
 def new_campaign(store: EventStore, world: WorldFile) -> CampaignId:
     campaign_id = CampaignId(new_id())
+    sealer: Sealer | None = getattr(store, "sealer", None)
+    if sealer is not None:
+        sealer.begin(campaign_id)
     store.append_all(compile_world(world, campaign_id, versions()))
     return campaign_id
 
