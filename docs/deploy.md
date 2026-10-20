@@ -1,6 +1,6 @@
 # Running Wyrd Protocol on the home server
 
-Runbook for build plan Layer 8: Postgres, the scheduler, nightly backups and the restore drill. Design and reasons are in [design.md §14](design.md#14-postgres-and-the-scheduler-layer-8-proposed). Written 2026-10-20. Nothing here has been run on the real server yet.
+Runbook for build plan Layer 8: Postgres, the scheduler, nightly backups and the restore drill. Design and reasons are in [design.md §14](design.md#14-postgres-and-the-scheduler-layer-8-decided). Written 2026-10-20. Nothing here has been run on the real server yet.
 
 Everything runs as one ordinary Linux user (not root): the Claude CLI login that live ticks use lives in that user's home, so the units are systemd **user** units.
 

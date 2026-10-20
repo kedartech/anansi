@@ -345,9 +345,9 @@ Two call sites, both in the referee, both pure protocols with a fixture implemen
 
 ---
 
-## 14. Postgres and the scheduler (Layer 8) **[proposed]**
+## 14. Postgres and the scheduler (Layer 8) **[decided]**
 
-Build plan Layer 8. Everything in this section is Vera's design for Josh to confirm; the code and tests follow it. No new event kinds, no schema bump: the log, the fold, the referee and the tick state machine are unchanged.
+Build plan Layer 8. Vera's design, decided 2026-10-20 (Josh deferred the three open calls to Vera: TEXT bodies, hand-rolled SQL migrations, and the 10-minute poll with its failure policy); the code and tests follow it. No new event kinds, no schema bump: the log, the fold, the referee and the tick state machine are unchanged.
 
 ### 14.1 Storage
 
@@ -361,7 +361,7 @@ Build plan Layer 8. Everything in this section is Vera's design for Josh to conf
 
 - **Two roles.** An admin role owns the database and tables and runs migrations (`$WYRD_ADMIN_DSN`). The runtime connects as an app role holding `SELECT, INSERT` on `events` and `snapshots`, and `SELECT, INSERT, UPDATE` on `schedule`. It cannot `UPDATE`, `DELETE` or `TRUNCATE` the log and cannot read `schema_migrations` (tested as the app role). The app role does not own the tables, because an owner bypasses grants.
 - **Triggers as a second layer**, mirroring SQLite: `BEFORE UPDATE OR DELETE` and `BEFORE TRUNCATE` on `events` and `snapshots` raise `append-only` for every role, the owner included (tested as admin).
-- **Migrations** are hand-rolled numbered SQL files in `engine/migrations/` (shipped in the wheel), applied by `migrate(admin_dsn, app_role)` / `wyrd db migrate`. A `schema_migrations(version, applied_at)` table records what ran; each file runs in its own transaction with its version row, under an advisory lock, so a rerun is a no-op and a failure stops at the last good version. The app role's name is passed in and quoted as an identifier; creating the roles is a documented manual step (`docs/deploy.md`), never hidden in a migration. Alembic was not used: it brings SQLAlchemy for two tables. This resolves the build plan's `[open]` migration-tool item.
+- **Migrations** are hand-rolled numbered SQL files in `engine/migrations/` (shipped in the wheel), applied by `migrate(admin_dsn, app_role)` / `wyrd db migrate`. A `schema_migrations(version, applied_at)` table records what ran; each file runs in its own transaction with its version row, under an advisory lock, so a rerun is a no-op and a failure stops at the last good version. The app role's name is passed in and quoted as an identifier; creating the roles is a documented manual step (`docs/deploy.md`), never hidden in a migration. Alembic was not used: it brings SQLAlchemy for two tables. This resolves the build plan's migration-tool item **[decided]**.
 
 ### 14.3 Copy and verify
 

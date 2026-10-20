@@ -235,8 +235,8 @@ Event(
 
 **Produces.**
 - `PostgresEventStore` behind the Layer 2 protocol: one `events` table with `UNIQUE(campaign_id, seq)`, the application role granted `INSERT, SELECT` only (no `UPDATE`/`DELETE` at the grant level, so append-only is enforced by the database, not the code).
-- Snapshots table. Migration tool (`alembic` or hand-rolled SQL files; **[open]**).
-- Scheduler: ticks fire on a timer, on all-submitted, or on host advance (README §9). systemd timer or an in-process APScheduler; **[proposed]** systemd timer calling `wyrd tick`, since the orchestrator is already resumable and a cron-style trigger needs no long-running process.
+- Snapshots table. Migration tool: hand-rolled numbered SQL files (**[decided]**, see Built below).
+- Scheduler: ticks fire on a timer, on all-submitted, or on host advance (README §9). systemd timer or an in-process APScheduler; **[decided]** systemd timer calling `wyrd scheduler run` (which runs the same tick path as `wyrd tick`), since the orchestrator is already resumable and a cron-style trigger needs no long-running process.
 - Nightly `pg_dump` off-box (README §17).
 - Migration test: a solo SQLite campaign exported and replayed into Postgres gives the same state hash.
 
@@ -244,10 +244,11 @@ Event(
 
 **Size.** One weekend.
 
-**Built (2026-10-20).** `PostgresEventStore`, migrations, `wyrd db migrate | copy | verify`, the shared tick runner, `wyrd scheduler run | advance | pause | resume | status`, systemd user units, the nightly backup and the restore drill. Design in [design.md §14](design.md#14-postgres-and-the-scheduler-layer-8-proposed), runbook in [deploy.md](deploy.md). Two open items resolved, both **[proposed]** for Josh to confirm:
+**Built (2026-10-20).** `PostgresEventStore`, migrations, `wyrd db migrate | copy | verify`, the shared tick runner, `wyrd scheduler run | advance | pause | resume | status`, systemd user units, the nightly backup and the restore drill. Design in [design.md §14](design.md#14-postgres-and-the-scheduler-layer-8-decided), runbook in [deploy.md](deploy.md). Three calls resolved, **[decided]** 2026-10-20 (Josh deferred them to Vera):
 
-- **[proposed]** Migrations are hand-rolled numbered SQL files with a `schema_migrations` table, not Alembic.
-- **[proposed]** The systemd timer is a user timer that polls `wyrd scheduler run` every 10 minutes (not `wyrd tick` directly); cadence comes from `Settings.tick_hours` per campaign, bookkeeping from a `schedule` table outside the event log, and a campaign pauses after 3 consecutive failures or any canary leak.
+- **[decided]** Event bodies are `TEXT`, not `JSONB`, because JSONB refuses `\u0000` and a player can type one (design.md §14.1).
+- **[decided]** Migrations are hand-rolled numbered SQL files with a `schema_migrations` table, not Alembic.
+- **[decided]** The systemd timer is a user timer that polls `wyrd scheduler run` every 10 minutes (not `wyrd tick` directly); cadence comes from `Settings.tick_hours` per campaign, bookkeeping from a `schedule` table outside the event log, and a campaign pauses after 3 consecutive failures or any canary leak.
 
 The exit criterion is **not met yet**: the three-day soak of 12-hour ticks and a real restore from the off-box copy are still Josh's steps on the home server (deploy.md §8). The test suite's stand-in is an accelerated 72-hour run on a fake clock.
 
@@ -277,7 +278,7 @@ A Hermes profile can still serve the host as an ops assistant in a channel only 
 - One private server per campaign. Channels from a fixed template: a public channel for public events and press, and one private dispatch channel per player. Names encode nothing about alliances or agent status.
 - Commands: `/order` (modal: paragraph, visibility select, spin line), `/briefing`, `/status`, `/advance` (host only, calls the shared tick runner), `/pause`, `/bug`, `/report`, `/key` (stub until Layer 10). A plain DM to the bot is an order to the player's agent.
 - Interactions are deferred immediately (Discord wants a first response within 3 seconds) and answered ephemerally once the engine has structured the order. Refusals are out of character.
-- **Delivery through the Layer 4 outbox.** `DiscordDeliverer` implements the existing `Deliverer` protocol (`deliver(seat_id, text, idempotency_key) -> message id`); `BriefingDelivered` is still written only after the send succeeds. It uses Discord's REST API with the bot token, so the Layer 8 scheduler (a one-shot process) can deliver without the gateway bot running. Second layer against the crash-between-send-and-log case: a message `nonce` derived from the idempotency key with `enforce_nonce`. **[verify against current Discord docs before relying on it]**
+- **Delivery through the Layer 4 outbox.** `DiscordDeliverer` implements the existing `Deliverer` protocol (`deliver(seat_id, text, idempotency_key) -> message id`); `BriefingDelivered` is still written only after the send succeeds. It uses Discord's REST API with the bot token, so the Layer 8 scheduler (a one-shot process) can deliver without the gateway bot running. Second layer against the crash-between-send-and-log case: a message `nonce` derived from the idempotency key with `enforce_nonce: true`. Checked against Discord's Create Message docs 2026-10-20: the nonce is at most 25 characters (a 26-character ULID does not fit, so derive it, e.g. a truncated hash of the key) and uniqueness is only enforced "in the past few minutes". It covers a quick retry, not a resend hours later; the outbox stays the real guarantee.
 - Long briefings split on paragraph boundaries under Discord's size limits. No web link until the later client.
 - Test DM at onboarding. If DMs are closed, fall back to the dispatch channel and say so.
 - Setup runbook added to `docs/deploy.md`: create the server, create the application, invite with `bot` and `applications.commands` and the fewest permissions that work, token into the service's environment file, link the seat.
