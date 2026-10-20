@@ -163,6 +163,29 @@ class Invites:
         return [Invite(CampaignId(r[0]), SeatId(r[1]), *r[2:]) for r in rows]
 
 
+class Channels:
+    """``discord_channels`` (migration 0006): the campaign's public channel."""
+
+    def __init__(self, conn: "Connection[Any]") -> None:
+        self.conn = conn
+
+    def set_public(self, campaign_id: CampaignId, channel_id: str, guild_id: str) -> None:
+        self.conn.execute(
+            "INSERT INTO discord_channels (campaign_id, purpose, channel_id, guild_id)"
+            " VALUES (%s, 'public', %s, %s) ON CONFLICT (campaign_id, purpose)"
+            " DO UPDATE SET channel_id = EXCLUDED.channel_id, guild_id = EXCLUDED.guild_id,"
+            " set_at = now()",
+            (campaign_id, channel_id, guild_id),
+        )
+
+    def public(self, campaign_id: CampaignId) -> str | None:
+        row = self.conn.execute(
+            "SELECT channel_id FROM discord_channels WHERE campaign_id = %s AND purpose = 'public'",
+            (campaign_id,),
+        ).fetchone()
+        return str(row[0]) if row else None
+
+
 class PgOutbox:
     """``discord_deliveries``: one row per part Discord accepted."""
 
@@ -202,6 +225,7 @@ def file_bug(
 
 __all__ = [
     "INVITE_HOURS",
+    "Channels",
     "Invite",
     "Invites",
     "Link",

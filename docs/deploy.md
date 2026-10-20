@@ -214,6 +214,10 @@ revisionist discord invite --seat "Ostrel War Council"    # prints a code once; 
 
 Send the code to the other player privately, never in a server channel. They join the Discord server by an ordinary server invite, then run `/join <code>` there. The bot binds them to the seat, spends the code and sends them a test DM; if their DMs are closed it says so, and their briefings wait for `/dispatch`. `revisionist discord invites` lists every code issued and whether it was used. A spent, expired or unknown code gets the same refusal. With two human seats, the CLI's `order`, `briefing` and `status` need `--seat`.
 
+### 9.7 The public channel (Layer 9b)
+
+Create one text channel named `#chronicle` and give the bot **View Channel** and **Send Messages** there, nothing more. Then `revisionist db migrate` (applies `0006_discord_channels`) and `revisionist discord channel public <channel ID>`. From the next tick, every player's spin line is posted there once, as `<seat name>: <text>`, and the press outlet's narration is posted there instead of written to a file. Nothing else goes to a channel: briefings stay in DMs, because the server owner can read every channel and private thread. Create no other channels, roles or threads for the campaign; their names and membership would say who is in it with whom.
+
 ## 10. Upgrading a host set up under the old name
 
 The project was called Wyrd Protocol through Layer 9a. Everything it installed carried that name: roles `wyrd_app` and `wyrd_admin`, database `wyrd`, `~/.config/wyrd/wyrd.env` and `wyrd-admin.env`, `~/.local/share/wyrd`, the `wyrd` tool, units `wyrd-scheduler`, `wyrd-backup` and `wyrd-discord`, dumps `wyrd-*.dump` and `WYRD_*` variables. Skip this section if none of that exists. Do every step in one sitting: the per-campaign advisory lock key changed with the rename, so an old and a new process must never run side by side.
