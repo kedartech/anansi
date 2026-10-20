@@ -27,7 +27,7 @@ from typing import Protocol
 from pydantic import Field
 
 from revisionist import __version__
-from revisionist.core import SCHEMA_VERSION, goals, referee
+from revisionist.core import SCHEMA_VERSION, goals, intel, referee
 from revisionist.core import delta as d
 from revisionist.core import events as ev
 from revisionist.core._base import Model
@@ -152,6 +152,8 @@ class _Tail(Model):
     narrations: dict[SeatId, tuple[EventId, str]] = Field(default_factory=dict)
     delivered: frozenset[SeatId] = frozenset()
     costs: tuple[CallCost, ...] = ()
+    intel: tuple[d.Delta, ...] = ()
+    """Goal pieces and decoys the engine applied this tick, for the narrators."""
 
 
 def _tail(events: Sequence[Event]) -> _Tail:
@@ -175,6 +177,8 @@ def _tail(events: Sequence[Event]) -> _Tail:
             case ev.DeltaProposed():
                 prop = Proposal(intent_id=p.intent_id, deltas=p.deltas)
                 tail = tail.model_copy(update={"proposals": (*tail.proposals, prop)})
+            case ev.DeltaApplied(delta=d.FactAssert(predicate=pred)) if pred in intel.PIECES:
+                tail = tail.model_copy(update={"intel": (*tail.intel, p.delta)})
             case ev.NarrationWritten():
                 narrations = dict(tail.narrations)
                 narrations[p.seat_id] = (e.event_id, p.text)
@@ -377,6 +381,9 @@ def run_tick(
             batch.append(em.event(ev.DeltaApplied(intent_id=source, delta=delta)))
             applied.append(delta)
         batch.extend(_operations(em, intents, rolls, providers.resolver))
+        found, learned = _intel(em, intents, rolls)
+        tail = tail.model_copy(update={"intel": (*tail.intel, *learned)})
+        batch.extend(found)
         batch.extend(_scheduled(em))
         batch.extend(_goals(em))
         batch.append(em.event(ev.TickStageCompleted(stage=TickStage.APPLY)))
@@ -392,7 +399,7 @@ def run_tick(
     if TickStage.NARRATE not in done:
         batch = []
         costs: list[CallCost] = []
-        applied_deltas = [delta for _, delta in kept]
+        applied_deltas = [delta for _, delta in kept] + list(tail.intel)
         for seat_id in _narration_seats(em.state):
             view = project(em.state, seat_id)
             visible = [x for x in applied_deltas if _in_view(view, x)]
@@ -631,6 +638,23 @@ def _scheduled(em: _Emitter) -> list[Event]:
         for s in sorted(state.scheduled.values(), key=lambda s: s.scheduled_id)
         if not s.fired and s.fire_at_tick <= state.tick
     ]
+
+
+def _intel(
+    em: _Emitter, intents: Sequence[Intent], rolls: Mapping[IntentId, referee.Roll]
+) -> tuple[list[Event], list[d.Delta]]:
+    """Goal pieces for investigations and decoys for forgeries, from engine code only."""
+    out: list[Event] = []
+    learned: list[d.Delta] = []
+    for intent in intents:
+        r = rolls[intent.intent_id]
+        found = intel.piece(em.state, intent, r.outcome, r.seed)
+        made = [found] if found is not None else intel.decoys(em.state, intent, r.outcome)
+        for delta in made:
+            applied = ev.DeltaApplied(intent_id=intent.intent_id, delta=delta)
+            out.append(em.event(applied, actor=intent.actor))
+            learned.append(delta)
+    return out, learned
 
 
 def _goals(em: _Emitter) -> list[Event]:
