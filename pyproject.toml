@@ -12,6 +12,9 @@ dependencies = [
     "typer>=0.15",
 ]
 
+[project.optional-dependencies]
+postgres = ["psycopg[binary]>=3.2"]
+
 [project.scripts]
 wyrd = "wyrd.cli:app"
 
@@ -23,6 +26,7 @@ dev = [
     "mypy>=1.14",
     "pytest-cov>=6.0",
     "types-pyyaml>=6.0",
+    "psycopg[binary]>=3.2",
 ]
 
 [build-system]

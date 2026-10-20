@@ -1,8 +1,8 @@
 """Event stores (build plan Layer 2).
 
-One protocol, two implementations: ``MemoryStore`` for tests and
-``SqliteStore`` for the solo slice (decision 3). Postgres arrives in Layer 8
-behind the same protocol.
+One protocol, three implementations: ``MemoryStore`` for tests,
+``SqliteStore`` for the solo slice (decision 3) and ``PostgresEventStore``
+(``engine/pg_store.py``, Layer 8) for the home server.
 
 Append-only is enforced by the store, not by convention: a sequence number
 must be exactly the next one, and the SQLite schema carries triggers that
@@ -43,6 +43,10 @@ class EventStore(Protocol):
 
     def latest_snapshot(self, campaign_id: CampaignId) -> State | None: ...
 
+    def campaign_ids(self) -> list[CampaignId]:
+        """Every campaign in the store, oldest first by first event."""
+        ...
+
 
 def load_state(store: EventStore, campaign_id: CampaignId) -> State:
     """Nearest snapshot plus the tail of the log."""
@@ -57,7 +61,7 @@ def load_state(store: EventStore, campaign_id: CampaignId) -> State:
     return replay(events, initial=snapshot)
 
 
-def _check_next(expected: int, event: Event) -> None:
+def check_next(expected: int, event: Event) -> None:
     if event.seq != expected:
         raise StoreError(
             f"append-only: campaign {event.campaign_id} expects seq {expected}, got {event.seq}"
@@ -80,8 +84,8 @@ class MemoryStore:
         expected = len(log)
         for event in events:
             if event.campaign_id != campaign_id:
-                raise StoreError("a batch belongs to one campaign")
-            _check_next(expected, event)
+                raise StoreError("append-only: a batch belongs to one campaign")
+            check_next(expected, event)
             expected += 1
         log.extend(events)
         return expected - 1
@@ -99,6 +103,11 @@ class MemoryStore:
 
     def latest_snapshot(self, campaign_id: CampaignId) -> State | None:
         return self._snapshots.get(campaign_id)
+
+    def campaign_ids(self) -> list[CampaignId]:
+        return sorted(
+            (c for c, log in self._events.items() if log), key=lambda c: self._events[c][0].event_id
+        )
 
 
 _SCHEMA = """
@@ -148,8 +157,8 @@ class SqliteStore:
             expected = self.last_seq(campaign_id) + 1
             for event in events:
                 if event.campaign_id != campaign_id:
-                    raise StoreError("a batch belongs to one campaign")
-                _check_next(expected, event)
+                    raise StoreError("append-only: a batch belongs to one campaign")
+                check_next(expected, event)
                 self._conn.execute(
                     "INSERT INTO events (campaign_id, seq, event_id, tick, kind, body)"
                     " VALUES (?, ?, ?, ?, ?, ?)",
@@ -190,7 +199,6 @@ class SqliteStore:
         )
 
     def campaign_ids(self) -> list[CampaignId]:
-        """Every campaign in this file, oldest first by first event."""
         rows = self._conn.execute(
             "SELECT campaign_id FROM events WHERE seq = 0 ORDER BY event_id"
         ).fetchall()
