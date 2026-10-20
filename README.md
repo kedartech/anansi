@@ -185,7 +185,7 @@ For each action, the engine rates **feasibility** and **risk** from state alone.
 - **Idle seats** are run by the player's agent (§10) on the seat's objectives and standing orders. It plays competent defence and stalls irreversible commitments (treaties, war, resignation, transfers) in the fiction. Players can declare leave in advance. A returning player gets a catch-up briefing ending with 2-3 live comeback options.
 - **Absence protection, with limits.** Irreversible outcomes against a seat from *other players* (removal, total loss) happen only at a formal session, with notice and a deadline; the agent asks for an adjournment and one is granted automatically. *Director events* (decision 22) do not wait: at Hard or Brutal lethality the agent defends, but the world moves on.
 - **Formal sessions** (hearings, budget votes, summits, UN sessions, councils of war) are scheduled in the fiction with a real-time deadline, at least 24-48 hours' notice, respecting declared availability windows, with pre-filed conditional votes and a weekly cap per caller. Every relevant seat answers, or its agent answers for it.
-- **Notifications.** One dispatch thread per player holding the briefing, dashboard, pending decisions and deadlines. Only two things ping: a deadline for your seat, and an action aimed at you.
+- **Notifications.** One dispatch per player, by DM from the bot, holding the briefing, dashboard, pending decisions and deadlines (a DM is the only place in the server its owner cannot read). Only two things ping: a deadline for your seat, and an action aimed at you.
 
 ## 10. Player agent [decided; proposed mechanics]
 
@@ -233,7 +233,7 @@ The GM plays:
 
 What the log enables: replay, rewind to tick N, fork a campaign, the admin `/why <action>` trace, bug-report bundles, and the end-of-season reveal and history page.
 
-**Protection.** Encrypted at rest, keyed per player (so erasure works despite append-only). Every admin read is itself a logged event.
+**Protection.** Encrypted at rest: a campaign key for the game, and a key per player for their own words, so erasing a player's words works despite append-only while the game stays replayable. Every admin read is itself a logged, announced event. See docs/design.md §16.6.
 
 **Fixed, world-agnostic ontology.** Campaigns create instances of these types and never extend them. Session Zero maps setting nouns onto them ("oxygen quota" becomes a Meter; "the Moon Senate" becomes an Office):
 
@@ -302,8 +302,8 @@ Revised 2026-10-20 (decisions 36-38). This replaces the old per-seat scoring wit
 - **Engine first, clients second.** A headless game engine with an API holds all the state and rules.
 - **Discord client (v1):**
   - one Discord server per campaign, least-privilege permissions
-  - orders through an ephemeral modal (paragraph input, visibility select, optional spin line) or DM with the agent
-  - public channels for public events and press; alliance threads for restricted information; DMs for briefings and covert orders
+  - orders through `/order` (text, visibility, optional spin line) or a DM to the agent
+  - one public channel for statements and press; DMs for briefings and covert orders; alliance threads for restricted information later (Layer 10)
   - briefings as embeds with a link to the full text on the web; `/briefing` pull as a fallback; a test DM at onboarding
   - slash commands for actions, votes, `/bug`, `/pause` (X-card), `/report`, `/key`
   - scheduled posts for ticks and formal sessions
