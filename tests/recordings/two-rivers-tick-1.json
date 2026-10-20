@@ -1,0 +1,95 @@
+{
+ "a277f19ca4221837ceb0441a": {
+  "call_class": "narrator",
+  "model": "claude-haiku-5-5",
+  "prompt_head": "## Reader: Chancellor of the South (seat 01ARZ3NDEKTSV4RRFFQ69G5SS0), tick 0\n\n## What this seat knows\n{\"campaign_id\":\"01",
+  "reply": {
+   "cached_tokens": 4866,
+   "input_tokens": 2,
+   "model": "claude-haiku-5-5",
+   "output": {
+    "text": "Tomas, the tick brought four changes, and two of them weigh against us. The northern stability meter rose by three points after the public declaration landed well, which steadies the Regent at home. The same success opened a public opportunity called Momentum from the declaration, which the Regent can exploit. It has four segments to fill and none filled yet.\n\nOn our side, the failed public sabotage against the Northern Levies has soured relations between North and South by one step. The Southern Guard, which carried the operation, lost a tier of strength in the failure. The truce signed with the North still stands on the record, but it is cooler than it was.\n\nThe decision before you is whether to answer the souring now, either through the truce or by approaching the Regent directly, or to hold the Guard back while it recovers and let the northern window run."
+   },
+   "output_tokens": 1991,
+   "usd": 0.00182488
+  }
+ },
+ "d8e7b85942a4c36cb89d09a7": {
+  "call_class": "resolver",
+  "model": "claude-sonnet-5-5",
+  "prompt_head": "## World state (truth; tick 0)\n{\"campaign_id\":\"01ARZ3NDEKTSV4RRFFQ69G5FA0\",\"tick\":0,\"settings\":{\"plausibility\":\"plausibl",
+  "reply": {
+   "cached_tokens": 11830,
+   "input_tokens": 2,
+   "model": "claude-sonnet-5-5",
+   "output": {
+    "proposals": [
+     {
+      "deltas": [
+       {
+        "change": 3,
+        "kind": "meter",
+        "meter_id": "01ARZ3NDEKTSV4RRFFQ69G5MN0",
+        "reason": "Public declaration lands well; assured success with an opening raises northern stability."
+       },
+       {
+        "clock_id": "01ARZ3NDEKTSV4RRFFQ69C00001",
+        "clock_kind": "opportunity",
+        "exposure": 0,
+        "intent_id": "01ARZ3NDEKTSV4RRFFQ69T00001",
+        "kind": "clock_create",
+        "name": "Momentum from the declaration",
+        "owner": "01ARZ3NDEKTSV4RRFFQ69G5SN0",
+        "reason": "Success with opportunity opens a public window the Regent can exploit.",
+        "scope": {
+         "known_by": [],
+         "visibility": "public"
+        },
+        "segments_total": 4
+       }
+      ],
+      "intent_id": "01ARZ3NDEKTSV4RRFFQ69T00001"
+     },
+     {
+      "deltas": [
+       {
+        "asset_id": "01ARZ3NDEKTSV4RRFFQ69G5AT0",
+        "change": -1,
+        "kind": "asset_tier",
+        "reason": "Sabotage attempt failed with complication; the Southern Guard used as means suffers losses."
+       },
+       {
+        "change": -1,
+        "kind": "disposition",
+        "reason": "Failed public sabotage against Northern Levies sours North-South relations.",
+        "relationship_id": "01ARZ3NDEKTSV4RRFFQ69G5RN0"
+       }
+      ],
+      "intent_id": "01ARZ3NDEKTSV4RRFFQ69T00002"
+     },
+     {
+      "deltas": [],
+      "intent_id": "01ARZ3NDEKTSV4RRFFQ69T00003"
+     }
+    ]
+   },
+   "output_tokens": 1003,
+   "usd": 0.057354
+  }
+ },
+ "fc02ef32770e2fd728054054": {
+  "call_class": "narrator",
+  "model": "claude-haiku-5-5",
+  "prompt_head": "## Reader: Regent of the North (seat 01ARZ3NDEKTSV4RRFFQ69G5SN0), tick 0\n\n## What this seat knows\n{\"campaign_id\":\"01ARZ3",
+  "reply": {
+   "cached_tokens": 5540,
+   "input_tokens": 2,
+   "model": "claude-haiku-5-5",
+   "output": {
+    "text": "Regent, three things moved this week. Our public declaration landed well, and northern stability rose three points, to sixty-six. That success has also opened a public window called Momentum from the declaration, with four segments to fill and no exposure yet, so it is ours to push whenever we choose. The news from the south is mixed. A sabotage attempt failed with complications, and the Southern Guard lost a tier of strength in the process. The failed public sabotage against our Northern Levies has also soured relations between North and South by a further point, leaving them at minus three. Our covert hill arming was not touched this week and stands at one segment filled. The decision in front of you is whether to commit to the momentum window while the declaration is still fresh, or hold it back and keep the hills quiet a while longer."
+   },
+   "output_tokens": 1443,
+   "usd": 0.0018297
+  }
+ }
+}

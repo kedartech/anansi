@@ -185,6 +185,8 @@ Event(
 
 **Done when** one live tick resolves on Josh's Anansi key with cost recorded, and the recorded fixture of it passes in CI.
 
+**Built (2026-10-20) [decided]:** transport is the Claude Code CLI on Josh's subscription, not an API key (none available yet); see design §9.2. The `Transport` protocol keeps the SDK swap to one class. Costs recorded are list price, the real charge is subscription usage.
+
 **Size.** One weekend plus a live afternoon.
 
 ---
