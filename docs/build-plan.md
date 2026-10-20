@@ -1,4 +1,4 @@
-# Wyrd Protocol build plan
+# Revisionist build plan
 
 Layer-by-layer plan for building the engine described in [README.md](../README.md) (v2). Written 2026-10-19. Plan only; nothing here is built.
 
@@ -23,15 +23,15 @@ Status legend as in the README: **[decided]**, **[proposed]**, **[open]**.
 **Purpose.** A repo that enforces the rules mechanically before any game code exists.
 
 **Produces.**
-- `pyproject.toml` with `uv`, Python 3.12+, `src/wyrd/` layout.
+- `pyproject.toml` with `uv`, Python 3.12+, `src/revisionist/` layout.
 - Dependencies pinned: `pydantic>=2`, `anthropic`, `typer` (CLI), `hypothesis`, `pytest`, `ruff`, `mypy --strict`.
-- `wyrd/core/` package marked **pure**: a lint rule (import-linter or a small test) that forbids `anthropic`, `discord`, `psycopg`, `httpx`, `os`, `time`, `random` module-level randomness in `core/`. This is how decision #34 ("pure core, no I/O") becomes a gate rather than a convention.
+- `revisionist/core/` package marked **pure**: a lint rule (import-linter or a small test) that forbids `anthropic`, `discord`, `psycopg`, `httpx`, `os`, `time`, `random` module-level randomness in `core/`. This is how decision #34 ("pure core, no I/O") becomes a gate rather than a convention.
 - GitHub Actions: lint, type-check, test on every PR; `uv lock --check`.
 - `CONTRIBUTING.md` restating the working rules (Josh owns commits and pushes; prefixes `docs:/feat:/bug:/chore:`).
 
 **Tests.** The purity gate itself has a test that fails when a forbidden import is added to `core/`.
 
-**Done when** a trivial `wyrd --version` passes CI with the purity gate green.
+**Done when** a trivial `revisionist --version` passes CI with the purity gate green.
 
 **Size.** One evening.
 
@@ -39,7 +39,7 @@ Status legend as in the README: **[decided]**, **[proposed]**, **[open]**.
 
 ## Layer 1: Design doc and schema
 
-**Purpose.** README §12 and §13 as pydantic models. The design doc and the models are one deliverable: `docs/design.md` explains, `wyrd/core/schema.py` (split into modules as it grows) defines.
+**Purpose.** README §12 and §13 as pydantic models. The design doc and the models are one deliverable: `docs/design.md` explains, `revisionist/core/schema.py` (split into modules as it grows) defines.
 
 **Produces.**
 
@@ -152,7 +152,7 @@ Event(
 **Purpose.** README §13's state machine: FREEZE, PROPOSE, VALIDATE, APPLY, NARRATE, DELIVER. Each stage persisted; resumable; a failed tick is quiet.
 
 **Produces.**
-- `wyrd/engine/tick.py`: drives the pure core; the only module that both reads the store and calls providers.
+- `revisionist/engine/tick.py`: drives the pure core; the only module that both reads the store and calls providers.
 - Stage events in the log (`TickOpened`, `TickStageCompleted(stage)`, `TickClosed`) so a crash mid-tick is visible and the next run resumes from the last completed stage.
 - Provider protocols: `Resolver` (intents + truth -> proposals), `Narrator` (view + applied deltas -> text), `Structurer` (free text + view -> Intent | Question). All stubbed here with fixture implementations; real ones in Layers 5-6.
 - APPLY is one transaction: all `DeltaApplied` events for a tick land or none do.
@@ -183,7 +183,7 @@ Event(
 
 **Tests.** Resolver output always validates against the Delta union (fuzz with malformed fixture responses). Narrator never receives a `State`, only a `View` (type-enforced; test asserts the call signature). Canary scan over 50 fixture ticks.
 
-**Done when** one live tick resolves on Josh's Wyrd Protocol key with cost recorded, and the recorded fixture of it passes in CI.
+**Done when** one live tick resolves on Josh's Revisionist key with cost recorded, and the recorded fixture of it passes in CI.
 
 **Built (2026-10-20) [decided]:** transport is the Claude Code CLI on Josh's subscription, not an API key (none available yet); see design §9.2. The `Transport` protocol keeps the SDK swap to one class. Costs recorded are list price, the real charge is subscription usage.
 
@@ -216,12 +216,12 @@ Event(
 **Purpose.** Close the solo minimum slice (README §22 step 2).
 
 **Produces.**
-- `worlds/*.yaml`: a hand-written world bible in the fixed ontology, compiled to creation events by `wyrd world compile`. The first world is small: 4 polities, 3 AI faction seats, 1 human seat, 2 Meters per polity, about 15 Assets, one press outlet Entity.
+- `worlds/*.yaml`: a hand-written world bible in the fixed ontology, compiled to creation events by `revisionist world compile`. The first world is small: 4 polities, 3 AI faction seats, 1 human seat, 2 Meters per polity, about 15 Assets, one press outlet Entity.
 - `Settings` from a YAML block (plausibility, lethality, etc.) rather than an LLM-run Session Zero. The LLM Session Zero comes in Layer 10.
-- CLI (`typer`): `wyrd new <world>`, `wyrd order "<text>"`, `wyrd tick`, `wyrd briefing`, `wyrd why <event_id>`, `wyrd replay --to <tick>`, `wyrd cost`, `wyrd leaks` (run the canary scan over the campaign log).
+- CLI (`typer`): `revisionist new <world>`, `revisionist order "<text>"`, `revisionist tick`, `revisionist briefing`, `revisionist why <event_id>`, `revisionist replay --to <tick>`, `revisionist cost`, `revisionist leaks` (run the canary scan over the campaign log).
 - One press outlet narrated from its own `project()`; this is the first non-seat narrator and a second canary surface.
 
-**Exit criteria (README §22 step 3).** 10 ticks solo, zero canary hits, cost per tick recorded in the log and reported by `wyrd cost`, and Josh's judgment that collisions with the AI factions felt fair.
+**Exit criteria (README §22 step 3).** 10 ticks solo, zero canary hits, cost per tick recorded in the log and reported by `revisionist cost`, and Josh's judgment that collisions with the AI factions felt fair.
 
 **Done when** Josh has played those 10 ticks.
 
@@ -236,7 +236,7 @@ Event(
 **Produces.**
 - `PostgresEventStore` behind the Layer 2 protocol: one `events` table with `UNIQUE(campaign_id, seq)`, the application role granted `INSERT, SELECT` only (no `UPDATE`/`DELETE` at the grant level, so append-only is enforced by the database, not the code).
 - Snapshots table. Migration tool: hand-rolled numbered SQL files (**[decided]**, see Built below).
-- Scheduler: ticks fire on a timer, on all-submitted, or on host advance (README §9). systemd timer or an in-process APScheduler; **[decided]** systemd timer calling `wyrd scheduler run` (which runs the same tick path as `wyrd tick`), since the orchestrator is already resumable and a cron-style trigger needs no long-running process.
+- Scheduler: ticks fire on a timer, on all-submitted, or on host advance (README §9). systemd timer or an in-process APScheduler; **[decided]** systemd timer calling `revisionist scheduler run` (which runs the same tick path as `revisionist tick`), since the orchestrator is already resumable and a cron-style trigger needs no long-running process.
 - Nightly `pg_dump` off-box (README §17).
 - Migration test: a solo SQLite campaign exported and replayed into Postgres gives the same state hash.
 
@@ -244,11 +244,11 @@ Event(
 
 **Size.** One weekend.
 
-**Built (2026-10-20).** `PostgresEventStore`, migrations, `wyrd db migrate | copy | verify`, the shared tick runner, `wyrd scheduler run | advance | pause | resume | status`, systemd user units, the nightly backup and the restore drill. Design in [design.md §14](design.md#14-postgres-and-the-scheduler-layer-8-decided), runbook in [deploy.md](deploy.md). Three calls resolved, **[decided]** 2026-10-20 (Josh deferred them to Vera):
+**Built (2026-10-20).** `PostgresEventStore`, migrations, `revisionist db migrate | copy | verify`, the shared tick runner, `revisionist scheduler run | advance | pause | resume | status`, systemd user units, the nightly backup and the restore drill. Design in [design.md §14](design.md#14-postgres-and-the-scheduler-layer-8-decided), runbook in [deploy.md](deploy.md). Three calls resolved, **[decided]** 2026-10-20 (Josh deferred them to Vera):
 
 - **[decided]** Event bodies are `TEXT`, not `JSONB`, because JSONB refuses `\u0000` and a player can type one (design.md §14.1).
 - **[decided]** Migrations are hand-rolled numbered SQL files with a `schema_migrations` table, not Alembic.
-- **[decided]** The systemd timer is a user timer that polls `wyrd scheduler run` every 10 minutes (not `wyrd tick` directly); cadence comes from `Settings.tick_hours` per campaign, bookkeeping from a `schedule` table outside the event log, and a campaign pauses after 3 consecutive failures or any canary leak.
+- **[decided]** The systemd timer is a user timer that polls `revisionist scheduler run` every 10 minutes (not `revisionist tick` directly); cadence comes from `Settings.tick_hours` per campaign, bookkeeping from a `schedule` table outside the event log, and a campaign pauses after 3 consecutive failures or any canary leak.
 
 The exit criterion is **not met yet**: the three-day soak of 12-hour ticks and a real restore from the off-box copy are still Josh's steps on the home server (deploy.md §8). The test suite's stand-in is an accelerated 72-hour run on a fake clock.
 
@@ -276,11 +276,11 @@ A Hermes profile can still serve the host as an ops assistant in a channel only 
 - **No privileged intents.** Orders arrive through slash commands, modals and DMs, which Discord delivers without Message Content or Server Members. A test constructs the client and asserts default intents only.
 - Seat binding table `discord_seats` (campaign, seat, Discord user id, guild). Operational data, not game state, so not in the event log (same reasoning as the Layer 8 schedule table). The acting seat is always taken from the interaction's user id, never from text the user typed. Host links Josh's seat with a CLI command.
 - One private server per campaign. Channels: none created by the bot in 9a (it has no Manage Channels permission); the public and dispatch channels move to 9b.
-- Commands: `/order text` (text only, the same input `wyrd order` takes; visibility select and spin move to 9b), `/briefing`, `/status`, `/advance` (host only, calls the scheduler under its lock), `/pause` and `/resume` (host only), `/bug`, `/report`, `/key` (stubs until Layer 10). A plain DM to the bot is an order to the player's agent.
+- Commands: `/order text` (text only, the same input `revisionist order` takes; visibility select and spin move to 9b), `/briefing`, `/status`, `/advance` (host only, calls the scheduler under its lock), `/pause` and `/resume` (host only), `/bug`, `/report`, `/key` (stubs until Layer 10). A plain DM to the bot is an order to the player's agent.
 - Interactions are deferred immediately (Discord wants a first response within 3 seconds) and answered ephemerally once the engine has structured the order. Refusals are out of character.
 - **Delivery through the Layer 4 outbox.** `DiscordDeliverer` implements the existing `Deliverer` protocol (`deliver(seat_id, text, idempotency_key) -> channel label`, here the constant `discord`; message IDs stay in the `discord_deliveries` outbox table); `BriefingDelivered` is still written only after the send succeeds. It uses Discord's REST API with the bot token, so the Layer 8 scheduler (a one-shot process) can deliver without the gateway bot running. Second layer against the crash-between-send-and-log case: a message `nonce` derived from the idempotency key with `enforce_nonce: true`. Checked against Discord's Create Message docs 2026-10-20: the nonce is at most 25 characters (a 26-character ULID does not fit, so derive it, e.g. a truncated hash of the key) and uniqueness is only enforced "in the past few minutes". It covers a quick retry, not a resend hours later; the outbox stays the real guarantee.
 - Long briefings split on paragraph boundaries under Discord's size limits. No web link until the later client.
-- If DMs are closed, fall back to `$WYRD_DISCORD_FALLBACK_CHANNEL` (a channel private to the player) when set, else fail the delivery so the tick stays resumable. No onboarding test DM in 9a; the runbook's smoke check stands in.
+- If DMs are closed, fall back to `$REVISIONIST_DISCORD_FALLBACK_CHANNEL` (a channel private to the player) when set, else fail the delivery so the tick stays resumable. No onboarding test DM in 9a; the runbook's smoke check stands in.
 - Setup runbook added to `docs/deploy.md`: create the server, create the application, invite with `bot` and `applications.commands` and the fewest permissions that work, token into the service's environment file, link the seat.
 
 **Tests.** Fake gateway and fake REST, headless, in a container (house rule: no browser on the host); no test touches the network.
@@ -290,14 +290,14 @@ A Hermes profile can still serve the host as an ops assistant in a channel only 
 - Identity: an unlinked user is refused; no input field can name another seat.
 - Canary: a planted covert string never appears in any outbound message that is not the owner's briefing (no public channel in 9a).
 
-**Done when** Josh plays 10 ticks of a solo campaign from Discord (briefings by DM, orders by `/order` or DM), `wyrd leaks` reports 0, and `wyrd db verify` passes on that campaign.
+**Done when** Josh plays 10 ticks of a solo campaign from Discord (briefings by DM, orders by `/order` or DM), `revisionist leaks` reports 0, and `revisionist db verify` passes on that campaign.
 
-**Built (2026-10-20).** `engine/play.py` (the order, briefing and status paths the CLI and the bot share), `engine/discord/` (REST deliverer and outbox, routing deliverer, operational tables, handlers, gateway bot), migration `0003_discord`, `wyrd discord link | unlink | seats | run`, `deploy/systemd/wyrd-discord.service`. Design in [design.md §15](design.md#15-the-discord-transport-layer-9a-proposed), runbook in [deploy.md §9](deploy.md#9-discord-layer-9a). Scope cuts for 9a **[decided]**:
+**Built (2026-10-20).** `engine/play.py` (the order, briefing and status paths the CLI and the bot share), `engine/discord/` (REST deliverer and outbox, routing deliverer, operational tables, handlers, gateway bot), migration `0003_discord`, `revisionist discord link | unlink | seats | run`, `deploy/systemd/revisionist-discord.service`. Design in [design.md §15](design.md#15-the-discord-transport-layer-9a-proposed), runbook in [deploy.md §9](deploy.md#9-discord-layer-9a). Scope cuts for 9a **[decided]**:
 
 - Only the one human seat plays from Discord. AI factions and the outlet keep the file deliverer.
 - No public channel, no dispatch channels, no channel creation; the bot has no Manage Channels permission.
 - No visibility select or spin field in `/order`: the CLI `order` takes only text, and parity with it is the point. Both move to 9b.
-- Postgres only, like the scheduler. `wyrd discord ...` on a SQLite `$WYRD_DB` exits non-zero.
+- Postgres only, like the scheduler. `revisionist discord ...` on a SQLite `$REVISIONIST_DB` exits non-zero.
 - Slash commands are synced to the one guild, so they work in that server, not in DMs; in a DM, plain text is an order.
 
 The exit criterion is **not met yet**: nothing has run against the real Discord API. The live smoke test and the 10-tick play are Josh's steps (deploy.md §9).
@@ -327,7 +327,7 @@ The exit criterion is **not met yet**: nothing has run against the real Discord 
 In the order README §22 step 5 gives, each as its own small PR with its tests. The order is chosen so each step uses only what is below it.
 
 1. **Historical Session Zero, goals and winning** (README §5, §15, decisions 4, 23, 35-38; revised 2026-10-20, replacing "Dashboard and Goals mode" and pulling the old item 11 forward). Split into small PRs:
-   - a. **Win conditions.** A closed `WinCondition` union in `wyrd/core/` (holds office, controls asset, entity status, meter threshold, commitment in force, disposition threshold, all-of, any-of) and a pure `goal_met(state, condition) -> bool`. Property tests: deterministic; depends only on State; never true on the empty world. `GoalMet` event, Private to the owner. The objective clock advances as sub-conditions come true. Each goal gets a kind, Lasting or Undoable, from a fixed table keyed on the condition (README §15); an Undoable goal that stops holding logs `GoalUndone` and counts as unmet until it holds again. Season-end check: Lasting goals ever met, plus Undoable goals holding at that tick. Tests: an Undoable goal met then reversed is not a winner; a Lasting goal met then "reversed" by a later delta still is.
+   - a. **Win conditions.** A closed `WinCondition` union in `revisionist/core/` (holds office, controls asset, entity status, meter threshold, commitment in force, disposition threshold, all-of, any-of) and a pure `goal_met(state, condition) -> bool`. Property tests: deterministic; depends only on State; never true on the empty world. `GoalMet` event, Private to the owner. The objective clock advances as sub-conditions come true. Each goal gets a kind, Lasting or Undoable, from a fixed table keyed on the condition (README §15); an Undoable goal that stops holding logs `GoalUndone` and counts as unmet until it holds again. Season-end check: Lasting goals ever met, plus Undoable goals holding at that tick. Tests: an Undoable goal met then reversed is not a winner; a Lasting goal met then "reversed" by a later delta still is.
    - b. **Goal intelligence.** `investigate` against a seat returns goal pieces in a fixed order (exists, domain, object, condition) as Facts in the seeker's view; partial outcomes may return a misleading piece; `forge` can plant a false goal fact. Counterfactual test: removing a goal fact changes no other seat's intents unless that seat holds a piece of it. Canary test: a goal's text never appears in another human's outbound text without a piece in their view.
    - c. **`/establish` and the world compiler.** Discussion is free chat; `/establish "<place, date>"` with settings runs the LLM world-bible draft (frontier model), compiled by the Layer 7 compiler and validated before any event is written. Recorded-fixture tests on two periods (one ancient, one 20th century).
    - d. **Character, goal and brief steps.** Roster (8-12), search by description, own pick (checked against the record and the start date); duplicate characters refused at the store with a unique constraint, not just in the prompt. Goal step with the three routes; a custom goal must compile to a `WinCondition` or is sent back with a rewording. Balance check on the pair. Tick-0 brief with "as recorded" and a labelled suggested route.
@@ -355,14 +355,14 @@ In the order README §22 step 5 gives, each as its own small PR with its tests. 
 
 ## Cross-cutting
 
-**Gates on every PR.** `ruff`, `mypy --strict`, `pytest` with the purity gate, JSON-schema diff, canary scan over fixtures, coverage of `wyrd/core/` at 90%+.
+**Gates on every PR.** `ruff`, `mypy --strict`, `pytest` with the purity gate, JSON-schema diff, canary scan over fixtures, coverage of `revisionist/core/` at 90%+.
 
 **Test kinds and where they live.**
 - Property (Hypothesis): Layers 1-3.
 - Resume and idempotency: Layer 4.
 - Recorded-fixture provider: Layers 5-6, all of Layer 10.
 - Canary (string), counterfactual (behaviour), human-boundary (union): Layers 5, 6, 9.
-- Live cost job: opt-in, runs on the Wyrd Protocol key, reports `$ per tick` into the PR.
+- Live cost job: opt-in, runs on the Revisionist key, reports `$ per tick` into the PR.
 
 **Who builds what.** Josh and Vera (README #17). Layers 1-3 are suited to Haiku-swarmed TDD briefs once the design doc is approved: pure functions, typed inputs, property tests already specified. Layers 4-9 are integration and stay in one head. Layer 10 items are individually briefable.
 
@@ -377,6 +377,6 @@ In the order README §22 step 5 gives, each as its own small PR with its tests. 
 3. **SQLite for the solo slice, Postgres at Layer 8** behind the same `EventStore` protocol (Layer 2).
 4. **`reveal()` emits ordinary KnowledgeGrant events** under a `partial`/`full` policy (Layer 1). No dedicated reveal event kind.
 5. **Encryption deferred to Layer 9**, with the `payload_enc` envelope slot reserved from Layer 1.
-6. **Scheduler is a systemd timer** calling `wyrd tick` (Layer 8).
+6. **Scheduler is a systemd timer** calling `revisionist tick` (Layer 8).
 
 Everything else in this plan is a Vera proposal that can be changed at the layer it belongs to.

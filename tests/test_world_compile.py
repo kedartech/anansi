@@ -5,23 +5,22 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tests import fixtures as fx
-from wyrd.core import events as ev
-from wyrd.core._base import Model
-from wyrd.core.canary import canaries_hidden_from
-from wyrd.core.fold import replay
-from wyrd.core.ids import AssetId, CampaignId, EntityId, FactId, SeatId
-from wyrd.core.ontology import (
+from revisionist.core import events as ev
+from revisionist.core._base import Model
+from revisionist.core.canary import canaries_hidden_from
+from revisionist.core.fold import replay
+from revisionist.core.ids import AssetId, CampaignId, EntityId, FactId, SeatId
+from revisionist.core.ontology import (
     AssetKind,
     ClockKind,
     Controller,
     EntityKind,
     SeatKind,
 )
-from wyrd.core.project import project
-from wyrd.core.settings import Settings
-from wyrd.core.visibility import Visibility
-from wyrd.core.world import (
+from revisionist.core.project import project
+from revisionist.core.settings import Settings
+from revisionist.core.visibility import Visibility
+from revisionist.core.world import (
     AgentDecl,
     AssetDecl,
     ClockDecl,
@@ -33,7 +32,8 @@ from wyrd.core.world import (
     SeatDecl,
     WorldFile,
 )
-from wyrd.core.world_compile import WorldError, compile_world, object_id, resolve_keys
+from revisionist.core.world_compile import WorldError, compile_world, object_id, resolve_keys
+from tests import fixtures as fx
 
 CANARY = "CANARY-VARDA-LEDGER-1a2b3c"
 OTHER_CAMPAIGN = CampaignId("01ARZ3NDEKTSV4RRFFQ69G5FB0")

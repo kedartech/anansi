@@ -1,5 +1,5 @@
 {
- "8cf4c548275ae8c47a8eb554": {
+ "5367c54f2cb4e0de42b498bf": {
   "call_class": "structure",
   "model": "claude-haiku-5-5",
   "prompt_head": "## Seat: Regent of the North (chief of staff)\n## What this seat knows\n{\"campaign_id\":\"01ARZ3NDEKTSV4RRFFQ69G5FA0\",\"tick\"",
@@ -23,7 +23,7 @@
    "usd": 0.00106473
   }
  },
- "ac8da6171815faed235d6a8a": {
+ "84f205e00d12a1826c9a668e": {
   "call_class": "brief",
   "model": "claude-haiku-5-5",
   "prompt_head": "## Reader: Regent of the North, tick 1\n## What this seat knows\n{\"campaign_id\":\"01ARZ3NDEKTSV4RRFFQ69G5FA0\",\"tick\":1,\"set",

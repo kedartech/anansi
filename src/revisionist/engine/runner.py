@@ -1,0 +1,87 @@
+"""One tick end to end: AI deputy turns, ``run_tick``, then the leak scan.
+
+``revisionist tick`` and the scheduler (Layer 8) share this path, so a scheduled tick
+is exactly the tick a host would run by hand.
+"""
+
+from collections.abc import Callable
+from dataclasses import dataclass
+from pathlib import Path
+
+from revisionist.core.canary import Leak
+from revisionist.core.ids import CampaignId, SeatId
+from revisionist.core.report import leak_report
+from revisionist.core.resolution import TickStage
+from revisionist.engine import campaign as cmp
+from revisionist.engine.agent import Agent
+from revisionist.engine.llm import ClaudeNarrator, ClaudeResolver, Transport, TransportError
+from revisionist.engine.providers import KeywordSafety, ScriptedResolver, TemplateNarrator
+from revisionist.engine.store import EventStore, load_state
+from revisionist.engine.tick import Deliverer, Providers, TickResult, file_intent, run_tick
+
+DelivererFactory = Callable[[EventStore, CampaignId, Path], Deliverer]
+"""Builds the tick's deliverer from the store, the campaign and the briefings directory."""
+
+
+def file_deliverer(store: EventStore, campaign_id: CampaignId, briefings: Path) -> Deliverer:
+    """The default: every briefing to a file under ``briefings``."""
+    state = load_state(store, campaign_id)
+    names: dict[SeatId, str] = {s.seat_id: s.name for s in state.seats.values()}
+    return cmp.FileDeliverer(briefings, names, state.tick)
+
+
+@dataclass(frozen=True)
+class TickRun:
+    result: TickResult
+    briefings: Path
+    leaks: list[Leak]
+
+
+def play_tick(
+    store: EventStore,
+    campaign_id: CampaignId,
+    *,
+    offline: bool,
+    transport_factory: Callable[[], Transport],
+    briefings: Path,
+    warn: Callable[[str], None],
+    stop_after: TickStage | None = None,
+    deliverer_factory: DelivererFactory | None = None,
+) -> TickRun:
+    """Run (or resume) one tick. Transport errors from the tick itself propagate."""
+    state = load_state(store, campaign_id)
+    deliverer = (deliverer_factory or file_deliverer)(store, campaign_id, briefings)
+    if offline:
+        providers = Providers(ScriptedResolver(), TemplateNarrator(), deliverer, KeywordSafety())
+    else:
+        transport = transport_factory()
+        if not state.frozen:  # a tick left mid-flight resumes as it was frozen
+            faction_turns(store, campaign_id, transport, warn)
+        providers = Providers(
+            ClaudeResolver(transport), ClaudeNarrator(transport), deliverer, KeywordSafety()
+        )
+    result = run_tick(store, campaign_id, providers, versions=cmp.versions(), stop_after=stop_after)
+    found = leak_report(load_state(store, campaign_id), store.read(campaign_id))
+    return TickRun(result, briefings, found)
+
+
+def faction_turns(
+    store: EventStore,
+    campaign_id: CampaignId,
+    transport: Transport,
+    warn: Callable[[str], None],
+) -> None:
+    """Each AI faction's deputy files up to three intents from its own view."""
+    for seat in cmp.faction_seats(load_state(store, campaign_id)):
+        agent = Agent.for_seat(load_state(store, campaign_id), seat, transport)
+        try:
+            intents = agent.deputy_turn()
+        except TransportError as exc:
+            warn(f"  {seat}: deputy call failed, standing still ({exc})")
+            intents = []
+        for intent in intents:
+            file_intent(store, campaign_id, intent, safety=KeywordSafety(), versions=cmp.versions())
+        cmp.log_cost(store, campaign_id, "deputy", agent.spent, seat)
+
+
+__all__ = ["DelivererFactory", "TickRun", "faction_turns", "file_deliverer", "play_tick"]

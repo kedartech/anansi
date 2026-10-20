@@ -10,17 +10,15 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from tests import fixtures as fx
-from tests.test_tick import _file_some, _intent
-from wyrd.core import canary
-from wyrd.core import delta as d
-from wyrd.core.events import Versions
-from wyrd.core.fold import replay, state_hash
-from wyrd.core.intent import Intent, Verb
-from wyrd.core.project import project
-from wyrd.core.state import State, View
-from wyrd.engine import llm
-from wyrd.engine.llm import (
+from revisionist.core import canary
+from revisionist.core import delta as d
+from revisionist.core.events import Versions
+from revisionist.core.fold import replay, state_hash
+from revisionist.core.intent import Intent, Verb
+from revisionist.core.project import project
+from revisionist.core.state import State, View
+from revisionist.engine import llm
+from revisionist.engine.llm import (
     ClaudeCli,
     ClaudeNarrator,
     ClaudeResolver,
@@ -29,9 +27,11 @@ from wyrd.engine.llm import (
     Reply,
     Request,
 )
-from wyrd.engine.providers import KeywordSafety, RecordingDeliverer, TemplateNarrator
-from wyrd.engine.store import MemoryStore, load_state
-from wyrd.engine.tick import Narration, Providers, run_tick
+from revisionist.engine.providers import KeywordSafety, RecordingDeliverer, TemplateNarrator
+from revisionist.engine.store import MemoryStore, load_state
+from revisionist.engine.tick import Narration, Providers, run_tick
+from tests import fixtures as fx
+from tests.test_tick import _file_some, _intent
 
 RECORDINGS = Path(__file__).parent / "recordings"
 
@@ -69,7 +69,7 @@ def _orders(state: State) -> list[Intent]:
 
 
 def _rolls(state: State, intents: list[Intent]) -> dict[Any, Any]:
-    from wyrd.engine.tick import _roll
+    from revisionist.engine.tick import _roll
 
     return {i.intent_id: _roll(state, i) for i in intents}
 
@@ -174,8 +174,8 @@ def test_canary_scan_catches_a_planted_leak(state: State) -> None:
 
 def test_canary_scan_over_fifty_fixture_ticks() -> None:
     """Scripted narrator that echoes everything it was given: the projection alone must hold."""
-    from wyrd.engine.providers import ScriptedResolver
-    from wyrd.engine.tick import Narration
+    from revisionist.engine.providers import ScriptedResolver
+    from revisionist.engine.tick import Narration
 
     class EchoNarrator:
         def narrate(self, view: View, deltas: Sequence[d.Delta]) -> Narration:
@@ -248,7 +248,7 @@ class _RecordedOrFixture:
 def test_one_live_tick_from_recording(recorded: RecordedTransport) -> None:
     """One real tick of Two Rivers through Claude, replayed from the committed recording.
 
-    Refresh with ``WYRD_RECORD=1 uv run pytest tests/test_llm.py -k live`` on a
+    Refresh with ``REVISIONIST_RECORD=1 uv run pytest tests/test_llm.py -k live`` on a
     host where ``claude`` is logged in; review the diff before committing.
     """
     store = MemoryStore()

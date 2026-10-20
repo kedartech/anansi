@@ -1,6 +1,6 @@
-# Wyrd Protocol design: log, state, boundary, pipeline
+# Revisionist design: log, state, boundary, pipeline
 
-Build plan Layer 1. Written 2026-10-19 against [README.md](../README.md) v2. The models in `src/wyrd/core/` are the schema; this document explains them and names the rules the code must keep. Where the two disagree, the code is wrong and this doc wins until the code is fixed.
+Build plan Layer 1. Written 2026-10-19 against [README.md](../README.md) v2. The models in `src/revisionist/core/` are the schema; this document explains them and names the rules the code must keep. Where the two disagree, the code is wrong and this doc wins until the code is fixed.
 
 Status legend: **[decided]**, **[proposed]**, **[open]**.
 
@@ -29,11 +29,11 @@ Module map:
 | `engine/store.py` | `EventStore` protocol, `MemoryStore`, `SqliteStore`, `load_state` (Layer 2) |
 | `engine/pg_store.py`, `engine/migrations/*.sql` | `PostgresEventStore`, `migrate` (Layer 8) |
 | `engine/maintenance.py` | `copy_campaign`, `verify_campaign` (Layer 8) |
-| `engine/runner.py` | `play_tick`: deputy turns, `run_tick`, leak scan; shared by `wyrd tick` and the scheduler (Layer 8) |
+| `engine/runner.py` | `play_tick`: deputy turns, `run_tick`, leak scan; shared by `revisionist tick` and the scheduler (Layer 8) |
 | `engine/scheduler.py` | the tick scheduler: pure `due` / `next_due_after` / `all_submitted`, the `schedule` table, `run` (Layer 8) |
 | `engine/play.py` | `give_order`, `get_briefing`, `status_lines`: what a seat does between ticks, shared by the CLI and the bot (Layer 9a) |
 | `engine/discord/` | Discord transport: REST deliverer and outbox, routing deliverer, operational tables, command handlers, the gateway bot (Layer 9a) |
-| `schema/wyrd.schema.json` | exported JSON Schema; CI fails on drift |
+| `schema/revisionist.schema.json` | exported JSON Schema; CI fails on drift |
 
 ---
 
@@ -290,7 +290,7 @@ Stores (`engine/store.py`) enforce append-only: `seq` must be exactly the next i
 - **Transport is the Claude Code CLI** (`claude -p`), not the Anthropic SDK. It runs on the host's Claude subscription, so no API key exists in the repo, its environment, or CI. Every call strips setting sources, tools and hooks (`--setting-sources "" --tools "" --no-session-persistence`); `--bare` is avoided because it also drops the login. The CLI's JSON result carries `structured_output`, the model, token counts and a list-price `total_cost_usd`; those become one `CallCost` on the stage marker. On a subscription the real charge is zero, so `usd` is the list-price shadow, which is what README #32 wants measured. Swapping to the SDK later is one new `Transport` class; the `Request`/`Reply` dataclasses do not change.
 - **Resolver** (`ClaudeResolver`, Sonnet tier): the system prompt is `prompts/resolver.md`; the user turn is the full `State` as JSON (truth) plus each frozen intent with its rolled outcome and band. Output is constrained by `--json-schema` to `{proposals: [{intent_id, deltas: [Delta]}]}` where the Delta schema is the union's own JSON Schema with `delta_id` removed; the engine mints IDs as `derived_id(campaign, tick, intent, n)` so a re-run gives the same IDs. Each proposal is validated against `list[Delta]`; a reply with any invalid proposal is retried once with the errors appended, then the still-invalid proposals are dropped and recorded on `resolver.dropped`. Malformed output never raises (property-tested).
 - **Narrator** (`ClaudeNarrator`, Haiku tier): takes `View` and the deltas visible in it; the type is the boundary and a test asserts the signature. Output schema is `{text}`.
-- **Recordings** (`RecordedTransport`): request key is blake2b over model, system prompt, user prompt and schema; replies are stored under `tests/recordings/*.json`. A missing key fails the test (`MissingRecordingError`) unless `WYRD_RECORD=1`, which records through the live CLI. CI never calls a model. Recordings are reviewed in the PR like any fixture.
+- **Recordings** (`RecordedTransport`): request key is blake2b over model, system prompt, user prompt and schema; replies are stored under `tests/recordings/*.json`. A missing key fails the test (`MissingRecordingError`) unless `REVISIONIST_RECORD=1`, which records through the live CLI. CI never calls a model. Recordings are reviewed in the PR like any fixture.
 - **Prompt versions**: `prompt_versions()` hashes both prompt files; the caller passes it as `Versions.prompt` to `run_tick` (the CLI does this at Layer 7), so every envelope in a tick names the exact prompt text that produced it.
 - **Canary harness** (`core/canary.py`, pure): `canaries_hidden_from(state, seat)` is the set of canary strings on facts whose scope excludes the seat; `scan` runs over every `narration_written` in the log and `scan_deliveries` over what the deliverer actually sent. Tests run it over 50 fixture ticks with an echo narrator (so the projection alone must hold) and over the recorded live tick. One hit fails the suite.
 
@@ -331,9 +331,9 @@ Two call sites, both in the referee, both pure protocols with a fixture implemen
 - Non-public scopes need a holder.
 - No delta has a free-form field.
 - `MUTATING_KINDS` is a subset of the real kinds; `delta_applied` mutates, `narration_written` does not.
-- The committed `schema/wyrd.schema.json` matches a fresh export (drift fails CI).
+- The committed `schema/revisionist.schema.json` matches a fresh export (drift fails CI).
 
-`tests/test_purity.py` keeps `wyrd.core` free of I/O, clock, network, model and unseeded-random imports.
+`tests/test_purity.py` keeps `revisionist.core` free of I/O, clock, network, model and unseeded-random imports.
 
 ---
 
@@ -357,45 +357,46 @@ Build plan Layer 8. Vera's design, decided 2026-10-20 (Josh deferred the three o
 - **Tables** (migration `0001_init`): `events(campaign_id, seq, event_id UNIQUE, tick, kind, body)` with `PRIMARY KEY (campaign_id, seq)`, and `snapshots(campaign_id, seq, body)` keyed on both.
 - **`body` is `TEXT`, not `JSONB`.** JSONB refuses the escape `\u0000`, and a player can type a NUL into an order, so a JSONB log could refuse a legal event. TEXT stores the exact bytes SQLite stores; the contract suite checks a NUL, an emoji and escapes round-trip to an equal `Event`. Nothing queries inside bodies today; `kind` and `tick` are columns for the queries that matter.
 - **`campaign_ids()`** is now on the protocol (all three stores), oldest first by first event ID.
-- **Backend selection.** `$WYRD_DB` is a `postgresql://` (or `postgres://`) URL for Postgres, anything else a SQLite path as before. `open_store()` returns an `EventStore`; the CLI and campaign helpers are typed to the protocol. `psycopg` is the optional `postgres` extra and is imported only when the URL says Postgres, so SQLite play needs nothing new (tested by importing the CLI with `psycopg` blocked). Briefings go to `$WYRD_BRIEFINGS_DIR` when set, else beside a SQLite file as before, else `./wyrd-briefings`.
+- **Backend selection.** `$REVISIONIST_DB` is a `postgresql://` (or `postgres://`) URL for Postgres, anything else a SQLite path as before. `open_store()` returns an `EventStore`; the CLI and campaign helpers are typed to the protocol. `psycopg` is the optional `postgres` extra and is imported only when the URL says Postgres, so SQLite play needs nothing new (tested by importing the CLI with `psycopg` blocked). Briefings go to `$REVISIONIST_BRIEFINGS_DIR` when set, else beside a SQLite file as before, else `./revisionist-briefings`.
 
 ### 14.2 Roles, grants and migrations
 
-- **Two roles.** An admin role owns the database and tables and runs migrations (`$WYRD_ADMIN_DSN`). The runtime connects as an app role holding `SELECT, INSERT` on `events` and `snapshots`, and `SELECT, INSERT, UPDATE` on `schedule`. It cannot `UPDATE`, `DELETE` or `TRUNCATE` the log and cannot read `schema_migrations` (tested as the app role). The app role does not own the tables, because an owner bypasses grants.
+- **Two roles.** An admin role owns the database and tables and runs migrations (`$REVISIONIST_ADMIN_DSN`). The runtime connects as an app role holding `SELECT, INSERT` on `events` and `snapshots`, and `SELECT, INSERT, UPDATE` on `schedule`. It cannot `UPDATE`, `DELETE` or `TRUNCATE` the log and cannot read `schema_migrations` (tested as the app role). The app role does not own the tables, because an owner bypasses grants.
 - **Triggers as a second layer**, mirroring SQLite: `BEFORE UPDATE OR DELETE` and `BEFORE TRUNCATE` on `events` and `snapshots` raise `append-only` for every role, the owner included (tested as admin).
-- **Migrations** are hand-rolled numbered SQL files in `engine/migrations/` (shipped in the wheel), applied by `migrate(admin_dsn, app_role)` / `wyrd db migrate`. A `schema_migrations(version, applied_at)` table records what ran; each file runs in its own transaction with its version row, under an advisory lock, so a rerun is a no-op and a failure stops at the last good version. The app role's name is passed in and quoted as an identifier; creating the roles is a documented manual step (`docs/deploy.md`), never hidden in a migration. Alembic was not used: it brings SQLAlchemy for two tables. This resolves the build plan's migration-tool item **[decided]**.
+- **Migrations** are hand-rolled numbered SQL files in `engine/migrations/` (shipped in the wheel), applied by `migrate(admin_dsn, app_role)` / `revisionist db migrate`. A `schema_migrations(version, applied_at)` table records what ran; each file runs in its own transaction with its version row, under an advisory lock, so a rerun is a no-op and a failure stops at the last good version. The app role's name is passed in and quoted as an identifier; creating the roles is a documented manual step (`docs/deploy.md`), never hidden in a migration. Alembic was not used: it brings SQLAlchemy for two tables. This resolves the build plan's migration-tool item **[decided]**.
+- **Applied migrations are never edited.** `0001_init` still creates the trigger function under the project's old name; `0004_rename` renames it to `revisionist_append_only`, so fresh and upgraded databases converge (tested).
 
 ### 14.3 Copy and verify
 
-- **`wyrd db copy --from <sqlite> --to <postgres url> [--campaign ID]`** appends the events the target lacks, in order, then the latest snapshot, then checks the target event for event and by `state_hash`. Rerunnable: a target holding a prefix gets the rest; a target that diverges is refused.
-- **`wyrd db verify [--campaign ID]`** replays each campaign from event 0 through the fold, which already checks `state_hash` at every `tick_closed` and raises `FoldError` on a mismatch, then checks the latest snapshot equals the replay at its `seq`. Non-zero exit on any failure. The restore drill runs it against a restored dump.
+- **`revisionist db copy --from <sqlite> --to <postgres url> [--campaign ID]`** appends the events the target lacks, in order, then the latest snapshot, then checks the target event for event and by `state_hash`. Rerunnable: a target holding a prefix gets the rest; a target that diverges is refused.
+- **`revisionist db verify [--campaign ID]`** replays each campaign from event 0 through the fold, which already checks `state_hash` at every `tick_closed` and raises `FoldError` on a mismatch, then checks the latest snapshot equals the replay at its `seq`. Non-zero exit on any failure. The restore drill runs it against a restored dump.
 
 ### 14.4 The scheduler
 
-- **Trigger.** A systemd user timer starts `wyrd scheduler run` every 10 minutes. It is a poll, not a daemon. The tick cadence is each campaign's `Settings.tick_hours`; the timer only sets how promptly a due tick is noticed. This refines build plan decision 6 (the timer calls `wyrd scheduler run`, which runs the same tick path as `wyrd tick`). User units because the Claude CLI login lives in the user's home.
-- **Shared tick path.** `engine/runner.py` `play_tick` is the deputy turns, `run_tick` and the leak scan that `wyrd tick` always did. Both the CLI and the scheduler call it.
+- **Trigger.** A systemd user timer starts `revisionist scheduler run` every 10 minutes. It is a poll, not a daemon. The tick cadence is each campaign's `Settings.tick_hours`; the timer only sets how promptly a due tick is noticed. This refines build plan decision 6 (the timer calls `revisionist scheduler run`, which runs the same tick path as `revisionist tick`). User units because the Claude CLI login lives in the user's home.
+- **Shared tick path.** `engine/runner.py` `play_tick` is the deputy turns, `run_tick` and the leak scan that `revisionist tick` always did. Both the CLI and the scheduler call it.
 - **Operational state is not game state.** The `schedule` table (migration `0002_schedule`) holds `campaign_id, next_due_at, advance_requested, paused, paused_reason, consecutive_failures, last_started_at, last_finished_at, last_status`. It is never in the event log. A campaign gets a row the first time the scheduler sees it, first due one tick later.
 - **When a campaign is due** (`due(row, now, in_flight=, submitted=)`, pure): never while paused; always when a tick is open (resume it); else when the host asked to advance; else when `now >= next_due_at`; else when every human seat has filed an intent since the last `tick_closed` that is still pending (a Wait counts; intents carried by a quiet tick or held by a running operation do not, so they cannot make a campaign tick every poll). At most one tick per campaign per run.
 - **No drift, no backfill.** After a tick closes, `next_due_at` becomes the previous `next_due_at` plus `tick_hours`, repeated until it is in the future (`next_due_after`, pure). A late tick does not shift the schedule; missed ticks are skipped. An early tick (advance or all-submitted) spends the current slot.
 - **Overlap.** Each campaign is ticked under a session advisory lock taken with `pg_try_advisory_lock`; a run that cannot take it skips the campaign silently. The store's primary key is the backstop.
-- **Failures.** A `TransportError` or any crash inside the tick is recorded (`last_status`, `consecutive_failures + 1`) and the tick stays resumable for the next poll. At 3 consecutive failures the campaign is paused with a reason and the run exits 1, so systemd shows the unit failed. A canary leak (the `wyrd tick` exit-3 path) pauses the campaign at once and the run exits 3. A process killed mid-tick leaves `last_status` at `running (...)`; the next run resumes the tick.
-- **Host controls.** `wyrd scheduler advance | pause [--reason] | resume | status`, each with `--campaign ID` (default all). The host's writes touch only their own columns and the scheduler only ever sets `paused`, never clears it, so a pause issued mid-tick survives the tick (tested).
-- **Clock.** Only `run` reads the clock, through an injected callable (`wyrd.cli.clock`). Tests step a fake one; no test sleeps.
-- **Postgres only.** The scheduler needs the advisory lock and the `schedule` table. SQLite campaigns tick by hand with `wyrd tick`.
+- **Failures.** A `TransportError` or any crash inside the tick is recorded (`last_status`, `consecutive_failures + 1`) and the tick stays resumable for the next poll. At 3 consecutive failures the campaign is paused with a reason and the run exits 1, so systemd shows the unit failed. A canary leak (the `revisionist tick` exit-3 path) pauses the campaign at once and the run exits 3. A process killed mid-tick leaves `last_status` at `running (...)`; the next run resumes the tick.
+- **Host controls.** `revisionist scheduler advance | pause [--reason] | resume | status`, each with `--campaign ID` (default all). The host's writes touch only their own columns and the scheduler only ever sets `paused`, never clears it, so a pause issued mid-tick survives the tick (tested).
+- **Clock.** Only `run` reads the clock, through an injected callable (`revisionist.cli.clock`). Tests step a fake one; no test sleeps.
+- **Postgres only.** The scheduler needs the advisory lock and the `schedule` table. SQLite campaigns tick by hand with `revisionist tick`.
 
 ### 14.5 Deployment and backups
 
-`deploy/systemd/` holds the scheduler and backup user units and timers; `deploy/backup/` holds `wyrd-backup.sh` (nightly `pg_dump -Fc` to a local directory with N-day retention, then `rsync` or `rclone` to `$WYRD_BACKUP_DEST`, failing loudly when it is unset) and `wyrd-restore-drill.sh` (newest dump into a scratch database, `wyrd db verify`, drop, non-zero on any failure). The runbook is `docs/deploy.md`.
+`deploy/systemd/` holds the scheduler and backup user units and timers; `deploy/backup/` holds `revisionist-backup.sh` (nightly `pg_dump -Fc` to a local directory with N-day retention, then `rsync` or `rclone` to `$REVISIONIST_BACKUP_DEST`, failing loudly when it is unset) and `revisionist-restore-drill.sh` (newest dump into a scratch database, `revisionist db verify`, drop, non-zero on any failure). The runbook is `docs/deploy.md`.
 
 ### 14.6 What the tests cover, and what they do not
 
-Covered, against a real Postgres when `$WYRD_TEST_PG_ADMIN_DSN` is set (CI sets it and `WYRD_REQUIRE_PG=1`, so a missing database fails instead of skipping):
+Covered, against a real Postgres when `$REVISIONIST_TEST_PG_ADMIN_DSN` is set (CI sets it and `REVISIONIST_REQUIRE_PG=1`, so a missing database fails instead of skipping):
 
 - The store contract suite over memory, SQLite and Postgres; app-role grants and owner triggers; concurrent writers; idempotent migrations.
 - The migration test: an offline SQLite campaign with three closed ticks and a fourth left open after APPLY is copied to Postgres, matches event for event and by `state_hash`, then resumes that tick and plays another on Postgres.
-- The accelerated stand-in for the three-day run: 72 simulated hours of 12-hour ticks, the scheduler invoked every 10 simulated minutes, one tick crashed after NARRATE and resumed by the next poll, one poll contended by a held lock. Exactly 6 ticks open and close, the late tick does not drift the schedule, and `wyrd db verify` passes.
+- The accelerated stand-in for the three-day run: 72 simulated hours of 12-hour ticks, the scheduler invoked every 10 simulated minutes, one tick crashed after NARRATE and resumed by the next poll, one poll contended by a held lock. Exactly 6 ticks open and close, the late tick does not drift the schedule, and `revisionist db verify` passes.
 - Advance, all-submitted, pause and resume, three-failure pause, leak pause, a pause landing mid-tick.
-- The unit files parse and their `ExecStart` is a real `wyrd scheduler run`; the backup script and restore drill run end to end against a scratch database with a local directory as the off-box target, and the drill fails on a corrupt dump.
+- The unit files parse and their `ExecStart` is a real `revisionist scheduler run`; the backup script and restore drill run end to end against a scratch database with a local directory as the off-box target, and the drill fails on a corrupt dump.
 
 Not covered: a real systemd run of the units, real linger and reboot behaviour, an actual off-box host or rclone remote, the real three-day soak on the home server, and GitHub Actions itself. Those are Josh's steps (`docs/deploy.md` §8).
 
@@ -403,16 +404,16 @@ Not covered: a real systemd run of the units, real linger and reboot behaviour, 
 
 ## 15. The Discord transport (Layer 9a) **[proposed]**
 
-Build plan Layer 9a: the solo slice played from Discord. Written 2026-10-20 with the code; not yet run against the real Discord API. No new event kinds, no schema bump, `wyrd.core` unchanged.
+Build plan Layer 9a: the solo slice played from Discord. Written 2026-10-20 with the code; not yet run against the real Discord API. No new event kinds, no schema bump, `revisionist.core` unchanged.
 
 ### 15.1 The bot is a transport, not a GM
 
-The bot turns a slash command or a DM into the call the CLI makes and sends back what the engine returns. It has no tools, no shell, no memory and no model call of its own. `engine/play.py` holds `give_order`, `get_briefing` (with the cost log and the `scan_deliveries` withhold) and `status_lines`; `wyrd order | briefing | status` and the bot both call them, so the two paths cannot drift. A test sends the same order text through `/order` and through `wyrd order` on two copies of one campaign and asserts the same pending intent and the same `state_hash`.
+The bot turns a slash command or a DM into the call the CLI makes and sends back what the engine returns. It has no tools, no shell, no memory and no model call of its own. `engine/play.py` holds `give_order`, `get_briefing` (with the cost log and the `scan_deliveries` withhold) and `status_lines`; `revisionist order | briefing | status` and the bot both call them, so the two paths cannot drift. A test sends the same order text through `/order` and through `revisionist order` on two copies of one campaign and asserts the same pending intent and the same `state_hash`.
 
 ### 15.2 Identity
 
-- **Seat from the link, never from text.** `discord_seats(campaign_id, seat_id, discord_user_id, guild_id, linked_at)` binds a human seat to a Discord user. The primary key on `(campaign_id, seat_id)` stops two users sharing a seat; `UNIQUE (campaign_id, discord_user_id)` stops one user holding two. The host binds with `wyrd discord link --user <id>`, which refuses a non-human seat. The bot looks the acting seat up from the interaction's (or DM author's) user ID, newest binding in its one guild. No command takes a seat argument; an unlinked user gets a refusal and nothing is written.
-- **Host commands** (`/advance`, `/pause`, `/resume`) check the user ID against `$WYRD_DISCORD_HOST_ID` and act on the host's own bound campaign, else the newest.
+- **Seat from the link, never from text.** `discord_seats(campaign_id, seat_id, discord_user_id, guild_id, linked_at)` binds a human seat to a Discord user. The primary key on `(campaign_id, seat_id)` stops two users sharing a seat; `UNIQUE (campaign_id, discord_user_id)` stops one user holding two. The host binds with `revisionist discord link --user <id>`, which refuses a non-human seat. The bot looks the acting seat up from the interaction's (or DM author's) user ID, newest binding in its one guild. No command takes a seat argument; an unlinked user gets a refusal and nothing is written.
+- **Host commands** (`/advance`, `/pause`, `/resume`) check the user ID against `$REVISIONIST_DISCORD_HOST_ID` and act on the host's own bound campaign, else the newest.
 - **Default intents only.** No Message Content, Server Members or Presence. Slash commands and DMs need none of them (Discord exempts DMs from Message Content). Guild messages are ignored, as are bots, the bot itself included.
 
 ### 15.3 Commands
@@ -423,12 +424,12 @@ The bot turns a slash command or a DM into the call the CLI makes and sends back
 
 ### 15.4 Delivery
 
-- **Routing.** When `$WYRD_DISCORD_TOKEN` is set and the store is Postgres, `wyrd tick`, `wyrd scheduler run` and `/advance` deliver through `RoutingDeliverer`: seats bound in `discord_seats` go to `DiscordDeliverer`, every other seat (AI factions, the outlet) to the Layer 7 `FileDeliverer`. Without the token, or on SQLite, nothing changes. `play_tick` and `scheduler.run` take an optional deliverer factory for this; the default is the file deliverer.
+- **Routing.** When `$REVISIONIST_DISCORD_TOKEN` is set and the store is Postgres, `revisionist tick`, `revisionist scheduler run` and `/advance` deliver through `RoutingDeliverer`: seats bound in `discord_seats` go to `DiscordDeliverer`, every other seat (AI factions, the outlet) to the Layer 7 `FileDeliverer`. Without the token, or on SQLite, nothing changes. `play_tick` and `scheduler.run` take an optional deliverer factory for this; the default is the file deliverer.
 - **REST, stdlib only.** The scheduler is a one-shot process with no gateway, so `DiscordDeliverer` uses `urllib` against `https://discord.com/api/v10`: open the DM with `POST /users/@me/channels`, send with `POST /channels/{id}/messages` (`allowed_mentions` empty, so a narration can never ping anyone). A 429 is waited out for its `retry_after`, at most 3 attempts, then the call raises. The token comes from the environment and never appears in logs, exception text or `repr` (tested, including a network error whose own text carries the token).
 - **Parts.** Discord caps `content` at 2000 characters. A briefing is cut on paragraph boundaries, then lines, then anywhere, each part at most 1900, and the parts concatenate back to the exact text (property-tested).
 - **Idempotency, two layers.** The real guarantee is `discord_deliveries(idempotency_key, part, channel_id, message_id, sent_at)`: a part recorded there is never resent, so a second DELIVER with the same key sends nothing. For a crash after Discord accepts a part but before the row lands, every send carries `nonce` = the first 25 characters of base32 blake2b of `key:part`, with `enforce_nonce: true`. Discord checks that uniqueness only for a few minutes, so it covers a quick retry, not a resend hours later.
 - **The log stays free of Discord IDs.** `BriefingDelivered.channel` is the constant `discord`; message IDs live only in `discord_deliveries`.
-- **Closed DMs.** If Discord refuses the DM (code 50007), the part goes to `$WYRD_DISCORD_FALLBACK_CHANNEL` when set, a channel that must be private to the player. Otherwise the error propagates: `BriefingDelivered` is not written, the tick stays resumable and the scheduler counts a failure. No other error falls back, and nothing ever falls back to any other channel.
+- **Closed DMs.** If Discord refuses the DM (code 50007), the part goes to `$REVISIONIST_DISCORD_FALLBACK_CHANNEL` when set, a channel that must be private to the player. Otherwise the error propagates: `BriefingDelivered` is not written, the tick stays resumable and the scheduler counts a failure. No other error falls back, and nothing ever falls back to any other channel.
 - **Last canary check before text leaves the host.** The routing deliverer scans a bound seat's narration against the canaries hidden from that seat before sending. A hit is written to the host's briefings file instead, `BriefingDelivered.channel` is `withheld`, and the tick's leak scan then fails the tick (exit 3; the scheduler pauses the campaign). The bot's handlers run the same scan over every reply they send. The projection should make both checks dead code; they exist so a narrator or agent bug cannot reach a player.
 
 ### 15.5 Operational tables
@@ -437,7 +438,7 @@ Migration `0003_discord`: `discord_seats`, `discord_deliveries`, `discord_bugs`.
 
 ### 15.6 Packaging and deployment
 
-`discord.py>=2.7` is the optional `discord` extra and is imported only by `engine/discord/bot.py`, which only `wyrd discord run` loads; a test runs the CLI and an offline tick with `discord` blocked from import. The REST deliverer needs nothing beyond the stdlib. The bot runs as `deploy/systemd/wyrd-discord.service`, a long-running user unit with `Restart=on-failure` and the scheduler unit's hardening and environment file. Runbook: `docs/deploy.md` §9.
+`discord.py>=2.7` is the optional `discord` extra and is imported only by `engine/discord/bot.py`, which only `revisionist discord run` loads; a test runs the CLI and an offline tick with `discord` blocked from import. The REST deliverer needs nothing beyond the stdlib. The bot runs as `deploy/systemd/revisionist-discord.service`, a long-running user unit with `Restart=on-failure` and the scheduler unit's hardening and environment file. Runbook: `docs/deploy.md` §9.
 
 ### 15.7 Not covered by the tests
 

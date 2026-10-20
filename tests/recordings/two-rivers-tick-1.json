@@ -1,5 +1,20 @@
 {
- "25713aebcc22c9dceb3cca43": {
+ "29dc83dea6dc5174be9f6a85": {
+  "call_class": "narrator",
+  "model": "claude-haiku-5-5",
+  "prompt_head": "## Reader: Regent of the North (seat 01ARZ3NDEKTSV4RRFFQ69G5SN0), tick 0\n\n## What this seat knows\n{\"campaign_id\":\"01ARZ3",
+  "reply": {
+   "cached_tokens": 5540,
+   "input_tokens": 2,
+   "model": "claude-haiku-5-5",
+   "output": {
+    "text": "Regent, three things moved this week. Our public declaration landed well, and northern stability rose three points, to sixty-six. That success has also opened a public window called Momentum from the declaration, with four segments to fill and no exposure yet, so it is ours to push whenever we choose. The news from the south is mixed. A sabotage attempt failed with complications, and the Southern Guard lost a tier of strength in the process. The failed public sabotage against our Northern Levies has also soured relations between North and South by a further point, leaving them at minus three. Our covert hill arming was not touched this week and stands at one segment filled. The decision in front of you is whether to commit to the momentum window while the declaration is still fresh, or hold it back and keep the hills quiet a while longer."
+   },
+   "output_tokens": 1443,
+   "usd": 0.0018297
+  }
+ },
+ "3e1b417f28369a2e72fd6a04": {
   "call_class": "narrator",
   "model": "claude-haiku-5-5",
   "prompt_head": "## Reader: Chancellor of the South (seat 01ARZ3NDEKTSV4RRFFQ69G5SS0), tick 0\n\n## What this seat knows\n{\"campaign_id\":\"01",
@@ -14,7 +29,7 @@
    "usd": 0.00182488
   }
  },
- "9fe93a9036f9b464a6c0ed49": {
+ "9b12e894c7277f2735f1fe8b": {
   "call_class": "resolver",
   "model": "claude-sonnet-5-5",
   "prompt_head": "## World state (truth; tick 0)\n{\"campaign_id\":\"01ARZ3NDEKTSV4RRFFQ69G5FA0\",\"tick\":0,\"settings\":{\"plausibility\":\"plausibl",
@@ -75,21 +90,6 @@
    },
    "output_tokens": 1003,
    "usd": 0.057354
-  }
- },
- "e1aeb52c273c700d608ecfaf": {
-  "call_class": "narrator",
-  "model": "claude-haiku-5-5",
-  "prompt_head": "## Reader: Regent of the North (seat 01ARZ3NDEKTSV4RRFFQ69G5SN0), tick 0\n\n## What this seat knows\n{\"campaign_id\":\"01ARZ3",
-  "reply": {
-   "cached_tokens": 5540,
-   "input_tokens": 2,
-   "model": "claude-haiku-5-5",
-   "output": {
-    "text": "Regent, three things moved this week. Our public declaration landed well, and northern stability rose three points, to sixty-six. That success has also opened a public window called Momentum from the declaration, with four segments to fill and no exposure yet, so it is ours to push whenever we choose. The news from the south is mixed. A sabotage attempt failed with complications, and the Southern Guard lost a tier of strength in the process. The failed public sabotage against our Northern Levies has also soured relations between North and South by a further point, leaving them at minus three. Our covert hill arming was not touched this week and stands at one segment filled. The decision in front of you is whether to commit to the momentum window while the declaration is still fresh, or hold it back and keep the hills quiet a while longer."
-   },
-   "output_tokens": 1443,
-   "usd": 0.0018297
   }
  }
 }

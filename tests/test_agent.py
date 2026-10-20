@@ -8,25 +8,25 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from tests import fixtures as fx
-from tests.test_tick import _file_some, _intent
-from wyrd.core import canary
-from wyrd.core.events import Versions
-from wyrd.core.fold import replay
-from wyrd.core.intent import IRREVERSIBLE_VERBS, Intent, Verb
-from wyrd.core.project import project
-from wyrd.core.referee import rate
-from wyrd.core.state import State, View
-from wyrd.engine.agent import (
+from revisionist.core import canary
+from revisionist.core.events import Versions
+from revisionist.core.fold import replay
+from revisionist.core.intent import IRREVERSIBLE_VERBS, Intent, Verb
+from revisionist.core.project import project
+from revisionist.core.referee import rate
+from revisionist.core.state import State, View
+from revisionist.engine.agent import (
     Agent,
     ClarifyingQuestion,
     counterfactual_diff,
     receive_order,
 )
-from wyrd.engine.llm import RecordedTransport, Reply, Request
-from wyrd.engine.providers import RecordingDeliverer, ScriptedResolver, TemplateNarrator
-from wyrd.engine.store import MemoryStore, load_state
-from wyrd.engine.tick import Providers, run_tick
+from revisionist.engine.llm import RecordedTransport, Reply, Request
+from revisionist.engine.providers import RecordingDeliverer, ScriptedResolver, TemplateNarrator
+from revisionist.engine.store import MemoryStore, load_state
+from revisionist.engine.tick import Providers, run_tick
+from tests import fixtures as fx
+from tests.test_tick import _file_some, _intent
 
 RECORDINGS = Path(__file__).parent / "recordings"
 
@@ -274,9 +274,9 @@ def recorded() -> Iterator[RecordedTransport]:
 def test_live_order_round_trip(recorded: RecordedTransport, state: State) -> None:
     """One real order through structure, filing, a tick and a briefing, replayed from the recording.
 
-    Refresh with ``WYRD_RECORD=1`` on a host where ``claude`` is logged in.
+    Refresh with ``REVISIONIST_RECORD=1`` on a host where ``claude`` is logged in.
     """
-    from wyrd.engine.llm import ClaudeCli
+    from revisionist.engine.llm import ClaudeCli
 
     if not recorded.path.exists():
         recorded.live = ClaudeCli()

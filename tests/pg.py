@@ -1,9 +1,9 @@
 """Scratch Postgres databases for tests (build plan Layer 8).
 
-Driven by ``$WYRD_TEST_PG_ADMIN_DSN``. A session builds one template database,
+Driven by ``$REVISIONIST_TEST_PG_ADMIN_DSN``. A session builds one template database,
 migrated as admin and granted to a fresh least-privilege app role with a
 generated password; each test gets its own copy of the template and connects
-as that role. Without the DSN these tests skip, unless ``$WYRD_REQUIRE_PG=1``
+as that role. Without the DSN these tests skip, unless ``$REVISIONIST_REQUIRE_PG=1``
 (as in CI), where a missing database is a failure.
 """
 
@@ -18,16 +18,16 @@ import pytest
 from psycopg import sql
 from psycopg.conninfo import conninfo_to_dict
 
-from wyrd.engine.pg_store import migrate
+from revisionist.engine.pg_store import migrate
 
-ADMIN_ENV = "WYRD_TEST_PG_ADMIN_DSN"
+ADMIN_ENV = "REVISIONIST_TEST_PG_ADMIN_DSN"
 
 
 @dataclass(frozen=True)
 class PgDb:
     admin_dsn: str
     app_dsn: str
-    """A ``postgresql://`` URL, so it also works as ``$WYRD_DB``."""
+    """A ``postgresql://`` URL, so it also works as ``$REVISIONIST_DB``."""
     app_role: str
 
 
@@ -35,8 +35,8 @@ def admin_dsn_or_skip() -> str:
     dsn = os.environ.get(ADMIN_ENV)
     if dsn:
         return dsn
-    if os.environ.get("WYRD_REQUIRE_PG") == "1":
-        pytest.fail(f"WYRD_REQUIRE_PG=1 but {ADMIN_ENV} is unset")
+    if os.environ.get("REVISIONIST_REQUIRE_PG") == "1":
+        pytest.fail(f"REVISIONIST_REQUIRE_PG=1 but {ADMIN_ENV} is unset")
     pytest.skip(f"{ADMIN_ENV} is unset")
 
 
@@ -68,9 +68,9 @@ class Cluster:
     def __init__(self, admin: str) -> None:
         self.admin = admin
         tag = secrets.token_hex(4)
-        self.role = f"wyrd_app_{tag}"
+        self.role = f"revisionist_app_{tag}"
         self.password = secrets.token_urlsafe(18)
-        self.template = f"wyrd_tpl_{tag}"
+        self.template = f"revisionist_tpl_{tag}"
         self._n = 0
         with psycopg.connect(admin, autocommit=True) as conn:
             conn.execute(

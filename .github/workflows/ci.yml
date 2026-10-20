@@ -23,9 +23,9 @@ jobs:
           --health-retries 10
     env:
       # A throwaway service container; the password is not a secret.
-      WYRD_TEST_PG_ADMIN_DSN: postgresql://postgres:postgres@localhost:5432/postgres
+      REVISIONIST_TEST_PG_ADMIN_DSN: postgresql://postgres:postgres@localhost:5432/postgres
       # Postgres tests fail rather than skip when the database is missing.
-      WYRD_REQUIRE_PG: "1"
+      REVISIONIST_REQUIRE_PG: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -37,4 +37,4 @@ jobs:
       - run: uv run --frozen ruff check .
       - run: uv run --frozen ruff format --check .
       - run: uv run --frozen mypy
-      - run: uv run --frozen pytest --cov=wyrd.core --cov-report=term-missing
+      - run: uv run --frozen pytest --cov=revisionist.core --cov-report=term-missing

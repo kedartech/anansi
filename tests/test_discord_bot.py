@@ -21,25 +21,25 @@ import psycopg
 import pytest
 from typer.testing import CliRunner
 
+from revisionist import cli
+from revisionist.core.fold import state_hash
+from revisionist.core.ids import CampaignId, SeatId
+from revisionist.engine import campaign as cmp
+from revisionist.engine import play
+from revisionist.engine import scheduler as sch
+from revisionist.engine.discord import bot, handlers
+from revisionist.engine.discord.delivery import routing_factory
+from revisionist.engine.discord.handlers import BotConfig, Handlers
+from revisionist.engine.discord.rest import DiscordRest
+from revisionist.engine.discord.tables import LinkError, SeatLinks
+from revisionist.engine.llm import Reply, Request, Transport, TransportError
+from revisionist.engine.maintenance import copy_campaign
+from revisionist.engine.pg_store import PostgresEventStore
+from revisionist.engine.store import EventStore, load_state
 from tests.discord_fakes import FakeDiscord
 from tests.pg import PgDb
 from tests.test_cli import FakeClaude
 from tests.test_scheduler import T0, Clock
-from wyrd import cli
-from wyrd.core.fold import state_hash
-from wyrd.core.ids import CampaignId, SeatId
-from wyrd.engine import campaign as cmp
-from wyrd.engine import play
-from wyrd.engine import scheduler as sch
-from wyrd.engine.discord import bot, handlers
-from wyrd.engine.discord.delivery import routing_factory
-from wyrd.engine.discord.handlers import BotConfig, Handlers
-from wyrd.engine.discord.rest import DiscordRest
-from wyrd.engine.discord.tables import LinkError, SeatLinks
-from wyrd.engine.llm import Reply, Request, Transport, TransportError
-from wyrd.engine.maintenance import copy_campaign
-from wyrd.engine.pg_store import PostgresEventStore
-from wyrd.engine.store import EventStore, load_state
 
 GUILD = "222222222222222222"
 HOST = "333333333333333333"
@@ -112,7 +112,7 @@ class Game:
             briefings=briefings,
             deliverer_factory=routing_factory(rest, None),
         )
-        self.bot = bot.WyrdBot(self.handlers, int(GUILD))
+        self.bot = bot.RevisionistBot(self.handlers, int(GUILD))
         self.replies: list[str] = []
 
     def command(self, name: str, user_id: str = PLAYER, **options: str) -> str:
@@ -157,9 +157,9 @@ class Game:
 
 @pytest.fixture
 def game(pg_db: PgDb, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[Game]:
-    monkeypatch.setenv("WYRD_DB", pg_db.app_dsn)
-    monkeypatch.setenv("WYRD_DISCORD_GUILD_ID", GUILD)
-    monkeypatch.setenv("WYRD_BRIEFINGS_DIR", str(tmp_path / "briefings"))
+    monkeypatch.setenv("REVISIONIST_DB", pg_db.app_dsn)
+    monkeypatch.setenv("REVISIONIST_DISCORD_GUILD_ID", GUILD)
+    monkeypatch.setenv("REVISIONIST_BRIEFINGS_DIR", str(tmp_path / "briefings"))
     monkeypatch.setattr(cli, "transport_factory", FakeClaude)
     assert runner.invoke(cli.app, ["new", "salt-strait"]).exit_code == 0
     result = runner.invoke(cli.app, ["discord", "link", "--user", PLAYER])
@@ -178,7 +178,7 @@ def test_the_client_asks_for_default_intents_only(tmp_path: Path) -> None:
         briefings=tmp_path,
         deliverer_factory=None,
     )
-    client = bot.WyrdBot(h, int(GUILD))
+    client = bot.RevisionistBot(h, int(GUILD))
     assert client.intents.value == discord.Intents.default().value
     assert not client.intents.message_content
     assert not client.intents.members
@@ -196,7 +196,7 @@ def test_an_order_from_discord_files_what_the_cli_files(
 ) -> None:
     """One campaign, two copies: the CLI orders on one, the bot on the other."""
     sqlite = tmp_path / "solo.db"
-    monkeypatch.setenv("WYRD_DB", str(sqlite))
+    monkeypatch.setenv("REVISIONIST_DB", str(sqlite))
     monkeypatch.setattr(cli, "transport_factory", FakeClaude)
     assert runner.invoke(cli.app, ["new", "salt-strait"]).exit_code == 0
     copy = runner.invoke(cli.app, ["db", "copy", "--from", str(sqlite), "--to", pg_db.app_dsn])
@@ -205,7 +205,7 @@ def test_an_order_from_discord_files_what_the_cli_files(
     source = cmp.open_store(sqlite)
     assert copy_campaign(source, cmp.open_store(twin), source.campaign_ids()[0]).verified.ok
 
-    monkeypatch.setenv("WYRD_DB", str(twin))
+    monkeypatch.setenv("REVISIONIST_DB", str(twin))
     assert runner.invoke(cli.app, ["order", ORDER]).exit_code == 0
     cli_store = cmp.open_store(twin)
 
@@ -439,26 +439,29 @@ def test_the_cli_and_an_offline_tick_need_no_discord(tmp_path: Path) -> None:
     code = (
         "import sys; sys.modules['discord'] = None\n"
         "from typer.testing import CliRunner\n"
-        "from wyrd import cli\n"
+        "from revisionist import cli\n"
         "r = CliRunner()\n"
         "assert r.invoke(cli.app, ['new', 'salt-strait']).exit_code == 0\n"
         "res = r.invoke(cli.app, ['tick', '--offline'])\n"
         "assert res.exit_code == 0, res.output\n"
         "assert 'discord' not in sys.modules or sys.modules['discord'] is None\n"
     )
-    env = {"PATH": "/usr/bin:/bin", "WYRD_DB": str(tmp_path / "solo.db")}
-    env["WYRD_DISCORD_TOKEN"] = TOKEN  # set, but SQLite: files as before
+    env = {"PATH": "/usr/bin:/bin", "REVISIONIST_DB": str(tmp_path / "solo.db")}
+    env["REVISIONIST_DISCORD_TOKEN"] = TOKEN  # set, but SQLite: files as before
     done = subprocess.run([sys.executable, "-c", code], env=env, capture_output=True, text=True)
     assert done.returncode == 0, done.stderr
 
 
 def test_discord_run_needs_postgres(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setenv("WYRD_DB", str(tmp_path / "solo.db"))
-    monkeypatch.setenv("WYRD_DISCORD_TOKEN", TOKEN)
-    monkeypatch.setenv("WYRD_DISCORD_GUILD_ID", GUILD)
+    monkeypatch.setenv("REVISIONIST_DB", str(tmp_path / "solo.db"))
+    monkeypatch.setenv("REVISIONIST_DISCORD_TOKEN", TOKEN)
+    monkeypatch.setenv("REVISIONIST_DISCORD_GUILD_ID", GUILD)
     result = runner.invoke(cli.app, ["discord", "run"])
     assert result.exit_code == cli.EXIT_ERROR and "postgresql://" in result.output
     assert TOKEN not in result.output
-    monkeypatch.delenv("WYRD_DISCORD_TOKEN")
+    monkeypatch.delenv("REVISIONIST_DISCORD_TOKEN")
     result = runner.invoke(cli.app, ["discord", "run"])
-    assert result.exit_code == cli.EXIT_ERROR and "WYRD_DISCORD_TOKEN is not set" in result.output
+    assert (
+        result.exit_code == cli.EXIT_ERROR
+        and "REVISIONIST_DISCORD_TOKEN is not set" in result.output
+    )

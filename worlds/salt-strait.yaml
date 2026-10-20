@@ -5,7 +5,7 @@
 # standing orders. The Strait Courier reports what it can see.
 #
 # Every secret below carries a canary: a string that must never reach a seat
-# outside the fact's scope. `wyrd leaks` scans every narration for them.
+# outside the fact's scope. `revisionist leaks` scans every narration for them.
 
 world: salt-strait
 name: Salt Strait

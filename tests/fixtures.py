@@ -4,9 +4,9 @@ Two player seats (north, south), one AI faction, one outlet. North holds a
 covert army and a covert fact with a canary; south must never see either.
 """
 
-from wyrd.core import events as ev
-from wyrd.core.events import Event, Versions
-from wyrd.core.ids import (
+from revisionist.core import events as ev
+from revisionist.core.events import Event, Versions
+from revisionist.core.ids import (
     AssetId,
     CampaignId,
     ClockId,
@@ -18,7 +18,7 @@ from wyrd.core.ids import (
     ScheduledEventId,
     SeatId,
 )
-from wyrd.core.ontology import (
+from revisionist.core.ontology import (
     Asset,
     AssetKind,
     Clock,
@@ -34,8 +34,8 @@ from wyrd.core.ontology import (
     Seat,
     SeatKind,
 )
-from wyrd.core.settings import Settings
-from wyrd.core.visibility import PUBLIC, Scope, Visibility, private_to
+from revisionist.core.settings import Settings
+from revisionist.core.visibility import PUBLIC, Scope, Visibility, private_to
 
 __all__ = [
     "AssetId",

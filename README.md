@@ -1,4 +1,4 @@
-# Wyrd Protocol
+# Revisionist
 
 An AI-run multiplayer statecraft game. Game parameters, v2 (2026-10-19).
 
@@ -10,11 +10,11 @@ Status legend: **[decided]** = Josh's call. **[proposed]** = Vera's design, not 
 
 ## 1. Pitch
 
-Wyrd Protocol is an AI-run multiplayer statecraft game. Think of an expanded, gamified Model UN run like a D&D campaign. Players pick a moment in history. An AI game master builds that world from the record and runs everything nobody is playing. Each player takes on a real person from that moment, judged by their agency rather than their fame: a head of state, a general, a banker, a spymaster, an assassin. Each one has a secret goal, which can be the one history gave them or one it never did. They can sit in the same government or in rival ones, and whoever has met their goal when the season ends wins. Players act in their own words, any time, through a personal in-world agent. The world reacts, keeps secrets, and keeps moving whether they are online or not.
+Revisionist is an AI-run multiplayer statecraft game. Think of an expanded, gamified Model UN run like a D&D campaign. Players pick a moment in history. An AI game master builds that world from the record and runs everything nobody is playing. Each player takes on a real person from that moment, judged by their agency rather than their fame: a head of state, a general, a banker, a spymaster, an assassin. Each one has a secret goal, which can be the one history gave them or one it never did. They can sit in the same government or in rival ones, and whoever has met their goal when the season ends wins. Players act in their own words, any time, through a personal in-world agent. The world reacts, keeps secrets, and keeps moving whether they are online or not.
 
-**Name.** *Wyrd* is the Old English word for fate: that which has come to be, often pictured as a woven thread. It fits the engine: the log is the past that cannot be altered, the world is a web of connections, and consequences arrive late. See §19 before any public release.
+**Name.** The event log is the one record nobody in the game can rewrite. Everything else is up for revision: what happened, who did it and what it meant, fought over through spin, leaks, forgeries and the reveals at chapter breaks. See §19 before any public release.
 
-Codename history: this project was called Anansi through its first seven layers.
+Codename history: this project was called Anansi through Layer 7 and Wyrd Protocol through Layer 9a.
 
 ## 2. Origin and reference
 
@@ -29,8 +29,8 @@ Inspired by **Fantasy President Career** (fantasypresidentcareer.com, @president
 - Free to month 12, then £5.99/mo.
 - Why it spreads: screenshots of polarized reactions to the same policy.
 
-**What Wyrd Protocol keeps:** free-text input, persona reactions, delayed consequences, shareable artifacts.
-**What Wyrd Protocol adds:** multiplayer, player-built worlds, async real-time play, hidden information, a per-player agent, a human co-GM layer, and many seat types beyond president.
+**What Revisionist keeps:** free-text input, persona reactions, delayed consequences, shareable artifacts.
+**What Revisionist adds:** multiplayer, player-built worlds, async real-time play, hidden information, a per-player agent, a human co-GM layer, and many seat types beyond president.
 
 **Closest existing games** (novelty check, 2026-10-19): Pax Historia and Open Historia (nation-level, whole room skips time together, no hidden information); STATECRAFT (secret allegiances, but a single 30-minute sitting); AI game masters such as Friends & Fables and AI Dungeon (one shared story, no secrets between players); human-run nation roleplay on Discord and NationStates (the social format, without AI running it). The combination of several players inside one government, each seeing only their own slice, in a world that runs while they are offline, was not found anywhere. The build effort goes into secrets and seats.
 
@@ -336,7 +336,7 @@ Share cards contain public information only, carry a one-line context, and carry
 - **Minors.** Under 13 is not allowed (Discord's terms). When anyone 13-17 plays: age band recorded, DMs between players routed through the bot, a guardian told, and a Session Zero reminder to set a rating. Not enforced beyond that (decision 29).
 - **Harassment.** Anonymous `/pause` and `/report`. Josh can audit reported exchanges; players are told at Session Zero that opacity is a game rule, not privacy from the admin. No targeting anyone's real identity or politics. Moderation applies to every channel level.
 - **Data.** A one-page notice at Session Zero: what is stored, who can read it (Josh and the model provider), retention (for example 90 days after the season), and how to get a copy or request deletion. API terms with no training on data and minimal retention.
-- **Before public distribution** (not needed for friends and family): an LLC holding the repo, accounts and Discord app; ToS, acceptable-use, privacy and content policy; an age gate; a moderation queue and ban process; Discord bot verification; payments through a merchant of record. **[open]** A trademark knockout search on "Wyrd Protocol" has not been run and must be before any public release. **[open]** Review whether living people may be the target of a harm goal such as assassination (allowed for friends and family, §21 item 6). **[open]** An "About the name" page crediting the Old English and Old Norse source of *wyrd* (Norse *urðr*). Original disclaimer text and format names, not copied from Fantasy President. For the later client: no likeness of any real living person, a visible AI/fiction label plus C2PA provenance, a face-match moderation pass.
+- **Before public distribution** (not needed for friends and family): an LLC holding the repo, accounts and Discord app; ToS, acceptable-use, privacy and content policy; an age gate; a moderation queue and ban process; Discord bot verification; payments through a merchant of record. **[open]** A trademark knockout search on "Revisionist" has not been run and must be before any public release. **[open]** Review whether living people may be the target of a harm goal such as assassination (allowed for friends and family, §21 item 6). **[open]** A name-risk review: "revisionist" and "historical revisionism" are widely used for historical negationism, including Holocaust denial. Before any public release, test how the name reads with people outside the project and consider a compound mark. Nothing here says the name is clear. Original disclaimer text and format names, not copied from Fantasy President. For the later client: no likeness of any real living person, a visible AI/fiction label plus C2PA provenance, a face-match moderation pass.
 
 ## 20. Models and cost [decided]
 
