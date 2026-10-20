@@ -289,6 +289,20 @@ def run_tick(
                     scope=intent.scope,
                 )
             )
+        # Spin goes public once, when its order first freezes; an operation that
+        # runs on is frozen again each tick but says nothing new.
+        stated = {e.payload.intent_id for e in events if isinstance(e.payload, ev.StatementIssued)}
+        for intent_id in em.state.frozen:
+            intent = em.state.pending[intent_id]
+            if intent.spin and intent_id not in rejected and intent_id not in stated:
+                batch.append(
+                    em.event(
+                        ev.StatementIssued(
+                            seat_id=intent.actor, intent_id=intent_id, text=intent.spin
+                        ),
+                        actor=intent.actor,
+                    )
+                )
         batch.append(em.event(ev.TickStageCompleted(stage=TickStage.FREEZE)))
         em.commit(batch)
         done.add(TickStage.FREEZE)

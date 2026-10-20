@@ -34,6 +34,8 @@ MAX_ATTEMPTS = 3
 CANNOT_DM = 50007
 """Discord's "Cannot send messages to this user" (DMs closed, or no shared server)."""
 CHANNEL_LABEL = "discord"
+PUBLIC_LABEL = "public"
+"""Logged as the channel for a narration posted to the campaign's public channel."""
 HELD_LABEL = "held"
 """Logged as the channel when Discord refused the DM: nothing was sent, ``/dispatch`` shows it."""
 """What ``BriefingDelivered.channel`` says. Message IDs stay in ``discord_deliveries``."""
@@ -220,6 +222,15 @@ class DiscordDeliverer:
             self.outbox.record(idempotency_key, part, channel_id, message_id)
         return CHANNEL_LABEL
 
+    def post(self, channel_id: str, text: str, idempotency_key: str) -> None:
+        """Post to a server channel, once per key: the same outbox and nonces as a DM."""
+        done = self.outbox.sent(idempotency_key)
+        for part, content in enumerate(split_message(text)):
+            if part in done or not content.strip():
+                continue
+            message_id = self.rest.send(channel_id, content, nonce_for(idempotency_key, part))
+            self.outbox.record(idempotency_key, part, channel_id, message_id)
+
 
 __all__ = [
     "API",
@@ -227,6 +238,7 @@ __all__ = [
     "CHANNEL_LABEL",
     "HELD_LABEL",
     "PART_LIMIT",
+    "PUBLIC_LABEL",
     "DiscordDeliverer",
     "DiscordError",
     "DiscordRest",

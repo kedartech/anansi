@@ -585,6 +585,29 @@ def discord_invites(campaign: OneCampaignOpt = None) -> None:
         typer.echo(f"{i.seat_id}  issued {i.issued_at.astimezone(UTC):%Y-%m-%d %H:%MZ}  {state}")
 
 
+@discord_app.command("channel")
+def discord_channel(
+    purpose: Annotated[str, typer.Argument(help="Only 'public' for now")],
+    channel_id: Annotated[str, typer.Argument(help="The Discord channel ID (digits)")],
+    campaign: OneCampaignOpt = None,
+) -> None:
+    """Set the campaign's public channel: player statements and the press are posted there."""
+    from revisionist.engine.discord.tables import Channels
+
+    if purpose != "public":
+        raise _fail("the only channel purpose is 'public'")
+    if not channel_id.isdigit():
+        raise _fail("the channel ID is digits (Developer Mode, right click, Copy ID)")
+    guild = _env("REVISIONIST_DISCORD_GUILD_ID")
+    store = _pg_store(*_DISCORD)
+    try:
+        campaign_id = CampaignId(campaign) if campaign else _campaign(store)
+        Channels(store.conn).set_public(campaign_id, channel_id, guild)
+    finally:
+        store.close()
+    typer.echo(f"public channel for {campaign_id} is {channel_id}")
+
+
 @discord_app.command("seats")
 def discord_seats() -> None:
     """Every Discord binding."""

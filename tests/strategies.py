@@ -360,6 +360,7 @@ payloads = st.one_of(
         text=st.text(max_size=400),
         from_deltas=st.lists(delta_ids, max_size=4).map(tuple),
     ),
+    st.builds(ev.StatementIssued, seat_id=seat_ids, intent_id=intent_ids, text=short_text),
     st.builds(
         ev.BriefingDelivered,
         seat_id=seat_ids,

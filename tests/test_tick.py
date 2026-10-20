@@ -355,3 +355,26 @@ def test_a_delta_the_fold_would_refuse_is_cut_not_fatal(store: EventStore) -> No
     assert any("duplicate fact" in r.detail for r in refused)
     assert load_state(store, fx.CAMPAIGN).tick == 1
     assert state_hash(replay(events[:-1])) == result.state_hash
+
+
+def test_spin_goes_public_once_when_the_order_freezes(store: EventStore) -> None:
+    declare = _intent(Verb.DECLARE, fx.NORTH, 1, spin="The passes stay open.")
+    sabotage = _intent(
+        Verb.SABOTAGE,
+        fx.SOUTH,
+        2,
+        targets=(fx.A_NORTH_ARMY,),
+        means=(fx.A_SOUTH_GUARD,),
+        duration_ticks=3,
+        spin="We seek only peace.",
+    ).model_copy(update={"scope": private_to(fx.SOUTH, covert=True)})
+    quiet = _intent(Verb.WAIT, fx.GUILD, 3)
+    for intent in (declare, sabotage, quiet):
+        assert file_intent(store, fx.CAMPAIGN, intent) is None
+    for _ in range(3):  # the sabotage may run as an operation, frozen again each tick
+        run_tick(store, fx.CAMPAIGN, _providers()[0])
+    statements = [e for e in store.read(fx.CAMPAIGN) if isinstance(e.payload, ev.StatementIssued)]
+    assert sorted((e.payload.seat_id, e.payload.text) for e in statements) == sorted(  # type: ignore[union-attr]
+        [(fx.NORTH, "The passes stay open."), (fx.SOUTH, "We seek only peace.")]
+    )
+    assert all(e.tick == 0 and e.scope == PUBLIC for e in statements)

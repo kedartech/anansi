@@ -194,3 +194,96 @@ def test_a_covert_order_stays_with_its_seat(duo: Duo) -> None:
     intent_id = filed.payload.intent.intent_id  # type: ignore[union-attr]
     assert intent_id not in project(state, duo.seat(VARDA)).model_dump_json()
     assert intent_id not in game.command("status", HOST)
+
+
+# --- the public channel ---------------------------------------------------------
+
+PUBLIC = "777777777777777777"
+
+
+def _set_public(duo: Duo) -> None:
+    result = runner.invoke(cli.app, ["discord", "channel", "public", PUBLIC])
+    assert result.exit_code == 0, result.output
+
+
+def _posted(duo: Duo) -> list[str]:
+    return [m.content for m in duo.game.discord.messages if m.channel_id == PUBLIC]
+
+
+def test_statements_and_the_press_go_to_the_public_channel_once(duo: Duo) -> None:
+    game = duo.game
+    _set_public(duo)
+    game.command("join", FRIEND, code=duo.code)
+    game.command("order", FRIEND, text=ORDER, visibility="covert", spin="We seek only peace.")
+    game.command("order", HOST, text=ORDER, visibility="public", spin="The strait stays open.")
+    game.command("order", HOST, text=ORDER)  # no spin: nothing public
+    assert "ticked" in game.command("advance", HOST)
+    posted = _posted(duo)
+    assert f"{OSTREL}: We seek only peace." in posted  # a covert order may carry a public line
+    assert f"{VARDA}: The strait stays open." in posted
+    assert "Briefing for The Strait Courier." in posted  # the outlet's narration
+    assert not any("Briefing for First Minister" in p or "Briefing for Ostrel" in p for p in posted)
+    count = len(posted)
+    assert "ticked" in game.command("advance", HOST)
+    assert [p for p in _posted(duo) if ": " in p and "Briefing" not in p] == [
+        p for p in posted if ": " in p and "Briefing" not in p
+    ]  # statements are not posted again
+    assert len(_posted(duo)) == count + 1  # only the second tick's press
+    routes = {
+        url.removeprefix("https://discord.com/api/v10") for _, url, _, _ in game.discord.requests
+    }
+    assert routes <= {
+        "/users/@me/channels",
+        *(f"/channels/{c}/messages" for c in (PUBLIC, f"dm-{HOST}", f"dm-{FRIEND}")),
+    }
+
+
+def test_without_a_public_channel_nothing_is_posted(duo: Duo) -> None:
+    game = duo.game
+    game.command("order", HOST, text=ORDER, visibility="public", spin="Open.")
+    assert "ticked" in game.command("advance", HOST)
+    assert all(m.channel_id.startswith("dm-") for m in game.discord.messages)
+
+
+def test_a_leaking_press_narration_is_withheld_from_the_channel(duo: Duo) -> None:
+    game = duo.game
+    _set_public(duo)
+
+    class LeakyPress(ReaderClaude):
+        def call(self, request: Request) -> Reply:
+            if request.call_class == "narrator" and "Courier" in request.prompt.splitlines()[0]:
+                return Reply(
+                    {"text": "Rumour: CANARY-OSTREL-HARROW-4c1e"}, request.model, 1, 1, 0, 0.0
+                )
+            return super().call(request)
+
+    game.transport = LeakyPress()
+    reply = game.command("advance", HOST)
+    assert "Canary leak" in reply
+    assert "CANARY-OSTREL-HARROW-4c1e" not in game.discord.text()
+    assert _posted(duo) == []  # the tick leaked, so statements wait too
+
+
+def test_the_server_template_names_encode_nothing() -> None:
+    import yaml
+
+    from revisionist.engine.discord import template
+
+    words = {"ally", "alliance", "human", "ai", "agent", "deputy", "player", "faction"}
+    for world in cmp.WORLDS_DIR.glob("*.yaml"):
+        raw = yaml.safe_load(world.read_text())
+        words |= {str(x["name"]).lower() for key in ("seats", "entities") for x in raw[key]}
+        words |= {str(x["key"]).lower() for key in ("seats", "entities") for x in raw[key]}
+    for name in (*template.CHANNELS, *template.ROLES):
+        assert not any(w in name.lower().split("-") or w == name.lower() for w in words), name
+    assert template.ROLES == ()
+
+
+def test_the_channel_command_checks_its_input(duo: Duo) -> None:
+    bad = runner.invoke(cli.app, ["discord", "channel", "private", PUBLIC])
+    assert bad.exit_code == cli.EXIT_ERROR and "only channel purpose" in bad.output
+    bad = runner.invoke(cli.app, ["discord", "channel", "public", "chronicle"])
+    assert bad.exit_code == cli.EXIT_ERROR and "digits" in bad.output
+    _set_public(duo)
+    again = runner.invoke(cli.app, ["discord", "channel", "public", "888888888888888888"])
+    assert again.exit_code == 0 and "888888888888888888" in again.output

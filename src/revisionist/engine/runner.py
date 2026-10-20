@@ -7,6 +7,7 @@ is exactly the tick a host would run by hand.
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Protocol, runtime_checkable
 
 from revisionist.core.canary import Leak
 from revisionist.core.ids import CampaignId, SeatId
@@ -18,6 +19,14 @@ from revisionist.engine.llm import ClaudeNarrator, ClaudeResolver, Transport, Tr
 from revisionist.engine.providers import KeywordSafety, ScriptedResolver, TemplateNarrator
 from revisionist.engine.store import EventStore, load_state
 from revisionist.engine.tick import Deliverer, Providers, TickResult, file_intent, run_tick
+
+
+@runtime_checkable
+class Publishes(Protocol):
+    """A deliverer that also posts public records (statements) after a clean tick."""
+
+    def publish(self) -> list[str]: ...
+
 
 DelivererFactory = Callable[[EventStore, CampaignId, Path], Deliverer]
 """Builds the tick's deliverer from the store, the campaign and the briefings directory."""
@@ -62,6 +71,8 @@ def play_tick(
         )
     result = run_tick(store, campaign_id, providers, versions=cmp.versions(), stop_after=stop_after)
     found = leak_report(load_state(store, campaign_id), store.read(campaign_id))
+    if not found and result.stopped_after is None and isinstance(deliverer, Publishes):
+        deliverer.publish()
     return TickRun(result, briefings, found)
 
 
@@ -84,4 +95,11 @@ def faction_turns(
         cmp.log_cost(store, campaign_id, "deputy", agent.spent, seat)
 
 
-__all__ = ["DelivererFactory", "TickRun", "faction_turns", "file_deliverer", "play_tick"]
+__all__ = [
+    "DelivererFactory",
+    "Publishes",
+    "TickRun",
+    "faction_turns",
+    "file_deliverer",
+    "play_tick",
+]

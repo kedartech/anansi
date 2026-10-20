@@ -2891,6 +2891,38 @@
         "title": "SettingsSet",
         "type": "object"
       },
+      "StatementIssued": {
+        "additionalProperties": false,
+        "description": "A player's spin, made public as the tick freezes (Layer 9b).\n\nSpin is the one free text a player addresses to the world (design \u00a75), so\nit is logged Public whatever the order's own scope: a covert operation can\ncome with a public denial. A record: it changes no state.",
+        "properties": {
+          "intent_id": {
+            "title": "Intent Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "statement_issued",
+            "default": "statement_issued",
+            "title": "Kind",
+            "type": "string"
+          },
+          "seat_id": {
+            "title": "Seat Id",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 280,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "seat_id",
+          "intent_id",
+          "text"
+        ],
+        "title": "StatementIssued",
+        "type": "object"
+      },
       "TickClosed": {
         "additionalProperties": false,
         "properties": {
@@ -3114,6 +3146,7 @@
             "seat_created": "#/$defs/SeatCreated",
             "seat_status_set": "#/$defs/SeatStatusSet",
             "settings_set": "#/$defs/SettingsSet",
+            "statement_issued": "#/$defs/StatementIssued",
             "tick_closed": "#/$defs/TickClosed",
             "tick_opened": "#/$defs/TickOpened",
             "tick_stage_completed": "#/$defs/TickStageCompleted"
@@ -3195,6 +3228,9 @@
           },
           {
             "$ref": "#/$defs/NarrationWritten"
+          },
+          {
+            "$ref": "#/$defs/StatementIssued"
           },
           {
             "$ref": "#/$defs/BriefingDelivered"

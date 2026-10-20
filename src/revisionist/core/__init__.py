@@ -17,5 +17,5 @@ Module map (build plan Layer 1):
 - ``state``       State (truth) and View (one seat's knowledge)
 """
 
-SCHEMA_VERSION = "3"
+SCHEMA_VERSION = "4"
 """Bumped on any change to events, deltas or the ontology."""

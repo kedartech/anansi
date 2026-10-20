@@ -228,6 +228,20 @@ class NarrationWritten(Model):
     from_deltas: tuple[DeltaId, ...] = ()
 
 
+class StatementIssued(Model):
+    """A player's spin, made public as the tick freezes (Layer 9b).
+
+    Spin is the one free text a player addresses to the world (design §5), so
+    it is logged Public whatever the order's own scope: a covert operation can
+    come with a public denial. A record: it changes no state.
+    """
+
+    kind: Literal["statement_issued"] = "statement_issued"
+    seat_id: SeatId
+    intent_id: IntentId
+    text: str = Field(max_length=280)
+
+
 class BriefingDelivered(Model):
     kind: Literal["briefing_delivered"] = "briefing_delivered"
     seat_id: SeatId
@@ -321,6 +335,7 @@ Payload = Annotated[
     | OperationResolved
     | ScheduledEventFired
     | NarrationWritten
+    | StatementIssued
     | BriefingDelivered
     | TickOpened
     | TickStageCompleted
