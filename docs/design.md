@@ -14,6 +14,7 @@ Module map:
 | `core/ontology.py` | Entity, Asset, Relationship, Meter, Clock, Fact, ScheduledEvent, Commitment, Seat |
 | `core/intent.py` | `Verb`, `Intent` |
 | `core/goals.py` | secret goals: the `WinCondition` union, `goal_met`, goal kinds, winners (Layer 10) |
+| `core/intel.py` | goal pieces from investigations, decoys from forgeries (Layer 10) |
 | `core/delta.py` | the `Delta` union |
 | `core/resolution.py` | bands, tiers, stages, rejection reasons, starting odds |
 | `core/events.py` | every event kind, the `Event` envelope |
@@ -537,3 +538,15 @@ An ID the state does not hold is unmet, so nothing is met in an empty world. Pro
 **Compatibility.** `State.goals` is a late field: it is left out of serialisation while empty (`Model.late_fields`), so every older state hashes, and every view serialises, byte for byte as before. Old logs replay and the recordings keep their keys. Goal records are sealed with the campaign key, never a seat key, because the fold needs them; erasing a player keeps their goal. The resolver's truth leaves goals out: no model weighs whether, or how, a goal is met. The player's own agent does see its seat's goal, through the view.
 
 **Deferred.** README §15 lists "exiled" as an entity status. Adding it changes the resolver's output schema and so every resolver recording key; it waits for the next live re-record.
+
+### 17.2 Goal intelligence (1b)
+
+README §7 and decision 37: a rival's goal is learned by working for it, and the engine, not a model, decides what is learned.
+
+- **Pieces.** An `investigate` intent whose target is another player seat's entity, and whose roll is a partial or better, earns that seat's next goal piece. A piece is an ordinary Fact about the target entity, Private to the seeker, applied in APPLY as `delta_applied` against the intent. The pieces come in a fixed order: `goal_exists` ("has a secret aim"), `goal_domain` (office, an asset kind, a person, standing, a treaty, a relationship), `goal_object` (the name of the thing), `goal_condition` (the whole condition in a few words, from `intel.render`). The next piece is the first the seeker does not already hold; once all four are held, nothing more is learned. One piece per intent per tick, so a multi-tick investigation earns one a tick.
+- **Misleading partials.** On a partial success the object and the condition may be false (`truth=False` in canon): the target's planted decoy if there is one, otherwise, on a seeded roll, another object of the same kind. The domain is never the lie. A full success always tells the truth.
+- **Forgery.** A `forge` whose targets name the actor's own entity and one other asset, entity or meter plants two decoy Facts (`goal_domain`, `goal_object`) about that bait, Covert and known only to the actor. They are what a rival's partial success finds.
+- **Pieces travel like facts.** A seeker can share, sell or lie about a piece with any knowledge grant; `intel.held` counts what a seat knows, however it came to know it. Only the pieces travel: the goal's own words never leave the owner's view.
+- **The narrator** of the seeker is given the piece among the tick's applied deltas, so the briefing can report what the spies found.
+- **Tests.** The counterfactual test removes a piece: deputies without it file the same intents, and the holder's changes, so the test can fail. The duo test runs four ticks of Varda investigating Ostrel with every narration echoing its whole view: Varda learns all four pieces, and Ostrel's goal text and canary never reach Varda's person.
+- **Not yet.** `conceal` (raising the bar on your own goal), interception and capture of agents carrying pieces, and other seats' AI investigations aimed at goals on purpose, come with later items.
