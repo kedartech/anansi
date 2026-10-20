@@ -1,6 +1,6 @@
 """Shared model configuration for the pure core."""
 
-from typing import Annotated, Any
+from typing import Annotated, Any, ClassVar
 
 from pydantic import (
     BaseModel,
@@ -21,6 +21,10 @@ class Model(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid", use_enum_values=False)
 
+    late_fields: ClassVar[frozenset[str]] = frozenset()
+    """Fields added after logs already existed. Left out while they hold their
+    default, so an older state serialises, and hashes, byte for byte as before."""
+
     @model_serializer(mode="wrap")
     def _serialize_sets_sorted(self, handler: SerializerFunctionWrapHandler) -> Any:
         """Emit every set-valued field in sorted order.
@@ -31,7 +35,13 @@ class Model(BaseModel):
         """
         data = handler(self)
         if isinstance(data, dict):
-            for name in type(self).model_fields:
+            fields = type(self).model_fields
+            for name in self.late_fields:
+                if name in data and getattr(self, name) == fields[name].get_default(
+                    call_default_factory=True
+                ):
+                    del data[name]
+            for name in fields:
                 if name in data and isinstance(getattr(self, name, None), frozenset | set):
                     data[name] = sorted(data[name])
         return data

@@ -7,7 +7,8 @@ State-mutating kinds (the fold in Layer 2 handles exactly these):
 ``CampaignCreated, SettingsSet, EntityCreated, AssetCreated, RelationshipSet,
 MeterCreated, ClockCreated, FactAsserted, CommitmentCreated, SeatCreated,
 AgentAssigned, SeatStatusSet, IntentFiled, IntentRejected, DeltaApplied,
-ScheduledEventFired, TickOpened, TickClosed``.
+ScheduledEventFired, GoalSet, GoalProgressed, GoalMet, GoalUndone, TickOpened,
+TickClosed``.
 
 Every other kind is a record: it is replayable, searchable and shown by
 ``/why``, but changes no state.
@@ -19,12 +20,14 @@ from pydantic import ConfigDict, Field
 
 from revisionist.core._base import Model
 from revisionist.core.delta import Delta
+from revisionist.core.goals import Goal
 from revisionist.core.ids import (
     CampaignId,
     ClockId,
     DeltaId,
     EntityId,
     EventId,
+    GoalId,
     IntentId,
     ScheduledEventId,
     SeatId,
@@ -250,6 +253,38 @@ class BriefingDelivered(Model):
     idempotency_key: str
 
 
+# --- Goals ---------------------------------------------------------------------
+
+
+class GoalSet(Model):
+    """A seat's secret goal, fixed at Session Zero (README §15). Private to the owner."""
+
+    kind: Literal["goal_set"] = "goal_set"
+    goal: Goal
+
+
+class GoalProgressed(Model):
+    """The goal's objective clock moved: ``parts_met`` of its parts hold now."""
+
+    kind: Literal["goal_progressed"] = "goal_progressed"
+    goal_id: GoalId
+    parts_met: int = Field(ge=0)
+
+
+class GoalMet(Model):
+    """The goal's condition holds at the end of this tick, first time or again."""
+
+    kind: Literal["goal_met"] = "goal_met"
+    goal_id: GoalId
+
+
+class GoalUndone(Model):
+    """An Undoable goal stopped holding. It counts as unmet until it holds again."""
+
+    kind: Literal["goal_undone"] = "goal_undone"
+    goal_id: GoalId
+
+
 # --- Tick lifecycle -----------------------------------------------------------
 
 
@@ -354,6 +389,10 @@ Payload = Annotated[
     | ScheduledEventFired
     | NarrationWritten
     | StatementIssued
+    | GoalSet
+    | GoalProgressed
+    | GoalMet
+    | GoalUndone
     | BriefingDelivered
     | TickOpened
     | TickStageCompleted
@@ -382,6 +421,10 @@ MUTATING_KINDS: frozenset[str] = frozenset(
         "intent_rejected",
         "delta_applied",
         "scheduled_event_fired",
+        "goal_set",
+        "goal_progressed",
+        "goal_met",
+        "goal_undone",
         "tick_opened",
         "tick_closed",
     }

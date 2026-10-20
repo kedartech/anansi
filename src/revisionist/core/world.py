@@ -19,6 +19,7 @@ from typing import Annotated, Literal
 from pydantic import Field, StringConstraints
 
 from revisionist.core._base import Label, Model
+from revisionist.core.goals import WinCondition
 from revisionist.core.intent import Verb
 from revisionist.core.ontology import (
     AssetKind,
@@ -163,6 +164,20 @@ class SeatDecl(Model):
     agent: AgentDecl | None = None
 
 
+class GoalDecl(Model):
+    """A player seat's secret goal. In a world file the condition names keys, not IDs.
+
+    The compiler gives the goal its objective clock and its kind; neither is
+    written here, because the kind comes from a fixed table (README §15).
+    """
+
+    key: Key
+    seat: Key
+    text: str = Field(max_length=280)
+    condition: WinCondition
+    canary: str | None = Field(default=None, max_length=60)
+
+
 Slug = Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_-]*$", max_length=40)]
 """A world's file name: lowercase, digits, underscores and hyphens."""
 
@@ -181,6 +196,7 @@ class WorldFile(Model):
     facts: tuple[FactDecl, ...] = ()
     commitments: tuple[CommitmentDecl, ...] = ()
     seats: tuple[SeatDecl, ...] = ()
+    goals: tuple[GoalDecl, ...] = ()
 
 
 __all__ = [
@@ -191,6 +207,7 @@ __all__ = [
     "CommitmentDecl",
     "EntityDecl",
     "FactDecl",
+    "GoalDecl",
     "Key",
     "MeterDecl",
     "RelationshipDecl",

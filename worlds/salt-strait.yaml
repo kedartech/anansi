@@ -231,3 +231,16 @@ seats:
     kind: outlet
     name: The Strait Courier
     embodies: courier
+
+# Secret goals (Layer 10): one per player seat, private to it. Each condition
+# names keys and compiles to a win condition the engine checks in code.
+goals:
+  - key: varda_goal
+    seat: varda_seat
+    text: Keep the Saltworks in Varda's hands and the city steady behind you. CANARY-VARDA-GOAL-71a3
+    canary: CANARY-VARDA-GOAL-71a3
+    condition:
+      check: all_of
+      conditions:
+        - {check: controls_asset, holder: varda, asset: varda_saltworks}
+        - {check: meter_at, meter: varda_stability, op: ge, value: 70}

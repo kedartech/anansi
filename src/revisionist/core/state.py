@@ -9,9 +9,12 @@ Layer 2 provides ``apply``, ``replay`` and ``project``; this module only
 defines the shapes.
 """
 
+from typing import ClassVar
+
 from pydantic import Field
 
 from revisionist.core._base import Model
+from revisionist.core.goals import Goal
 from revisionist.core.ids import (
     AssetId,
     CampaignId,
@@ -19,6 +22,7 @@ from revisionist.core.ids import (
     CommitmentId,
     EntityId,
     FactId,
+    GoalId,
     IntentId,
     MeterId,
     RelationshipId,
@@ -55,6 +59,10 @@ class _World(Model):
     facts: dict[FactId, Fact] = Field(default_factory=dict)
     scheduled: dict[ScheduledEventId, ScheduledEvent] = Field(default_factory=dict)
     commitments: dict[CommitmentId, Commitment] = Field(default_factory=dict)
+    goals: dict[GoalId, Goal] = Field(default_factory=dict)
+    """Secret goals (Layer 10). A view holds only its own seat's."""
+
+    late_fields: ClassVar[frozenset[str]] = frozenset({"goals"})
 
 
 class SeatFace(Model):

@@ -25,6 +25,7 @@ CommitmentId = NewType("CommitmentId", str)
 SeatId = NewType("SeatId", str)
 IntentId = NewType("IntentId", str)
 DeltaId = NewType("DeltaId", str)
+GoalId = NewType("GoalId", str)
 
 WorldObjectId = EntityId | AssetId | RelationshipId | MeterId | ClockId | FactId | CommitmentId
 """Anything an Intent may target."""

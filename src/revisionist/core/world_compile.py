@@ -10,6 +10,19 @@ from collections.abc import Callable, Mapping, Sequence
 from revisionist.core import events as ev
 from revisionist.core.events import Event, Versions
 from revisionist.core.fold import FoldError, replay
+from revisionist.core.goals import (
+    MAX_DEPTH,
+    MAX_PARTS,
+    AllOf,
+    AnyOf,
+    Goal,
+    WinCondition,
+    depth,
+    goal_kind,
+    goal_met,
+    leaves,
+    parts,
+)
 from revisionist.core.ids import (
     AssetId,
     CampaignId,
@@ -18,6 +31,7 @@ from revisionist.core.ids import (
     EntityId,
     EventId,
     FactId,
+    GoalId,
     MeterId,
     RelationshipId,
     SeatId,
@@ -25,8 +39,10 @@ from revisionist.core.ids import (
 )
 from revisionist.core.ontology import (
     Asset,
+    AssetKind,
     Clause,
     Clock,
+    ClockKind,
     Commitment,
     Controller,
     Entity,
@@ -36,9 +52,11 @@ from revisionist.core.ontology import (
     Persona,
     Relationship,
     Seat,
+    SeatKind,
 )
-from revisionist.core.visibility import PUBLIC, Scope, Visibility
-from revisionist.core.world import ClauseDecl, ScopeDecl, ScopeSpec, WorldFile
+from revisionist.core.state import State
+from revisionist.core.visibility import PUBLIC, Scope, Visibility, private_to
+from revisionist.core.world import ClauseDecl, GoalDecl, ScopeDecl, ScopeSpec, WorldFile
 
 
 class WorldError(ValueError):
@@ -88,9 +106,12 @@ def compile_world(world: WorldFile, campaign_id: CampaignId, versions: Versions)
         for seq, (payload, scope) in enumerate(emitted)
     ]
     try:
-        replay(events)
+        state = replay(events)
     except FoldError as exc:
         raise WorldError([f"fold: {exc}"]) from exc
+    met = [f"goal {g.key}: already met at tick 0" for g in world.goals if _met(state, g, ids)]
+    if met:
+        raise WorldError(met)
     return events
 
 
@@ -107,6 +128,7 @@ def _keyed(world: WorldFile) -> list[tuple[str, str]]:
     keyed += [("fact", d.key) for d in world.facts]
     keyed += [("commitment", d.key) for d in world.commitments]
     keyed += [("seat", d.key) for d in world.seats]
+    keyed += [("goal", d.key) for d in world.goals]
     return keyed
 
 
@@ -166,6 +188,7 @@ def _check(world: WorldFile, sections: Mapping[str, str], problems: list[str]) -
     _check_facts(world, sections, problems)
     _check_commitments(world, sections, problems)
     _check_seats(world, sections, problems)
+    _check_goals(world, sections, problems)
 
 
 def _check_entities(world: WorldFile, sections: Mapping[str, str], problems: list[str]) -> None:
@@ -256,6 +279,62 @@ def _check_seats(world: WorldFile, sections: Mapping[str, str], problems: list[s
                 problems.append(f"{where}: agent must be a person")
 
 
+_CONDITION_REFS = {
+    "holder": "entity",
+    "office": "asset",
+    "asset": "asset",
+    "entity": "entity",
+    "meter": "meter",
+    "commitment": "commitment",
+    "relationship": "relationship",
+}
+"""Which section each reference field of a win condition names."""
+
+
+def _check_goals(world: WorldFile, sections: Mapping[str, str], problems: list[str]) -> None:
+    seats = {d.key: d for d in world.seats}
+    offices = {d.key for d in world.assets if d.kind is AssetKind.OFFICE}
+    canaries = {d.canary for d in world.facts if d.canary is not None}
+    owners: set[str] = set()
+    for g in world.goals:
+        where = f"goal {g.key}"
+        _ref(problems, where, g.seat, "seat", sections)
+        seat = seats.get(g.seat)
+        if seat is not None and seat.kind is not SeatKind.PLAYER:
+            problems.append(f"{where}: only a player seat has a goal")
+        if g.seat in owners:
+            problems.append(f"{where}: seat {g.seat} already has a goal")
+        owners.add(g.seat)
+        if depth(g.condition) > MAX_DEPTH or len(leaves(g.condition)) > MAX_PARTS:
+            problems.append(f"{where}: condition too large")
+        for leaf in leaves(g.condition):
+            for name, section in _CONDITION_REFS.items():
+                ref = getattr(leaf, name, None)
+                _ref(problems, where, ref, section, sections)
+                if name == "office" and ref in sections and ref not in offices:
+                    problems.append(f"{where}: {ref} is not an office")
+        if g.canary is not None:
+            if g.canary in canaries:
+                problems.append(f"{where}: duplicate canary")
+            canaries.add(g.canary)
+
+
+def _bind(c: WinCondition, ids: Mapping[str, str]) -> WinCondition:
+    """The same condition with every key replaced by its ID."""
+    if isinstance(c, AllOf | AnyOf):
+        return c.model_copy(update={"conditions": tuple(_bind(x, ids) for x in c.conditions)})
+    update = {name: ids[getattr(c, name)] for name in _CONDITION_REFS if hasattr(c, name)}
+    return c.model_copy(update=update)
+
+
+def _goal_clock(goal_id: str) -> ClockId:
+    return ClockId(derived_id(goal_id, "clock"))
+
+
+def _met(state: State, g: GoalDecl, ids: Mapping[str, str]) -> bool:
+    return goal_met(state, _bind(g.condition, ids))
+
+
 # --- emission -----------------------------------------------------------------
 
 
@@ -340,6 +419,17 @@ def _emit(
             scope=scope,
         )
         out.append((ev.ClockCreated(clock=clock), scope))
+    for g in world.goals:
+        owner = SeatId(ids[g.seat])
+        clock = Clock(
+            clock_id=_goal_clock(ids[g.key]),
+            kind=ClockKind.OBJECTIVE,
+            name="Goal",
+            owner=owner,
+            segments_total=parts(g.condition),
+            scope=private_to(owner),
+        )
+        out.append((ev.ClockCreated(clock=clock), clock.scope))
     for f in world.facts:
         scope = _scope(f.scope, ids)
         fact = Fact(
@@ -371,7 +461,8 @@ def _emit(
             embodies=EntityId(ids[s.embodies]),
             controller=s.controller,
             slots=s.slots if s.slots is not None else world.settings.starting_slots,
-            objectives=frozenset(ClockId(ids[k]) for k in s.objectives),
+            objectives=frozenset(ClockId(ids[k]) for k in s.objectives)
+            | {_goal_clock(ids[g.key]) for g in world.goals if g.seat == s.key},
             standing_orders=s.standing_orders,
         )
         out.append((ev.SeatCreated(seat=seat), PUBLIC))
@@ -391,6 +482,20 @@ def _emit(
             persona=persona,
         )
         out.append((assigned, PUBLIC))
+    for g in world.goals:
+        condition = _bind(g.condition, ids)
+        owner = SeatId(ids[g.seat])
+        goal = Goal(
+            goal_id=GoalId(ids[g.key]),
+            seat_id=owner,
+            text=g.text,
+            condition=condition,
+            kind=goal_kind(condition),
+            clock_id=_goal_clock(ids[g.key]),
+            scope=private_to(owner),
+            canary=g.canary,
+        )
+        out.append((ev.GoalSet(goal=goal), goal.scope))
     return out
 
 

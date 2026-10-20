@@ -11,11 +11,12 @@ Module map (build plan Layer 1):
 - ``ontology``    Entity, Asset, Relationship, Meter, Clock, Fact,
                   ScheduledEvent, Commitment, Seat
 - ``intent``      Verb and Intent, the resolver's only input
+- ``goals``       secret goals and their win conditions
 - ``delta``       the Delta union, the LLM's only output
 - ``resolution``  FeasibilityBand, OutcomeTier, TickStage, RejectionReason
 - ``events``      every event kind and the Event envelope
 - ``state``       State (truth) and View (one seat's knowledge)
 """
 
-SCHEMA_VERSION = "5"
+SCHEMA_VERSION = "6"
 """Bumped on any change to events, deltas or the ontology."""
