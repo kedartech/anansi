@@ -313,6 +313,8 @@ Share cards contain public information only, carry a one-line context, and carry
 
 ## 22. Build path
 
+Layer-by-layer detail, tests and sizing: [docs/build-plan.md](docs/build-plan.md).
+
 1. **Design doc** (`docs/design.md`): event types and the log, the state schema as a projection, the agent boundary and `project()`, the four-stage pipeline and clamp rules, visibility and `reveal()`, the tick state machine, the safety floor hooks. Written as pydantic models (decision 34).
 2. **Minimum slice, solo** (about 2-3 weekends): one hand-written world bible in the fixed schema; 1 human seat with its agent plus 3 AI factions; orders via CLI; a tick triggered manually running structure, rate, roll, propose, clamp, apply, narrate; one press outlet; a canary leak test from day one (AI factions must not act on the seat's covert facts). Not included: director events, co-GM, formal sessions, personas, Discord.
 3. **Exit criteria:** 10 ticks solo, zero canary leaks, cost per tick measured, Josh says collisions with AI factions felt fair.
