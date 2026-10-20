@@ -17,6 +17,7 @@ from anansi.core.ids import (
     DeltaId,
     EntityId,
     FactId,
+    IntentId,
     MeterId,
     RelationshipId,
     ScheduledEventId,
@@ -102,6 +103,8 @@ class ClockCreate(_Delta):
     name: str = Field(max_length=80)
     owner: SeatId | None = None
     target: EntityId | None = None
+    intent_id: IntentId | None = None
+    """For operation clocks: the intent that opened it."""
     segments_total: int = Field(ge=1, le=12)
     exposure: int = Field(default=0, ge=0, le=5)
     scope: Scope

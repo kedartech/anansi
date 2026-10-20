@@ -256,6 +256,7 @@ deltas = st.one_of(
         clock_id=clock_ids,
         name=short_text,
         owner=st.none() | seat_ids,
+        intent_id=st.none() | intent_ids,
         segments_total=st.integers(1, 12),
         exposure=st.integers(0, 5),
         scope=scopes(),

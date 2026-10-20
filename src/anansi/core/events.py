@@ -244,11 +244,6 @@ class TickOpened(Model):
     intents_frozen: tuple[IntentId, ...]
 
 
-class TickStageCompleted(Model):
-    kind: Literal["tick_stage_completed"] = "tick_stage_completed"
-    stage: TickStage
-
-
 class CallCost(Model):
     call_class: str
     """resolver | narrator | structurer | persona | press | director."""
@@ -259,10 +254,18 @@ class CallCost(Model):
     usd: float = Field(ge=0)
 
 
+class TickStageCompleted(Model):
+    kind: Literal["tick_stage_completed"] = "tick_stage_completed"
+    stage: TickStage
+    costs: tuple[CallCost, ...] = ()
+    """Model calls made during the stage. ``tick_closed`` sums them."""
+
+
 class TickClosed(Model):
     kind: Literal["tick_closed"] = "tick_closed"
     quiet: bool = False
     """True when the resolver failed and intents carried forward."""
+    quiet_reason: str = Field(default="", max_length=200)
     costs: tuple[CallCost, ...] = ()
     state_hash: str
     """blake2b of the canonical state JSON after this tick. Replay must match."""

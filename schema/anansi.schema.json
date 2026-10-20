@@ -724,6 +724,18 @@
             "title": "Exposure",
             "type": "integer"
           },
+          "intent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Intent Id"
+          },
           "kind": {
             "const": "clock_create",
             "default": "clock_create",
@@ -2859,6 +2871,12 @@
             "title": "Quiet",
             "type": "boolean"
           },
+          "quiet_reason": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Quiet Reason",
+            "type": "string"
+          },
           "state_hash": {
             "title": "State Hash",
             "type": "string"
@@ -2908,6 +2926,14 @@
       "TickStageCompleted": {
         "additionalProperties": false,
         "properties": {
+          "costs": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/CallCost"
+            },
+            "title": "Costs",
+            "type": "array"
+          },
           "kind": {
             "const": "tick_stage_completed",
             "default": "tick_stage_completed",

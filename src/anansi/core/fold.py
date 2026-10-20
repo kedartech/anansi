@@ -165,7 +165,8 @@ def _mutate(state: State, event: Event) -> State:
             _need(state.seats, i.actor, "seat")
             return state.model_copy(update={"pending": _put(state.pending, i.intent_id, i)})
         case ev.IntentRejected():
-            _need(state.pending, p.intent_id, "intent")
+            if p.intent_id not in state.pending:
+                return state  # rejected at filing: a record, nothing to remove
             pending = {k: v for k, v in state.pending.items() if k != p.intent_id}
             frozen = tuple(i for i in state.frozen if i != p.intent_id)
             return state.model_copy(update={"pending": pending, "frozen": frozen})
@@ -187,7 +188,10 @@ def _mutate(state: State, event: Event) -> State:
                     f"replay gives {actual}"
                 )
             done = set(state.frozen)
-            pending = {k: v for k, v in state.pending.items() if k not in done}
+            if p.quiet:
+                pending = dict(state.pending)  # nothing resolved; intents carry forward
+            else:
+                pending = {k: v for k, v in state.pending.items() if k not in done}
             return state.model_copy(
                 update={"pending": pending, "frozen": (), "tick": event.tick + 1}
             )
@@ -270,6 +274,7 @@ def _apply_delta(state: State, delta: d.Delta, tick: int) -> State:
                 name=delta.name,
                 owner=delta.owner,
                 target=delta.target,
+                intent_id=delta.intent_id,
                 segments_total=delta.segments_total,
                 exposure=delta.exposure,
                 opened_tick=tick,

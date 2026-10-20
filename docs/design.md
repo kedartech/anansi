@@ -19,7 +19,9 @@ Module map:
 | `core/state.py` | `State` (truth) and `View` (one seat's knowledge) |
 | `core/fold.py` | `apply`, `replay`, `replay_to`, `state_hash` (Layer 2) |
 | `core/project.py` | `project(state, seat) -> View` (Layer 2) |
-| `core/referee.py` | `validate`, `rate`, `roll`, `clamp`, `reveal`, `slots` (Layer 3) |
+| `core/referee.py` | `validate`, `rate`, `roll`, `clamp`, `cap_meters`, `reveal`, `slots` (Layer 3) |
+| `engine/tick.py` | `run_tick`, `file_intent`; provider protocols `Resolver`, `Narrator`, `Deliverer` (Layer 4) |
+| `engine/providers.py` | fixture providers: scripted/failing resolver, template narrator, recording deliverer, keyword safety (Layer 4) |
 | `engine/store.py` | `EventStore` protocol, `MemoryStore`, `SqliteStore`, `load_state` (Layer 2) |
 | `schema/anansi.schema.json` | exported JSON Schema; CI fails on drift |
 
@@ -257,6 +259,20 @@ CLOSE    tick_closed(costs, state_hash)   snapshot written; replay must reproduc
 The fold (`core/fold.py`) is total over `MUTATING_KINDS` and refuses: sequence gaps, wrong campaign, duplicate creation, unknown IDs, and a hash mismatch. Type bounds (tier 0-5, meter lo-hi, disposition -5..+5, slots 0-cap) are clamped per step in the fold so a replay can never produce an invalid object; the Layer 3 clamp table is a tighter policy applied before a delta is ever logged. A clock that fills becomes `resolved` and releases its slot; `clock_status` handles failed and abandoned.
 
 Stores (`engine/store.py`) enforce append-only: `seq` must be exactly the next integer, batches are atomic, and the SQLite schema carries `BEFORE UPDATE` and `BEFORE DELETE` triggers that abort. `load_state` is the newest snapshot plus the tail of the log; a test proves it equals a full replay.
+
+### 9.1 The orchestrator in code (`engine/tick.py`) **[decided]**
+
+`run_tick(store, campaign_id, providers)` is the only function that both reads the store and calls a provider. Each stage is one atomic batch that ends in `tick_stage_completed(stage, costs)`; resuming means reading the tail of the log since the last `tick_closed` and skipping every stage already marked. What a later stage needs from an earlier one is either in the log (`delta_proposed`, `narration_written`, `briefing_delivered`) or a pure function of state (rolls, clamps), so a resumed run reaches the same `state_hash` as an uninterrupted one. Tested by stopping after every stage and comparing against a clean run, and by a 10-tick campaign with two injected crashes whose every recorded hash replays.
+
+- **FREEZE** writes `tick_opened` with the sorted pending IDs, re-validates each frozen intent against the frozen state (`intent_rejected` on failure; the safety hook runs here), then logs `feasibility_rated` (true and perceived band) and `rolled` per survivor. Seeds come from `referee.seed_for`, so the roll is recomputable and never stored anywhere the resolver could change it.
+- **PROPOSE** calls the resolver once with the full `State`, the frozen intents and the rolls; one retry, then the tick closes quiet with `quiet_reason` and every intent stays pending. `delta_proposed` per intent carries the proposal verbatim.
+- **VALIDATE** recomputes `clamp` per intent and `cap_meters` across the tick, logging a `delta_rejected` per trim or drop. Nothing here needs a model, so a resume recomputes rather than reads.
+- **APPLY** logs `delta_applied` for every kept delta, opens an operation clock for each slot-holding intent with `duration_ticks > 1` whose roll was not a failure (`operation_opened`, clock ID derived from the intent), advances every open operation by one segment (`operation_resolved` when it fills), and fires due scheduled events. One batch; all or nothing.
+- **NARRATE** builds `project(state, seat)` per human seat and passes the view plus only those applied deltas whose object is in that view. The narrator's signature takes `View`; a `State` is a type error. `narration_written` is logged `private_to(seat)`.
+- **DELIVER** sends each narration with key `derived_id(campaign, tick, "deliver", seat)` and logs `briefing_delivered` right after each send, so a crash between two sends resumes with exactly the undelivered seats.
+- **close** sums the stage costs into `tick_closed(costs, state_hash)` and writes a snapshot.
+
+`file_intent(store, campaign_id, intent, safety=)` is the filing path: `referee.validate` then `intent_filed` or `intent_rejected`. Both outcomes are logged under the intent's scope. Providers are protocols (`Resolver`, `Narrator`, `Deliverer`, plus the `SafetyCheck` hook); `engine/providers.py` ships the fixture implementations used by the tests and by Layer 7's dry run. Operations re-rolled per tick by the resolver, and narration for outlets, arrive with Layer 6.
 
 ---
 

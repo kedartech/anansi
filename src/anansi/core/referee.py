@@ -203,14 +203,20 @@ class Rejection(Model):
     detail: str = Field(default="", max_length=200)
 
 
-def validate(state: State, intent: Intent, safety: SafetyCheck | None = None) -> Rejection | None:
-    """None when the intent may be filed. Checks run in the order a player would expect."""
+def validate(
+    state: State, intent: Intent, safety: SafetyCheck | None = None, *, filed: bool = False
+) -> Rejection | None:
+    """None when the intent may proceed. Checks run in the order a player would expect.
+
+    ``filed=True`` re-checks an intent already in ``pending`` (at FREEZE), so the
+    duplicate test is skipped and the intent does not count against its own slot.
+    """
     seat = state.seats.get(intent.actor)
     if seat is None:
         return Rejection(reason=RejectionReason.MALFORMED, detail="actor is not a seat")
     if seat.status is SeatStatus.FALLEN:
         return Rejection(reason=RejectionReason.SEAT_INACTIVE, detail="seat has fallen")
-    if intent.intent_id in state.pending:
+    if not filed and intent.intent_id in state.pending:
         return Rejection(reason=RejectionReason.DUPLICATE)
 
     if seat.kind is SeatKind.OUTLET and intent.verb not in OUTLET_VERBS:
@@ -246,11 +252,12 @@ def validate(state: State, intent: Intent, safety: SafetyCheck | None = None) ->
             return Rejection(reason=RejectionReason.MALFORMED, detail="nothing offered to accept")
 
     slotted = seat.kind in (SeatKind.PLAYER, SeatKind.FACTION)
-    if (
-        slotted
-        and intent.holds_slot
-        and slots(state, intent.actor, state.pending.values()).free <= 0
-    ):
+    queued = (
+        i
+        for i in state.pending.values()
+        if i.intent_id not in state.frozen and i.intent_id != intent.intent_id
+    )
+    if slotted and intent.holds_slot and slots(state, intent.actor, queued).free <= 0:
         return Rejection(reason=RejectionReason.NO_SLOT)
 
     if safety is not None:
@@ -395,7 +402,8 @@ class Clamped(Model):
     """Everything dropped or trimmed, for ``delta_rejected`` events."""
 
 
-def _touched(delta: d.Delta) -> str:
+def touched(delta: d.Delta) -> str:
+    """The ID of the one object a delta changes or creates."""
     match delta:
         case d.AssetTierDelta() | d.AssetStatusSet() | d.AssetControllerSet() | d.AssetCreate():
             return delta.asset_id
@@ -417,6 +425,14 @@ def _touched(delta: d.Delta) -> str:
             return delta.scheduled_id
         case d.SeatSlotsDelta():
             return delta.seat_id
+
+
+def _budget(totals: dict[MeterId, int], meter_id: MeterId, cap: int, change: int) -> int:
+    """Net change allowed for this meter given what the tick already spent."""
+    so_far = totals.get(meter_id, 0)
+    net = max(-cap, min(cap, so_far + change))
+    totals[meter_id] = net
+    return net - so_far
 
 
 def _sign(n: int) -> int:
@@ -466,7 +482,7 @@ def clamp(
         cut.append(Cut(delta_id=delta.delta_id, reason=RejectionReason.CLAMPED, detail=detail))
 
     for delta in proposal:
-        obj = _touched(delta)
+        obj = touched(delta)
         if obj not in objects and len(objects) >= MAX_OBJECTS_PER_INTENT:
             drop(delta, RejectionReason.CLAMPED, f"over {MAX_OBJECTS_PER_INTENT} objects")
             continue
@@ -505,10 +521,7 @@ def clamp(
                     drop(delta, RejectionReason.TARGET_UNKNOWN, "meter")
                     continue
                 cap = meter.max_delta_per_tick
-                so_far = meter_total.get(delta.meter_id, 0)
-                net = max(-cap, min(cap, so_far + delta.change))
-                change = net - so_far
-                meter_total[delta.meter_id] = net
+                change = _budget(meter_total, delta.meter_id, cap, delta.change)
                 if change == 0 and delta.change != 0:
                     drop(delta, RejectionReason.CLAMPED, f"meter cap {cap} per tick reached")
                     continue
@@ -659,6 +672,36 @@ def clamp(
     return Clamped(kept=tuple(kept), cut=tuple(cut))
 
 
+def cap_meters(state: State, deltas: Sequence[d.Delta]) -> Clamped:
+    """Second pass across every intent in a tick: net meter change stays within the cap.
+
+    ``clamp`` budgets per intent; the orchestrator calls this over the union so
+    three seats cannot each spend the full cap on the same meter.
+    """
+    kept: list[d.Delta] = []
+    cut: list[Cut] = []
+    totals: dict[MeterId, int] = {}
+    for delta in deltas:
+        if not isinstance(delta, d.MeterDelta) or delta.meter_id not in state.meters:
+            kept.append(delta)
+            continue
+        cap = state.meters[delta.meter_id].max_delta_per_tick
+        change = _budget(totals, delta.meter_id, cap, delta.change)
+        if change == 0 and delta.change != 0:
+            cut.append(
+                Cut(delta_id=delta.delta_id, reason=RejectionReason.CLAMPED, detail="tick cap")
+            )
+            continue
+        if change != delta.change:
+            kept.append(delta.model_copy(update={"change": change}))
+            cut.append(
+                Cut(delta_id=delta.delta_id, reason=RejectionReason.CLAMPED, detail="tick cap")
+            )
+        else:
+            kept.append(delta)
+    return Clamped(kept=tuple(kept), cut=tuple(cut))
+
+
 # --- reveal ------------------------------------------------------------------
 
 
@@ -725,11 +768,13 @@ __all__ = [
     "SafetyCheck",
     "Slots",
     "World",
+    "cap_meters",
     "clamp",
     "rate",
     "reveal",
     "roll",
     "seed_for",
     "slots",
+    "touched",
     "validate",
 ]
