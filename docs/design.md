@@ -64,6 +64,7 @@ Consequences the code keeps:
 | Cost | `cost_logged` (model calls outside a tick; schema v2) |
 | Admin | `admin_read` |
 | Goals | `goal_set`, `goal_progressed`, `goal_met`, `goal_undone` (schema v6) |
+| Session Zero | `session_zero_opened`, `character_listed` (schema v7) |
 
 Later layers add `vote_*`, `director_event_proposed`, `agent_harmed`, `seat_fallen`, `player_joined`, `key_attached`, `safety_refused`. Each addition bumps `core.SCHEMA_VERSION`.
 
@@ -550,3 +551,18 @@ README §7 and decision 37: a rival's goal is learned by working for it, and the
 - **The narrator** of the seeker is given the piece among the tick's applied deltas, so the briefing can report what the spies found.
 - **Tests.** The counterfactual test removes a piece: deputies without it file the same intents, and the holder's changes, so the test can fail. The duo test runs four ticks of Varda investigating Ostrel with every narration echoing its whole view: Varda learns all four pieces, and Ostrel's goal text and canary never reach Varda's person.
 - **Not yet.** `conceal` (raising the bar on your own goal), interception and capture of agents carrying pieces, and other seats' AI investigations aimed at goals on purpose, come with later items.
+
+### 17.3 `/establish` and the world compiler (1c)
+
+README §5 step 2. `revisionist establish "<place, date>"` (with `--plausibility`, `--inertia`, `--lethality`, `--betrayal`, `--tone`, `--tick-hours`) and the host's `/establish` lock a point in history:
+
+1. `engine/session_zero.draft_world` asks the frontier model (`SESSION_ZERO_MODEL`, call class `session_zero`, `prompts/establish.md`) for a whole world file in the fixed schema, given the place, the date and the table's settings for tone.
+2. The draft is checked: it must parse as a `WorldFile`, pass the Layer 7 compiler, and pass `world_compile.check_history`: a start, 8-12 roster characters, no human seats, no goals. The roster is checked like everything else: each character is a person, listed once, and controls the means it is given; `composite` has no default, so every character is labelled real or composite.
+3. On any problem the model gets one retry with the problems listed; a second failure is refused and **nothing is written**.
+4. The table's settings replace the draft's, the slug is derived from the place, and the compiled events are written, with `character_listed` for each roster entry and a Public `session_zero_opened(start, notes)` last. `notes` is the GM's log of readings it chose where the record is disputed or silent. The cost lands as `cost_logged(purpose=session_zero)`.
+
+**Phase.** `State.phase` is `play` for every campaign from a hand-written world (a late field, so older states are unchanged); `session_zero_opened` sets `session_zero`. `run_tick` and `play_tick` raise `NotInPlayError` outside play, before any faction spends a model call; `revisionist tick` exits 2, and the scheduler and `/advance` report `waiting: session zero`.
+
+**Who may establish.** The host only, for now. README §5 has `/establish` pass by the co-GM vote at three or more humans; that comes with votes (Layer 10 item 7). The new campaign becomes the host's current one; Discord's `/establish` uses the default settings.
+
+**Tests** use two hand-written drafts (Florence, April 1478; Washington, October 1962) under `tests/drafts/`, labelled as stand-ins to be re-recorded live; no recording exists for this prompt yet.
