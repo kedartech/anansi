@@ -10,7 +10,7 @@ Status legend: **[decided]** = Josh's call. **[proposed]** = Vera's design, not 
 
 ## 1. Pitch
 
-Wyrd Protocol is an AI-run multiplayer statecraft game. Think of an expanded, gamified Model UN run like a D&D campaign. Players describe a world. An AI game master builds it and runs everything nobody is playing. Each player takes a seat: head of state, general, foreign minister, spymaster, journalist, opposition leader, or anything the world supports. They can sit in the same government or in rival ones. Players act in their own words, any time, through a personal in-world agent. The world reacts, keeps secrets, and keeps moving whether they are online or not.
+Wyrd Protocol is an AI-run multiplayer statecraft game. Think of an expanded, gamified Model UN run like a D&D campaign. Players pick a moment in history. An AI game master builds that world from the record and runs everything nobody is playing. Each player takes on a real person from that moment, judged by their agency rather than their fame: a head of state, a general, a banker, a spymaster, an assassin. Each one has a secret goal, which can be the one history gave them or one it never did. They can sit in the same government or in rival ones, and whoever has met their goal when the season ends wins. Players act in their own words, any time, through a personal in-world agent. The world reacts, keeps secrets, and keeps moving whether they are online or not.
 
 **Name.** *Wyrd* is the Old English word for fate: that which has come to be, often pictured as a woven thread. It fits the engine: the log is the past that cannot be altered, the world is a web of connections, and consequences arrive late. See §19 before any public release.
 
@@ -43,7 +43,7 @@ Not the reference: Studio 14b's scripted "President Simulator" on Steam (Early A
 | 1 | AI backend | Yes. Free-text actions with AI-generated reactions. |
 | 2 | Headline mode | Multiplayer campaigns. Players enrol and choose a seat, in the same government or a different one. |
 | 3 | Formats | Several formats on one engine. Military strategy is one seat or scenario type, not the whole game. |
-| 4 | World creation | Players prompt it, D&D style: real countries in a real historical start, real countries in a fictional scenario, or an invented world. |
+| 4 | World creation | v1: **history only.** Any real period or event the table can build a world around, from antiquity to the recent past, agreed at Session Zero. Fictional scenarios and invented worlds come in a later version. (Revised 2026-10-20.) |
 | 5 | Timing | Asynchronous, not strictly turn-based. The world responds to differences in activity between players. |
 | 6 | Formal sessions | Hearings, votes, summits and similar procedure exist in the fiction and act as sync points. |
 | 7 | Audience | Friends and family first, with a path to wider distribution. |
@@ -62,22 +62,26 @@ Not the reference: Studio 14b's scripted "President Simulator" on Steam (Early A
 | 20 | Player agent | Players never talk to the GM directly. Each player has a personal in-world agent that structures orders, briefs, advises, and runs the seat as deputy when the player is away. Players design the agent's persona; its function is fixed. |
 | 21 | Agent harm | The world can act on a player's agent: kidnap, turn or kill it. Losing it blinds the seat until a replacement is found in the fiction. |
 | 22 | AI-generated events | The GM's director layer generates events (tragedies, disasters, exposures, assassinations, scandals). Some can cause permanent harm to a player. |
-| 23 | Goals | Session Zero mode: Goals (set and revise trackable goals, scored per seat) or Open (sandbox, no set ending). |
+| 23 | Goals | Each player picks one goal for their character after choosing the character: from a suggested list (what really happened, or what could have), or their own, grounded in the known world. Goals mode ships first. Open mode (sandbox, no set ending) comes after the first working game. (Revised 2026-10-20.) |
 | 24 | Betrayal and elimination | Set at Session Zero. Default: cutthroat, lethality Hard, elimination on. An eliminated player returns as a new character they design. |
 | 25 | Operation slots | 3 per seat to start, cap 5, earned or lost in the fiction. Talk and diplomacy never use a slot. |
 | 26 | Seats per human | One human, one seat (solo players may switch at chapter breaks). |
 | 27 | Joining mid-campaign | By invite, up to 10. Take over an AI seat or build a new character. Vote from the second tick. |
-| 28 | Real people | May appear by name and act in the fiction. The game never invents allegations about them. |
+| 28 | Real people | May appear by name and act in the fiction, including living and recently dead people in recent-history settings, and as player characters. The game never invents allegations about them. (Widened 2026-10-20.) |
 | 29 | Content rating | None by default. The table sets one at Session Zero if it wants one. Platform hard lines always apply. |
 | 30 | First playtest | Josh holds a seat, solo first. Not adults-only. |
 | 31 | Models | Josh's Claude API, separate key, hybrid split (frontier for the resolver, small for everything else). Players may bring their own Claude key for their seat's calls. |
 | 32 | Budget | Provisional: $10/month solo, $30/week at 10 players (alert at $20), $150/month backstop on the key. Reset after the first build measures cost per tick. |
 | 33 | Bug reports | In-game `/bug` snapshots state and log with a notes field. |
 | 34 | Engine language | Python. Pydantic models are the schema; the deterministic core (rate, roll, clamp, apply, project) stays pure functions with no I/O so it can be ported to Rust later. Postgres for storage. |
+| 35 | Characters | Each player plays a person from the chosen point in history: picked from a suggested roster, found by describing what they want to play, or named by the player even if unlisted. Characters are judged by **agency in history, not fame**: a spy or assassin nobody remembers can matter as much as a king. No two players may hold the same character. (2026-10-20) |
+| 36 | Winning | Decided at **season end**. Every player whose goal is met wins. A player who meets their goal keeps playing and may help or thwart the others. (2026-10-20) |
+| 37 | Secret goals | Goals are secret. Other players learn them only through intelligence in the fiction: sending spies, intercepting messages, turning or capturing agents. Partial information is normal. (2026-10-20) |
+| 38 | Competing goals | Allowed. Two players may want the same throne. (2026-10-20) |
 
 ## 4. Core loop [proposed]
 
-1. **Session Zero.** Players describe the world, pick seats, and design their agents. The GM writes the world bible in the fixed schema (§12).
+1. **Session Zero.** Players agree on a point in history and lock it with `/establish`. Each player then chooses a character, chooses a secret goal, reads a historical brief, and designs their agent. The GM writes the world bible in the fixed schema (§12).
 2. **Briefing.** Each seat's agent writes that seat's briefing, from that seat's knowledge only.
 3. **Act.** Players talk to their agent in free text, any time. The agent turns orders into structured intents, tagged with a visibility level (§7). Players can also talk to each other directly.
 4. **Resolve.** Each resolution tick, the engine batches every intent in that window, plus the AI factions' moves and any director events, and resolves them together (§13).
@@ -86,31 +90,51 @@ Not the reference: Studio 14b's scripted "President Simulator" on Steam (Early A
 
 ## 5. Session Zero [proposed]
 
-Every campaign starts here, as at a tabletop. Defaults to a quick start: a preset scenario, a menu of seats with one-line pitches, and preset settings. Everything can be customised.
+Every campaign starts here, as at a tabletop. Defaults to a quick start: a preset historical start, a suggested roster, and preset settings. Everything can be customised.
 
-- **Setting prompt:** free text, for example "1914, the archduke survives", "modern Europe but Texas seceded", or "three moon colonies fighting over water".
+Session Zero runs in five steps, in order. Steps 3-5 are private to each player.
+
+1. **Discuss.** The players talk freely in the campaign channel about when and where to play. The GM can answer questions about a period ("what was going on in Florence in 1478?") but builds nothing yet.
+2. **Establish (`/establish`).** One command locks the world: a point in history (place and date, for example "Florence, April 1478" or "Washington, October 1962") plus the settings below. Any human can call it; it passes by the co-GM vote rules (§14), or by the host alone at 2 or fewer humans. The GM then compiles the world bible from the historical record at that date. After this, the start is fixed.
+3. **Character.** Each player picks one of three routes:
+   - **Roster:** a suggested list of 8-12 real people from that moment, each with a one-line pitch and their reach.
+   - **Search:** the player describes what they want to play ("someone who can move money without being seen") and the GM suggests matching real people.
+   - **Own pick:** any real person from that point in history, listed or not. The GM checks they existed and were placed to act at that date, then adds them to the world bible.
+   Characters are judged by **agency in history, not fame**. An unnamed spy, courier, banker's clerk or assassin is a valid character, and the roster includes such roles deliberately, as a named or composite person drawn from what the record shows such people did. Once a player claims a character, no one else can (decision 35).
+4. **Goal.** Each player picks one secret goal (decision 37), again by one of three routes:
+   - **As history went:** what the character really tried for, and whether they got it.
+   - **As history could have gone:** plausible alternatives the character was placed to try.
+   - **Own goal:** written by the player, grounded in the world as it stands.
+   Every goal must compile to a condition the engine can check in code (§15). The agent helps reword a goal that cannot, for example "be remembered as great" into "hold the Signoria and outlive the Pazzi". Two players may hold competing goals (decision 38).
+5. **Brief.** The player's agent delivers the tick-0 briefing: the character's real history up to the start date, how they really pursued the goal and how it turned out (where the record says), and one suggested route to the goal, marked as a suggestion. Where the record is thin or disputed, the brief says so instead of filling the gap.
+
+Settings locked by `/establish`:
+
+- **Setting:** a real point in history, anywhere from antiquity to the recent past (decision 4). Recent events and living people are allowed (decision 28). Fictional scenarios and invented worlds come later.
 - **Plausibility:** Strict / Plausible / Pulp. Shifts feasibility bands; never removes engine clamps.
 - **Historical inertia:** None / Tendencies / Strong. How hard AI factions carry real-world doctrine, weakening as the world diverges.
 - **Tone:** for example grounded, satirical, pulp or grim.
 - **Content rating:** none unless set. Lines (never on the table) and veils (off-screen only). Any player can add a line anonymously at any time; the most restrictive setting wins. If anyone under 18 is at the table, Session Zero reminds the table to set a rating.
-- **Goals mode or Open mode** (decision 23).
+- **Goals mode** (decision 23). Open mode is not offered in v1.
 - **Betrayal intensity:** cooperative / intrigue with caps / cutthroat (default) / cutthroat with elimination (default on).
 - **Lethality:** Soft (setbacks only) / Hard (permanent losses, default) / Brutal (elimination from events).
 - **Agent harm:** on or off (default on).
 - **Compromised-aide twist:** opt-in (automatic at cutthroat).
 - **Clock speed:** in-world time per real day, and the tick interval. Family campaigns default to 12-24 hour ticks and one digest per player per day.
 - **Availability windows** per player, which formal sessions respect.
-- **Seat selection:** each player picks or invents a seat. The GM confirms it exists in the world bible or adds it. A balance check scores each seat's means and reach on a fixed rubric; outliers need the table's approval.
-- **Agent design:** each player designs their agent's persona (§10).
+- **Balance check:** run after steps 3 and 4. It scores each character's means and reach on a fixed rubric and each goal's difficulty from the same state. A powerful character with an easy goal, or a weak one with an impossible goal, is flagged to the player with a suggested adjustment; outliers need the table's approval. Scores stay private, so the check does not reveal goals.
+- **Agent design:** each player designs their agent's persona (§10), after the brief.
 - **Table norms:** lies stay in the game; out-of-game alliances allowed or in-game channels only.
-- **Output:** a **world bible** in the fixed schema. It covers polities, leaders, factions, resources, geography, tensions, open threads, and each seat's starting knowledge, which may differ between seats. Seat backstory locks when Session Zero ends.
+- **Output:** a **world bible** in the fixed schema. It covers polities, leaders, factions, resources, geography, tensions, open threads, and each seat's starting knowledge, which may differ between seats. Each player seat carries its character and its goal clock, both Private to that seat. Seat backstory locks when Session Zero ends.
+- **Historical accuracy.** The world bible and briefs are drawn from the documented record and say "as recorded" where it matters. Where historians disagree or the record is silent, the GM picks one reading for the world bible and logs that it did so. Past the start date, history is whatever the players make it.
 
 ## 6. Seats [proposed]
 
 - A seat is any role with agency in the world. Examples: head of state, minister, general, admiral, intelligence chief, ambassador, opposition leader, governor, CEO, journalist, arms dealer, revolutionary.
 - Several players can share a government. Their seats come with **differing interests**: the defence minister wants budget, the finance minister wants cuts. The world bible gives each seat a domain the head can't veto; the head's overrides are public and cost standing.
 - Each seat has **means** (typed assets and relationships: money, people, assets, contacts, legal powers) and **reach** (what it can affect directly). Means are an inventory, seeded at Session Zero and changed only by logged events. A means the seat doesn't have becomes an acquisition action: recruit, buy, build, turn an agent. That takes time and slots and carries exposure.
-- **Objectives.** In Goals mode, each seat has 2-3 public mandate objectives plus an optional hidden agenda, each tracked as an engine clock. Score is against your own objectives; there is no single winner.
+- **A player seat is a character:** a real person from the chosen moment (decision 35), with the means and reach the record gives them at that date. The player's agent is that character's aide.
+- **Goal.** Each player seat has one secret goal (decisions 23, 37), tracked as an objective clock with a win condition the engine checks in code (§15). AI seats keep their historical aims as objectives that drive their moves but never win.
 - **Operation slots.** 3 to start, cap 5. Each running operation holds one slot until it resolves; extra orders wait in a visible queue. Slots are gained by hiring staff, fixers or a network, and lost through scandal or lost assets. They are never spent, saved or traded. Statements, talks and diplomacy are always free.
 - **One human, one seat.** In solo, the player holds one seat and may switch at chapter breaks.
 - **Falling.** A seat can be lost to events or to other players. The player returns as a new character designed to fit the world as it now stands: passes the same balance check, starts with public knowledge only, fresh inventory seeded by the engine. The player keeps their own memory of what the old seat knew; that is drama, not policed.
@@ -127,6 +151,12 @@ Every campaign starts here, as at a tabletop. Defaults to a quick start: a prese
 - **Players control disclosure.** They can share, leak, lie or forge. The game does not fact-check what one player tells another. Forgery is between seats only, never of the real person behind a seat.
 - **Discovery is gameplay.** Intelligence work, journalists, informants, audits, defectors and plain bad luck can expose covert actions over time. The engine rates the odds and rolls them.
 - **Covert seats are first-class.** Spy, double agent, shadow financier and saboteur are valid seats.
+- **Intelligence on goals (decision 37).** A goal is a Private fact about a seat and leaks only the way any secret does. A player who wants to know a rival's goal has to work for it:
+  - **Send a spy.** An `investigate` operation against a seat, using a Network asset or a recruited informant. It takes slots and time and carries exposure. Each success returns one **piece** of the goal, in a fixed order from vague to exact: that the target has an aim at all, then its domain (office, wealth, a person, territory), then the object (which office, which person), then the full condition. A partial success may return a piece that is true but misleading, such as the right domain with the wrong object.
+  - **Intercept.** Letters, couriers and agents carry information; seizing them can grant a piece directly.
+  - **Turn or capture.** A captured spy can be interrogated (revealing who sent them, and possibly that sender's goal pieces) or turned to feed false reports back. Losing your agent to capture risks exposing what it knew.
+  - **Counter-intelligence.** `conceal` raises the exposure bar on your own goal; `forge` plants a false goal fact for a rival's spies to find.
+  - Goal pieces are ordinary Facts in the seeker's knowledge layer. Players may share, sell or lie about them like anything else. Nothing about a goal reaches anyone through the briefing narrators, the press or the dashboard.
 - **Enforced by code, not by prompt.** Every event carries `visibility` and `known_by`. Every narrator, agent, AI faction, NPC and outlet is built from `project(state, actor_id)`. The full-truth resolver emits only enums, IDs and numbers; none of its prose reaches a player. Each seat has its own chronicle; no shared true chronicle is ever fed to a narrator. Players see **perceived** odds, from their own knowledge, only after an order is filed and locked. Conditional orders trigger only on events the seat can see.
 - **The opacity boundary is the human,** not the seat. Tests check the union of everything each human can see.
 - **Leak tests** run in CI before any playtest: canary strings planted in covert orders and searched for in all outbound text over 50+ ticks; counterfactual tests (remove one covert fact, AI moves must not change); the prompt-injection suite; Discord metadata checks.
@@ -167,7 +197,7 @@ Players never talk to the GM directly. Each player has a personal in-world agent
 - writes the seat's briefings and dashboard
 - suggests moves (every briefing ends with one dilemma on a clock and 3 suggested moves)
 - runs the seat as deputy while the player is away (§9)
-- helps turn goals into engine clocks (Goals mode) and helps design a new character after elimination
+- runs the character, goal and brief steps of Session Zero (§5): suggests characters and goals, checks a custom goal compiles to a win condition, and helps design a new character after elimination
 
 **Persona (designed by the player):** name, role in the world, personality and voice, backstory, relationship to the seat, portrait (later client). Locked at Session Zero; cosmetic changes allowed later; role changes only through events in the fiction.
 
@@ -241,10 +271,16 @@ Four stages per intent, every tick:
 
 ## 15. Chapters, seasons and endings [decided mode; proposed mechanics]
 
-- **Goals mode:** players set goals at Session Zero and revise them during play; each becomes a clock the engine scores. Scoring is per seat; no single winner. Fixed in-world checkpoints (elections, budgets) give scored moments.
-- **Open mode:** sandbox, no set ending.
-- **Both modes:** chapter breaks with a partial covert reveal and a history snapshot, so an open campaign still pays off. A season (about 3 real weeks by default) ends with a climactic formal session, an epilogue, a full covert reveal, the history page and a ledger per seat. A sequel season can inherit the world. If active seats fall below a threshold, the director brings the finale forward.
-- **Dashboard** on demand and at the top of every briefing: standing, means, slots, 2-3 seat-specific meters, objective progress.
+Revised 2026-10-20 (decisions 36-38). This replaces the old per-seat scoring with no winner.
+
+- **Win conditions are code.** A goal compiles at Session Zero into a typed condition over state, built from a closed set of checks: holds an Office, controls an Asset, an Entity's status (alive, dead, captured, exiled), a Meter at or past a value, a Commitment in force, a Relationship at or past a disposition, and AND / OR over these. No model ever decides whether a goal is met. A goal that cannot be written this way is reworded at Session Zero or refused.
+- **Progress** is the goal's objective clock: the engine advances it as sub-conditions come true, so the dashboard can show "2 of 3" to the owner only.
+- **Meeting a goal.** When the condition first holds at the end of a tick, the engine logs `GoalMet`, Private to the owner. The player keeps playing with full means, and may help or thwart the others. Whether a met goal stays met if the world later undoes it is an open question (§21).
+- **Season end decides the winners.** Every player whose goal is met wins. Several winners, or none, are both valid endings. The full reveal shows every goal, who met it and when, and which pieces each rival had uncovered.
+- **No changing goals mid-season.** A goal is fixed at Session Zero. A player whose goal becomes impossible (their target dies at someone else's hand) may pick a new one at the next chapter break, from the same three routes, at a stated cost to progress. A fallen character's goal ends with them; the redesign gets a new one.
+- **Open mode** (sandbox, no set ending) returns after the first working game.
+- **Chapter breaks** come with a partial covert reveal and a history snapshot, so a long campaign pays off along the way. A season (about 3 real weeks by default) ends with a climactic formal session, an epilogue, a full covert reveal, the history page and a ledger per seat. A sequel season can inherit the world. If active seats fall below a threshold, the director brings the finale forward.
+- **Dashboard** on demand and at the top of every briefing: standing, means, slots, 2-3 seat-specific meters, goal progress (owner only), and the goal pieces gathered on each rival.
 
 ## 16. Scale and formats [decided range; proposed mechanics]
 
@@ -292,11 +328,11 @@ Share cards contain public information only, carry a one-line context, and carry
 - **Abstraction is an engine rule.** Weapons of mass destruction, explosives, weapon conversion, intrusion and laundering are abstract capability clocks. Narration gives results, never procedures, quantities, precursors or code. Input and output classifiers back this up.
 - Checks run on the engine's **input**: player orders, covert actions, co-GM proposals, agent and AI-faction moves, standing orders. Breaking a line is refused out of character, not attempted in the fiction.
 - **Prompt injection:** player text is data, never instructions. The agent boundary (§10) and the referee split (§11) are two layers of defence.
-- **Real people (decision 28):** may appear by name and act in the fiction. The engine and director never generate claims of crime, corruption, sexual misconduct, health conditions or private scandal about real people. The documented public record is fine. A player's covert "exposure" of a real figure is narrated as the player's operation inside the game. Real living private individuals are never included by name. No mastheads that mimic real newspapers; no fake polls attributed to real polling firms. The US general election is **Nov 3, 2026**; the watermark matters now.
+- **Real people (decision 28):** may appear by name and act in the fiction, including living people when the table picks a recent setting, and including as a player's character. Playing a real person is a counterfactual inside the game, never a claim about what they did or would do; briefs separate the record from the game. The engine and director never generate claims of crime, corruption, sexual misconduct, health conditions or private scandal about real people. The documented public record is fine. A player's covert "exposure" of a real figure is narrated as the player's operation inside the game. Real living private individuals are never included by name. No mastheads that mimic real newspapers; no fake polls attributed to real polling firms. The US general election is **Nov 3, 2026**; the watermark matters now.
 - **Minors.** Under 13 is not allowed (Discord's terms). When anyone 13-17 plays: age band recorded, DMs between players routed through the bot, a guardian told, and a Session Zero reminder to set a rating. Not enforced beyond that (decision 29).
 - **Harassment.** Anonymous `/pause` and `/report`. Josh can audit reported exchanges; players are told at Session Zero that opacity is a game rule, not privacy from the admin. No targeting anyone's real identity or politics. Moderation applies to every channel level.
 - **Data.** A one-page notice at Session Zero: what is stored, who can read it (Josh and the model provider), retention (for example 90 days after the season), and how to get a copy or request deletion. API terms with no training on data and minimal retention.
-- **Before public distribution** (not needed for friends and family): an LLC holding the repo, accounts and Discord app; ToS, acceptable-use, privacy and content policy; an age gate; a moderation queue and ban process; Discord bot verification; payments through a merchant of record. **[open]** A trademark knockout search on "Wyrd Protocol" has not been run and must be before any public release. **[open]** An "About the name" page crediting the Old English and Old Norse source of *wyrd* (Norse *urðr*). Original disclaimer text and format names, not copied from Fantasy President. For the later client: no likeness of any real living person, a visible AI/fiction label plus C2PA provenance, a face-match moderation pass.
+- **Before public distribution** (not needed for friends and family): an LLC holding the repo, accounts and Discord app; ToS, acceptable-use, privacy and content policy; an age gate; a moderation queue and ban process; Discord bot verification; payments through a merchant of record. **[open]** A trademark knockout search on "Wyrd Protocol" has not been run and must be before any public release. **[open]** Review whether living people may be the target of a harm goal such as assassination (allowed for friends and family, §21 item 6). **[open]** An "About the name" page crediting the Old English and Old Norse source of *wyrd* (Norse *urðr*). Original disclaimer text and format names, not copied from Fantasy President. For the later client: no likeness of any real living person, a visible AI/fiction label plus C2PA provenance, a face-match moderation pass.
 
 ## 20. Models and cost [decided]
 
@@ -312,6 +348,9 @@ Share cards contain public information only, carry a one-line context, and carry
 1. Whether co-GM proposals may name a specific player's seat (currently allowed by decision 13; revisit after the first multiplayer slice).
 2. Exact lead time for co-GM events (1-2 ticks proposed).
 3. Season length default (about 3 weeks proposed) and chapter-break cadence.
+4. Does a met goal stay met? Proposed: goals of the form "achieve X" lock when met; goals of the form "hold X" must still be true at season end. The goal step labels each one.
+5. Unnamed historical figures (a spy or courier the record does not name): proposed as a named composite drawn from what such people did, labelled as composite in the brief.
+6. Living people as targets of harm goals (assassination, capture, exile). **Allowed for now** (Josh, 2026-10-20). Must be reviewed before any public release; listed in the §19 pre-distribution checklist.
 
 ## 22. Build path
 
@@ -321,6 +360,6 @@ Layer-by-layer detail, tests and sizing: [docs/build-plan.md](docs/build-plan.md
 2. **Minimum slice, solo** (about 2-3 weekends): one hand-written world bible in the fixed schema; 1 human seat with its agent plus 3 AI factions; orders via CLI; a tick triggered manually running structure, rate, roll, propose, clamp, apply, narrate; one press outlet; a canary leak test from day one (AI factions must not act on the seat's covert facts). Not included: director events, co-GM, formal sessions, personas, Discord.
 3. **Exit criteria:** 10 ticks solo, zero canary leaks, cost per tick measured, Josh says collisions with AI factions felt fair.
 4. **Two-human slice:** a second human seat, Discord DMs and modals, the human-boundary canary test, perceived odds.
-5. **Then add, in order:** dashboard and Goals mode; absence protection with the agent as deputy; personas and the instant reaction card; press; formal sessions; chapters, seasons and the reveal; co-GM votes; director events and agent harm; elimination and redesign; joining mid-campaign; bring-your-own key.
+5. **Then add, in order:** the historical Session Zero (`/establish`, character, goal, brief) with win conditions, goal intelligence and the dashboard; absence protection with the agent as deputy; personas and the instant reaction card; press; formal sessions; chapters, seasons and the reveal; co-GM votes; director events and agent harm; elimination and redesign; joining mid-campaign; bring-your-own key.
 6. **Friends-and-family playtest** (up to 10 seats, Josh holding a seat) once the leak tests, safety floor and data notice are in place.
 7. Arenas, the later client and distribution only after the playtest and the pre-distribution checklist in §19.

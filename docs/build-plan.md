@@ -326,7 +326,12 @@ The exit criterion is **not met yet**: nothing has run against the real Discord 
 
 In the order README §22 step 5 gives, each as its own small PR with its tests. The order is chosen so each step uses only what is below it.
 
-1. **Dashboard and Goals mode.** Objectives as Clocks; per-seat score from Clock state; `/dashboard`.
+1. **Historical Session Zero, goals and winning** (README §5, §15, decisions 4, 23, 35-38; revised 2026-10-20, replacing "Dashboard and Goals mode" and pulling the old item 11 forward). Split into small PRs:
+   - a. **Win conditions.** A closed `WinCondition` union in `wyrd/core/` (holds office, controls asset, entity status, meter threshold, commitment in force, disposition threshold, all-of, any-of) and a pure `goal_met(state, condition) -> bool`. Property tests: deterministic; depends only on State; never true on the empty world. `GoalMet` event, Private to the owner. The objective clock advances as sub-conditions come true.
+   - b. **Goal intelligence.** `investigate` against a seat returns goal pieces in a fixed order (exists, domain, object, condition) as Facts in the seeker's view; partial outcomes may return a misleading piece; `forge` can plant a false goal fact. Counterfactual test: removing a goal fact changes no other seat's intents unless that seat holds a piece of it. Canary test: a goal's text never appears in another human's outbound text without a piece in their view.
+   - c. **`/establish` and the world compiler.** Discussion is free chat; `/establish "<place, date>"` with settings runs the LLM world-bible draft (frontier model), compiled by the Layer 7 compiler and validated before any event is written. Recorded-fixture tests on two periods (one ancient, one 20th century).
+   - d. **Character, goal and brief steps.** Roster (8-12), search by description, own pick (checked against the record and the start date); duplicate characters refused at the store with a unique constraint, not just in the prompt. Goal step with the three routes; a custom goal must compile to a `WinCondition` or is sent back with a rewording. Balance check on the pair. Tick-0 brief with "as recorded" and a labelled suggested route.
+   - e. **Dashboard and season end.** `/dashboard` with goal progress (owner only) and rival pieces gathered; season end lists every winner, or none, in the full reveal.
 2. **Absence protection.** Formal-session gate for irreversible outcomes from other players; auto-adjournment; declared leave. Uses Layer 6 deputy.
 3. **Personas and the instant reaction card.** Small-model persona calls on Public actions; share card renderer with watermark.
 4. **Press.** Several outlets, each with its own `project()`; slant as persona.
@@ -336,7 +341,7 @@ In the order README §22 step 5 gives, each as its own small PR with its tests. 
 8. **Director and agent harm.** Director proposals go through the same Delta union and clamp; exposures only from Facts with exposure risk; foreshadowing as a `ScheduledEventQueued` one tick ahead; `AgentHarmed` with the blinding rules of README §10.
 9. **Elimination and redesign.** `SeatFallen`; new-character flow through the Session Zero balance check.
 10. **Joining mid-campaign.** `PlayerJoined`; take-over of an AI seat inherits its knowledge layer; vote eligibility from the second tick.
-11. **LLM-run Session Zero.** Prompt in, world bible out, compiled by the Layer 7 compiler; balance check on seats.
+11. **LLM-run Session Zero.** Moved into item 1 (2026-10-20). Fictional and invented-world setups, and Open mode, come after the friends-and-family playtest.
 12. **Bring-your-own key.** `KeyAttached`; per-seat call routing; the resolver always on the host key.
 13. **Budget governor degrade ladder.** Meter from Layer 5 drives: fewer persona calls, merged press, agents on standing orders, longer tick.
 14. **Safety classifiers.** Input and output classifiers replacing the Layer 4 keyword hook; abstraction clocks for the dangerous-capability list; real-person rules (README §19).
