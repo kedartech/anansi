@@ -1,4 +1,4 @@
-"""The tick orchestrator (README §13; build plan Layer 4).
+"""The tick orchestrator (spec §13; build plan Layer 4).
 
 The only module that both reads the store and calls providers. It drives the
 pure core through six stages, each landed in the log as one atomic batch
@@ -62,7 +62,7 @@ class Narration(Model):
 
 
 class Resolver(Protocol):
-    """The one place truth meets a model (README §12). Layer 5 implements it with Claude."""
+    """The one place truth meets a model (spec §12). Layer 5 implements it with Claude."""
 
     def propose(
         self, state: State, intents: Sequence[Intent], rolls: Mapping[IntentId, referee.Roll]
@@ -520,7 +520,7 @@ def _operations(
     then advance every open operation (old and new) by one segment.
 
     A running operation is re-rated and re-rolled each tick from its own seed
-    (README: the world keeps moving). A failure stops it; a success that fills
+    (spec: the world keeps moving). A failure stops it; a success that fills
     the clock logs ``operation_resolved`` with the outcome actually rolled.
     """
     out: list[Event] = []
@@ -652,7 +652,7 @@ def _scheduled(em: _Emitter) -> list[Event]:
 
 
 def _topped(state: State, seat_id: SeatId, text: str) -> str:
-    """A player's briefing opens with their dashboard (README §15); the press's does not."""
+    """A player's briefing opens with their dashboard (spec §15); the press's does not."""
     if state.seats[seat_id].kind is not SeatKind.PLAYER:
         return text
     board = dashboard.render(dashboard.dashboard(project(state, seat_id)))
@@ -689,7 +689,7 @@ def _narration_seats(state: State) -> list[SeatId]:
     """Humans get a private briefing; outlets get a public one from their own view.
 
     An outlet only ever narrates what its view contains, so a press seat learns a
-    secret exactly when someone leaked it and not before (README §11).
+    secret exactly when someone leaked it and not before (spec §11).
     """
     return sorted(
         s.seat_id

@@ -61,7 +61,7 @@ def test_other_seats_show_only_their_face() -> None:
 def test_how_another_seat_is_run_never_changes_a_view(
     controller: Controller, status: SeatStatus, blinded: bool, slots: int
 ) -> None:
-    """README §17: human or AI, agent, persona, status and deputy stay hidden."""
+    """spec §17: human or AI, agent, persona, status and deputy stay hidden."""
     state = replay(fx.creation_events())
     before = project(state, fx.SOUTH).model_dump_json()
     north = state.seats[fx.NORTH].model_copy(

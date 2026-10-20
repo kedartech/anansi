@@ -1,6 +1,6 @@
 # Contributing
 
-Builders: Josh and Vera (README §3 #17).
+Builders: Josh and Vera (spec §3 #17).
 
 ## Rules
 

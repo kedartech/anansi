@@ -1,17 +1,17 @@
 # Revisionist build plan
 
-Layer-by-layer plan for building the engine described in [README.md](../README.md) (v2). Written 2026-10-19. Plan only; nothing here is built.
+Layer-by-layer plan for building the engine described in [game-spec.md](game-spec.md) (v2). Written 2026-10-19. Plan only; nothing here is built.
 
-Each layer has a purpose, what it produces, what it depends on, how it is tested, and a definition of done. Layers 0-7 are the **solo minimum slice** (README §22 steps 1-3). Layers 8-9 are the **two-human slice** (§22 step 4). Layer 10 is the feature ladder (§22 step 5) toward the friends-and-family playtest.
+Each layer has a purpose, what it produces, what it depends on, how it is tested, and a definition of done. Layers 0-7 are the **solo minimum slice** (spec §22 steps 1-3). Layers 8-9 are the **two-human slice** (§22 step 4). Layer 10 is the feature ladder (§22 step 5) toward the friends-and-family playtest.
 
-Status legend as in the README: **[decided]**, **[proposed]**, **[open]**.
+Status legend as in the [spec](game-spec.md): **[decided]**, **[proposed]**, **[open]**.
 
 ---
 
 ## Principles that order the layers
 
 1. **Bottom-up along the trust gradient.** Pure, deterministic code first (schema, fold, rate, roll, clamp, project). I/O second (log store, tick orchestrator). LLM third. Humans and Discord last. Each layer is testable without the layers above it.
-2. **The log is canon from the first commit** (README #19). Even Session Zero output is a stream of creation events. There is never a "state table" that is not derivable by replay.
+2. **The log is canon from the first commit** (spec #19). Even Session Zero output is a stream of creation events. There is never a "state table" that is not derivable by replay.
 3. **No LLM call in CI.** Every layer that touches a model also ships a recorded-fixture provider so the suite runs offline and free. Live calls happen in a separate, opt-in cost-measurement job.
 4. **The pure core is swarmable.** Layers 1-3 are pure functions with typed inputs and property tests, so they can be split into small TDD briefs for parallel subagents. Layers 4-7 are integration work and are better done in one head.
 5. **Leak tests start at the first narration**, not before a playtest. The canary harness lands with the first narrator (Layer 5).
@@ -39,7 +39,7 @@ Status legend as in the README: **[decided]**, **[proposed]**, **[open]**.
 
 ## Layer 1: Design doc and schema
 
-**Purpose.** README §12 and §13 as pydantic models. The design doc and the models are one deliverable: `docs/design.md` explains, `revisionist/core/schema.py` (split into modules as it grows) defines.
+**Purpose.** spec §12 and §13 as pydantic models. The design doc and the models are one deliverable: `docs/design.md` explains, `revisionist/core/schema.py` (split into modules as it grows) defines.
 
 **Produces.**
 
@@ -47,7 +47,7 @@ Status legend as in the README: **[decided]**, **[proposed]**, **[open]**.
 
 *Visibility.* `Visibility = Public | Restricted | Private | Covert`, and `KnownBy: frozenset[ActorId]`. Every event and every Fact carries both.
 
-*Ontology* (README §12, fixed and world-agnostic):
+*Ontology* (spec §12, fixed and world-agnostic):
 - `Entity(kind: polity|faction|person|org|location, status, ...)`; the player agent is an Entity with `kind=person`.
 - `Asset(kind: Force|Wealth|Network|Office|Info|Facility, tier: 0-5, controller, location, loyalty)`.
 - `Relationship(a, b, disposition: -5..+5, price_tags, leverage_tags)`.
@@ -96,7 +96,7 @@ Event(
 **Produces.**
 - `apply(state, event) -> state`: total fold, one event at a time. Unknown kinds raise; the log is never silently skipped.
 - `replay(events) -> state` and `replay_to(events, tick)`.
-- `project(state, actor_id) -> View`: everything the actor is in `known_by` for, plus everything `Public`. A `View` is a separate pydantic model from `State`, so a type error catches passing truth where a view belongs. **This is the only read path for any narrator, agent, faction, NPC or outlet** (README §7).
+- `project(state, actor_id) -> View`: everything the actor is in `known_by` for, plus everything `Public`. A `View` is a separate pydantic model from `State`, so a type error catches passing truth where a view belongs. **This is the only read path for any narrator, agent, faction, NPC or outlet** (spec §7).
 - `EventStore` protocol: `append(event) -> seq`, `read(campaign, from_seq)`, `snapshot(seq)`. Two implementations here: in-memory (tests) and a single-file SQLite store (solo slice). Postgres arrives in Layer 8 behind the same protocol.
 - Snapshots: state is checkpointed at every `TickClosed`; replay = nearest snapshot + tail.
 
@@ -110,13 +110,13 @@ Event(
 **Size.** One weekend. Swarmable: fold cases per EventKind.
 
 **Open in this layer.**
-- **[proposed]** SQLite for the solo slice instead of Postgres from day one. README §17 settles Postgres for hosting; the protocol makes the swap mechanical in Layer 8, and SQLite keeps the solo slice to one file with no server. Josh to confirm.
+- **[proposed]** SQLite for the solo slice instead of Postgres from day one. spec §17 settles Postgres for hosting; the protocol makes the swap mechanical in Layer 8, and SQLite keeps the solo slice to one file with no server. Josh to confirm.
 
 ---
 
 ## Layer 3: Deterministic core: rate, roll, validate, clamp
 
-**Purpose.** The referee (README §11, §13 stages 2-3 and the engine half of stage 4). No LLM anywhere.
+**Purpose.** The referee (spec §11, §13 stages 2-3 and the engine half of stage 4). No LLM anywhere.
 
 **Produces.**
 - `rate(view_or_state, intent, settings) -> FeasibilityBand` from means, reach, counterparty disposition and price, slot availability, and the plausibility setting. Because it takes a `View` as well as `State`, **perceived odds are `rate(project(state, seat), intent)`** and true odds are `rate(state, intent)`. One function, two inputs, no second code path.
@@ -125,7 +125,7 @@ Event(
 - `clamp(state, proposal: list[Delta], tier) -> list[Delta]`: the table below, applied in code. Anything over the limit is cut to the limit and the cut is logged as `DeltaRejected(reason=clamped)`.
 - `slots(state, seat) -> (used, cap)` and the queue order.
 
-**Clamp table [proposed].** The README says "clamp to size" without numbers; these are the first numbers, tuned after the solo slice.
+**Clamp table [proposed].** The spec says "clamp to size" without numbers; these are the first numbers, tuned after the solo slice.
 
 | Quantity | Limit per applied intent |
 |---|---|
@@ -139,7 +139,7 @@ Event(
 
 **Feasibility to outcome [proposed].** Impossible: always Fail-with-complication. Long shot 20%, Contested 50%, Likely 75%, Assured 95% chance of a success tier; within success, Partial 40% / Success 45% / Opportunity 15%. Exposure: independent roll against the Clock's `exposure` value; a hit expands `known_by` to one investigator entity, not to Public. Exposure escalates to Public only through further Investigate or Leak intents.
 
-**Tests (property).** `clamp` is idempotent and its output is always within the table. `roll` is reproducible from the seed. `rate` never returns Assured for an actor missing a required means. `validate` rejects every intent whose `means` the actor does not hold (the "claim an army" case, README §10).
+**Tests (property).** `clamp` is idempotent and its output is always within the table. `roll` is reproducible from the seed. `rate` never returns Assured for an actor missing a required means. `validate` rejects every intent whose `means` the actor does not hold (the "claim an army" case, spec §10).
 
 **Done when** a scripted tick of 5 intents against the Layer 2 fixture state resolves end to end with hand-written proposals (no LLM) and the log replays to the same state.
 
@@ -149,7 +149,7 @@ Event(
 
 ## Layer 4: Tick orchestrator (first I/O boundary)
 
-**Purpose.** README §13's state machine: FREEZE, PROPOSE, VALIDATE, APPLY, NARRATE, DELIVER. Each stage persisted; resumable; a failed tick is quiet.
+**Purpose.** spec §13's state machine: FREEZE, PROPOSE, VALIDATE, APPLY, NARRATE, DELIVER. Each stage persisted; resumable; a failed tick is quiet.
 
 **Produces.**
 - `revisionist/engine/tick.py`: drives the pure core; the only module that both reads the store and calls providers.
@@ -173,12 +173,12 @@ Event(
 **Purpose.** The first live model calls, behind the referee.
 
 **Produces.**
-- `AnthropicResolver`: input is the list of typed Intents plus the full `State` serialised (truth; this is the one place truth meets a model). Output is constrained to `list[Delta]` via tool-use/structured output; anything that fails to parse or validate is retried once, then dropped and logged (README §12). Frontier model tier.
-- `AnthropicNarrator`: input is `project(state, seat)` plus the applied deltas filtered to that view; output is prose for that seat only. Small model tier. One narration slot per human seat per tick (README §11).
+- `AnthropicResolver`: input is the list of typed Intents plus the full `State` serialised (truth; this is the one place truth meets a model). Output is constrained to `list[Delta]` via tool-use/structured output; anything that fails to parse or validate is retried once, then dropped and logged (spec §12). Frontier model tier.
+- `AnthropicNarrator`: input is `project(state, seat)` plus the applied deltas filtered to that view; output is prose for that seat only. Small model tier. One narration slot per human seat per tick (spec §11).
 - Prompt files versioned in-repo; the version string lands in every event envelope.
-- Prompt caching on from the first call (README §20).
+- Prompt caching on from the first call (spec §20).
 - `RecordedProvider`: replays stored request/response pairs so CI runs offline. A `--record` flag refreshes fixtures from a live call, reviewed in the PR.
-- Cost meter per call class, written as a `TickClosed` payload field, so cost per tick is measured from the first live tick (README #32).
+- Cost meter per call class, written as a `TickClosed` payload field, so cost per tick is measured from the first live tick (spec #32).
 - **Canary harness.** Covert Facts in fixtures carry unique canary strings. After every tick, all outbound text (narrations, briefings) is scanned for canaries the recipient should not know. Zero tolerance; the suite fails on one hit.
 
 **Tests.** Resolver output always validates against the Delta union (fuzz with malformed fixture responses). Narrator never receives a `State`, only a `View` (type-enforced; test asserts the call signature). Canary scan over 50 fixture ticks.
@@ -193,7 +193,7 @@ Event(
 
 ## Layer 6: Player agent and AI factions
 
-**Purpose.** README §10. The structure stage, briefings, perceived odds, and the deputy. Also the AI factions.
+**Purpose.** spec §10. The structure stage, briefings, perceived odds, and the deputy. Also the AI factions.
 
 **Produces.**
 - `Agent`: holds exactly `project(state, seat_id)` and the seat's persona. `structure(text) -> Intent | ClarifyingQuestion`; drops meta-text and rule claims. `brief() -> Briefing` ending with one dilemma on a clock and 3 suggested moves. `perceived_odds(intent) = rate(view, intent)`. `deputy_turn() -> list[Intent]`: competent defence on standing orders, never an irreversible verb (Declare war, Transfer of a tier-3+ asset, resignation) unless a standing order names it.
@@ -213,7 +213,7 @@ Event(
 
 ## Layer 7: World bible, Session Zero (hand-written), CLI
 
-**Purpose.** Close the solo minimum slice (README §22 step 2).
+**Purpose.** Close the solo minimum slice (spec §22 step 2).
 
 **Produces.**
 - `worlds/*.yaml`: a hand-written world bible in the fixed ontology, compiled to creation events by `revisionist world compile`. The first world is small: 4 polities, 3 AI faction seats, 1 human seat, 2 Meters per polity, about 15 Assets, one press outlet Entity.
@@ -221,7 +221,7 @@ Event(
 - CLI (`typer`): `revisionist new <world>`, `revisionist order "<text>"`, `revisionist tick`, `revisionist briefing`, `revisionist why <event_id>`, `revisionist replay --to <tick>`, `revisionist cost`, `revisionist leaks` (run the canary scan over the campaign log).
 - One press outlet narrated from its own `project()`; this is the first non-seat narrator and a second canary surface.
 
-**Exit criteria (README §22 step 3).** 10 ticks solo, zero canary hits, cost per tick recorded in the log and reported by `revisionist cost`, and Josh's judgment that collisions with the AI factions felt fair.
+**Exit criteria (spec §22 step 3).** 10 ticks solo, zero canary hits, cost per tick recorded in the log and reported by `revisionist cost`, and Josh's judgment that collisions with the AI factions felt fair.
 
 **Done when** Josh has played those 10 ticks.
 
@@ -231,13 +231,13 @@ Event(
 
 ## Layer 8: Postgres and the scheduler
 
-**Purpose.** Run unattended on the home server (README §17).
+**Purpose.** Run unattended on the home server (spec §17).
 
 **Produces.**
 - `PostgresEventStore` behind the Layer 2 protocol: one `events` table with `UNIQUE(campaign_id, seq)`, the application role granted `INSERT, SELECT` only (no `UPDATE`/`DELETE` at the grant level, so append-only is enforced by the database, not the code).
 - Snapshots table. Migration tool: hand-rolled numbered SQL files (**[decided]**, see Built below).
-- Scheduler: ticks fire on a timer, on all-submitted, or on host advance (README §9). systemd timer or an in-process APScheduler; **[decided]** systemd timer calling `revisionist scheduler run` (which runs the same tick path as `revisionist tick`), since the orchestrator is already resumable and a cron-style trigger needs no long-running process.
-- Nightly `pg_dump` off-box (README §17).
+- Scheduler: ticks fire on a timer, on all-submitted, or on host advance (spec §9). systemd timer or an in-process APScheduler; **[decided]** systemd timer calling `revisionist scheduler run` (which runs the same tick path as `revisionist tick`), since the orchestrator is already resumable and a cron-style trigger needs no long-running process.
+- Nightly `pg_dump` off-box (spec §17).
 - Migration test: a solo SQLite campaign exported and replayed into Postgres gives the same state hash.
 
 **Done when** a solo campaign runs for three days of 12-hour ticks with no manual trigger and the backup restores.
@@ -256,14 +256,14 @@ The exit criterion is **not met yet**: the three-day soak of 12-hour ticks and a
 
 ## Layer 9: Discord client, solo play first, then the two-human slice
 
-**Purpose.** README §17 Discord v1 and §22 step 4. Split in two so Josh can play the solo slice on Discord before a second person joins. 9a moves the solo slice onto Discord. 9b adds the second human, encryption at rest and the human-boundary canary.
+**Purpose.** spec §17 Discord v1 and §22 step 4. Split in two so Josh can play the solo slice on Discord before a second person joins. 9a moves the solo slice onto Discord. 9b adds the second human, encryption at rest and the human-boundary canary.
 
 **Prerequisite.** Layer 8: the Discord deliverer plugs into the shared tick runner and the scheduler extracted there.
 
 **Who the GM is. [proposed]** The GM is the engine, not a chat agent. The resolver and narrator keep running through the Claude CLI transport (Layer 5) and stay the only model calls that decide anything. The Discord bot is a transport. It turns interactions and DMs into the same calls the CLI makes (`receive_order`, `file_intent`, the shared tick runner) and sends what the engine delivers. It has no tools, no memory, no shell and no model call of its own.
 
 A Hermes profile is not used as the GM:
-- A Hermes gateway agent has tool access and its own memory, so a player's message would reach an agent that can read the database. That breaks the agent boundary (README §10), the prompt-injection defence (§19) and the canary guarantee.
+- A Hermes gateway agent has tool access and its own memory, so a player's message would reach an agent that can read the database. That breaks the agent boundary (spec §10), the prompt-injection defence (§19) and the canary guarantee.
 - One conversational agent serving several seats mixes their context, which is the leak this project exists to prevent.
 - Every Discord message would cost a full agent loop on top of the engine's own calls, on the same subscription.
 
@@ -309,8 +309,8 @@ The exit criterion is **not met yet**: nothing has run against the real Discord 
 **Produces.**
 - Second human seat. `/join` with a single-use invite code issued by the host.
 - Moved from 9a: the channel template (a public channel for public events and press, one private dispatch channel per player, names that encode nothing), and the `/order` modal's visibility select and spin line.
-- **Encryption at rest, keyed per player** (README §12): the `payload_enc` slot reserved in Layer 1 is now used for `OrderReceived`, `IntentFiled` with Covert visibility, and Covert `FactAsserted`. Keys per player in a separate table; erasure = key deletion. Every admin read of a decrypted payload writes `AdminRead`.
-- **Human-boundary canary** (README §7): the scan now checks the union of everything each Discord user can see across channels, DMs and threads, not just per seat.
+- **Encryption at rest, keyed per player** (spec §12): the `payload_enc` slot reserved in Layer 1 is now used for `OrderReceived`, `IntentFiled` with Covert visibility, and Covert `FactAsserted`. Keys per player in a separate table; erasure = key deletion. Every admin read of a decrypted payload writes `AdminRead`.
+- **Human-boundary canary** (spec §7): the scan now checks the union of everything each Discord user can see across channels, DMs and threads, not just per seat.
 - Metadata-leak checks: role names, channel membership and thread titles are generated from a fixed template that encodes nothing about alliances or agent status.
 - Alliance threads for restricted information, and perceived odds visible in briefings.
 
@@ -327,7 +327,7 @@ The exit criterion is **not met yet**: nothing has run against the real Discord 
 - **[decided]** Spin is the player's own line, made public as a new record kind, `statement_issued`.
 - **[decided]** The 4 recordings whose prompts embed the View were re-keyed offline (marked `rekeyed_from`); Josh re-records them live.
 - Visibility and spin are `/order` options, not a modal, so the CLI can match them. Alliance threads move to Layer 10: nothing in the engine targets a restricted shared surface yet.
-- Perceived odds are shown once an order is locked at the cutoff, not when it is filed (README §7).
+- Perceived odds are shown once an order is locked at the cutoff, not when it is filed (spec §7).
 
 The exit criterion is **not met yet**: nothing has run against the real Discord API with two people. Josh's steps are in deploy.md §9.6-9.9.
 
@@ -335,10 +335,10 @@ The exit criterion is **not met yet**: nothing has run against the real Discord 
 
 ## Layer 10: Feature ladder to the friends-and-family playtest
 
-In the order README §22 step 5 gives, each as its own small PR with its tests. The order is chosen so each step uses only what is below it.
+In the order spec §22 step 5 gives, each as its own small PR with its tests. The order is chosen so each step uses only what is below it.
 
-1. **Historical Session Zero, goals and winning** (README §5, §15, decisions 4, 23, 35-38; revised 2026-10-20, replacing "Dashboard and Goals mode" and pulling the old item 11 forward). Split into small PRs:
-   - a. **Win conditions.** A closed `WinCondition` union in `revisionist/core/` (holds office, controls asset, entity status, meter threshold, commitment in force, disposition threshold, all-of, any-of) and a pure `goal_met(state, condition) -> bool`. Property tests: deterministic; depends only on State; never true on the empty world. `GoalMet` event, Private to the owner. The objective clock advances as sub-conditions come true. Each goal gets a kind, Lasting or Undoable, from a fixed table keyed on the condition (README §15); an Undoable goal that stops holding logs `GoalUndone` and counts as unmet until it holds again. Season-end check: Lasting goals ever met, plus Undoable goals holding at that tick. Tests: an Undoable goal met then reversed is not a winner; a Lasting goal met then "reversed" by a later delta still is.
+1. **Historical Session Zero, goals and winning** (spec §5, §15, decisions 4, 23, 35-38; revised 2026-10-20, replacing "Dashboard and Goals mode" and pulling the old item 11 forward). Split into small PRs:
+   - a. **Win conditions.** A closed `WinCondition` union in `revisionist/core/` (holds office, controls asset, entity status, meter threshold, commitment in force, disposition threshold, all-of, any-of) and a pure `goal_met(state, condition) -> bool`. Property tests: deterministic; depends only on State; never true on the empty world. `GoalMet` event, Private to the owner. The objective clock advances as sub-conditions come true. Each goal gets a kind, Lasting or Undoable, from a fixed table keyed on the condition (spec §15); an Undoable goal that stops holding logs `GoalUndone` and counts as unmet until it holds again. Season-end check: Lasting goals ever met, plus Undoable goals holding at that tick. Tests: an Undoable goal met then reversed is not a winner; a Lasting goal met then "reversed" by a later delta still is.
      **Built (2026-10-20):** `core/goals.py`, schema 6, goals in the Salt Strait worlds, design §17.1. Kinds `goal_set`, `goal_progressed`, `goal_met`, `goal_undone`. "Exiled" is deferred until the resolver recordings are next re-recorded live.
    - b. **Goal intelligence.** `investigate` against a seat returns goal pieces in a fixed order (exists, domain, object, condition) as Facts in the seeker's view; partial outcomes may return a misleading piece; `forge` can plant a false goal fact. Counterfactual test: removing a goal fact changes no other seat's intents unless that seat holds a piece of it. Canary test: a goal's text never appears in another human's outbound text without a piece in their view.
      **Built (2026-10-20):** `core/intel.py`, pieces and decoys applied in APPLY, design §17.2. `conceal` waits for a later item.
@@ -355,17 +355,17 @@ In the order README §22 step 5 gives, each as its own small PR with its tests. 
 4. **Press.** Several outlets, each with its own `project()`; slant as persona.
 5. **Formal sessions.** Scheduled Entities with deadlines, notice, availability windows, pre-filed conditional votes, weekly cap.
 6. **Chapters, seasons, reveal.** `reveal()` from Layer 1 applied at chapter breaks (partial) and season end (full); history page from the log.
-7. **Co-GM votes.** `VoteOpened/Cast/Resolved`; quorum and majority rules as README #14; the fixed covert-plan effect table (Delay / Reroute / Repurpose / Cash out) applied in code; validator rejects `cancelled` from this source.
-8. **Director and agent harm.** Director proposals go through the same Delta union and clamp; exposures only from Facts with exposure risk; foreshadowing as a `ScheduledEventQueued` one tick ahead; `AgentHarmed` with the blinding rules of README §10.
+7. **Co-GM votes.** `VoteOpened/Cast/Resolved`; quorum and majority rules as spec #14; the fixed covert-plan effect table (Delay / Reroute / Repurpose / Cash out) applied in code; validator rejects `cancelled` from this source.
+8. **Director and agent harm.** Director proposals go through the same Delta union and clamp; exposures only from Facts with exposure risk; foreshadowing as a `ScheduledEventQueued` one tick ahead; `AgentHarmed` with the blinding rules of spec §10.
 9. **Elimination and redesign.** `SeatFallen`; new-character flow through the Session Zero balance check.
 10. **Joining mid-campaign.** `PlayerJoined`; take-over of an AI seat inherits its knowledge layer; vote eligibility from the second tick.
 11. **LLM-run Session Zero.** Moved into item 1 (2026-10-20). Fictional and invented-world setups, and Open mode, come after the friends-and-family playtest.
 12. **Bring-your-own key.** `KeyAttached`; per-seat call routing; the resolver always on the host key.
 13. **Budget governor degrade ladder.** Meter from Layer 5 drives: fewer persona calls, merged press, agents on standing orders, longer tick.
-14. **Safety classifiers.** Input and output classifiers replacing the Layer 4 keyword hook; abstraction clocks for the dangerous-capability list; real-person rules (README §19).
+14. **Safety classifiers.** Input and output classifiers replacing the Layer 4 keyword hook; abstraction clocks for the dangerous-capability list; real-person rules (spec §19).
 15. **Data notice and admin tooling.** Session Zero notice, `/why`, erasure by key deletion, retention job.
 
-**Playtest gate (README §22 step 6):** leak tests (type-level, canary, counterfactual, human-boundary) green on the current build; safety classifiers in place; data notice shown; Josh holds a seat.
+**Playtest gate (spec §22 step 6):** leak tests (type-level, canary, counterfactual, human-boundary) green on the current build; safety classifiers in place; data notice shown; Josh holds a seat.
 
 **Size.** Roughly one weekend per item; two or three can share a weekend when small. Order within the ladder can flex to what the two-human slice shows is missing most.
 
@@ -382,9 +382,9 @@ In the order README §22 step 5 gives, each as its own small PR with its tests. 
 - Canary (string), counterfactual (behaviour), human-boundary (union): Layers 5, 6, 9.
 - Live cost job: opt-in, runs on the Revisionist key, reports `$ per tick` into the PR.
 
-**Who builds what.** Josh and Vera (README #17). Layers 1-3 are suited to Haiku-swarmed TDD briefs once the design doc is approved: pure functions, typed inputs, property tests already specified. Layers 4-9 are integration and stay in one head. Layer 10 items are individually briefable.
+**Who builds what.** Josh and Vera (spec #17). Layers 1-3 are suited to Haiku-swarmed TDD briefs once the design doc is approved: pure functions, typed inputs, property tests already specified. Layers 4-9 are integration and stay in one head. Layer 10 items are individually briefable.
 
-**Cost control during the build.** No live calls in CI. Live calls only from the cost job and Josh's own play. Prompt caching from the first call. The $10/month solo cap (README #32) applies from Layer 5.
+**Cost control during the build.** No live calls in CI. Live calls only from the cost job and Josh's own play. Prompt caching from the first call. The $10/month solo cap (spec #32) applies from Layer 5.
 
 ---
 

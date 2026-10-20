@@ -1,4 +1,4 @@
-"""The fixed, world-agnostic ontology (README §12).
+"""The fixed, world-agnostic ontology (spec §12).
 
 Campaigns create instances of these types and never extend them. Session
 Zero maps setting nouns onto them: "oxygen quota" is a Meter, "the Moon
@@ -122,7 +122,7 @@ class ClockKind(StrEnum):
     """A danger ticking toward someone; director fuel."""
     OPPORTUNITY = "opportunity"
     CAPABILITY = "capability"
-    """Abstract dangerous capability (README §19). Never narrated as procedure."""
+    """Abstract dangerous capability (spec §19). Never narrated as procedure."""
 
 
 class ClockStatus(StrEnum):
@@ -241,7 +241,7 @@ class SeatKind(StrEnum):
 class SeatStatus(StrEnum):
     ACTIVE = "active"
     BLINDED = "blinded"
-    """Agent lost (README §10). Public feed only, 1 slot, no deputy."""
+    """Agent lost (spec §10). Public feed only, 1 slot, no deputy."""
     FALLEN = "fallen"
     """Eliminated. Awaiting redesign or retired."""
 
@@ -257,7 +257,7 @@ class Persona(Model):
 
 
 class Seat(Model):
-    """Anything that holds a view of the world (README §6, §7, §10).
+    """Anything that holds a view of the world (spec §6, §7, §10).
 
     Humans, AI factions, press outlets and NPCs are all Seats, because they
     all need ``project(state, seat_id)``. Only ``PLAYER`` seats hold slots
@@ -290,7 +290,7 @@ class Phase(StrEnum):
 
 
 class Character(Model):
-    """A real person from the chosen moment that a player may claim (README §5 step 3).
+    """A real person from the chosen moment that a player may claim (spec §5 step 3).
 
     Judged by agency in history, not fame. Where the record names no one, the
     character is a composite: named, built from what people in that role did,

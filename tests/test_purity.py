@@ -1,4 +1,4 @@
-"""The core package must stay pure (README §3 #34, build plan Layer 0).
+"""The core package must stay pure (spec §3 #34, build plan Layer 0).
 
 Any module under ``revisionist.core`` that imports an I/O, network, clock, model
 or unseeded-randomness module fails this test.

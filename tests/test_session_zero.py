@@ -1,4 +1,4 @@
-"""Layer 10 item 1c: ``/establish`` and the world compiler (README §5 step 2).
+"""Layer 10 item 1c: ``/establish`` and the world compiler (spec §5 step 2).
 
 The GM's draft is scripted here from two hand-written stand-ins, one ancient
 and one from the 20th century; they are not model outputs and are re-recorded

@@ -1,4 +1,4 @@
-"""Layer 10 item 1b: intelligence on secret goals (README §7, decision 37).
+"""Layer 10 item 1b: intelligence on secret goals (spec §7, decision 37).
 
 A rival's goal is learned one piece at a time, by investigation, from engine
 code. A partial success can mislead, a forgery can plant a decoy, and nothing

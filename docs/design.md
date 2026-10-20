@@ -1,6 +1,6 @@
 # Revisionist design: log, state, boundary, pipeline
 
-Build plan Layer 1. Written 2026-10-19 against [README.md](../README.md) v2. The models in `src/revisionist/core/` are the schema; this document explains them and names the rules the code must keep. Where the two disagree, the code is wrong and this doc wins until the code is fixed.
+Build plan Layer 1. Written 2026-10-19 against [game-spec.md](game-spec.md) v2. The models in `src/revisionist/core/` are the schema; this document explains them and names the rules the code must keep. Where the two disagree, the code is wrong and this doc wins until the code is fixed.
 
 Status legend: **[decided]**, **[proposed]**, **[open]**.
 
@@ -43,7 +43,7 @@ Module map:
 
 ## 1. The log is canon **[decided]**
 
-README #19. There is no state table. There is an append-only sequence of `Event` records per campaign, and `State` is what you get by folding them. Anything the game knows, it knows because an event said so.
+spec #19. There is no state table. There is an append-only sequence of `Event` records per campaign, and `State` is what you get by folding them. Anything the game knows, it knows because an event said so.
 
 Consequences the code keeps:
 
@@ -73,7 +73,7 @@ Later layers add `vote_*`, `director_event_proposed`, `agent_harmed`, `seat_fall
 
 ## 2. Visibility: the knowledge ACL **[decided]**
 
-README §7. Every event, fact, asset, clock, commitment and intent carries a `Scope`:
+spec §7. Every event, fact, asset, clock, commitment and intent carries a `Scope`:
 
 ```
 Scope(visibility: public | restricted | private | covert, known_by: frozenset[SeatId])
@@ -85,13 +85,13 @@ Scope(visibility: public | restricted | private | covert, known_by: frozenset[Se
 
 `Scope.visible_to(seat)` is the single predicate `project()` uses. `Scope.grant(*seats)` is the single way knowledge widens; `KnowledgeGrant` deltas, exposure rolls, leaks and `reveal()` all call it. There is no second mechanism.
 
-The ACL is **per seat**, not per human. README §7's human boundary (one person must never see two seats' secrets) is a Layer 9 concern enforced at the Discord edge, and the human-boundary canary tests it.
+The ACL is **per seat**, not per human. spec §7's human boundary (one person must never see two seats' secrets) is a Layer 9 concern enforced at the Discord edge, and the human-boundary canary tests it.
 
 ---
 
 ## 3. The ontology **[decided]**
 
-README §12. Fixed and world-agnostic. Session Zero maps a setting's nouns onto these types and never extends them. If a concept does not fit, it is a Meter, a Fact or a Clock; it is not a new type.
+spec §12. Fixed and world-agnostic. Session Zero maps a setting's nouns onto these types and never extends them. If a concept does not fit, it is a Meter, a Fact or a Clock; it is not a new type.
 
 | Type | What it is | Key fields |
 |---|---|---|
@@ -109,18 +109,18 @@ Points that matter:
 
 - **Assets carry a scope.** A secret army is a Covert `Force`. "Who knows this exists" is on the asset, not a separate fact.
 - **Facts are structured, never prose.** `predicate` comes from the world bible's closed vocabulary; `obj` is an ID or a capped `Label`. A forgery is a `Fact(truth=False)` placed in someone's view, so disinformation is first-class and the resolver can rate against what a seat believes.
-- **An Operation is a Clock** with `kind=operation`, an `owner` seat and `holds_slot=True`. Slots (README #25) are counted by summing open operation clocks per seat; there is no separate slot ledger.
-- **Objectives are Clocks** too (`kind=objective`), so Goals mode (README #22) scores clock state and needs no second mechanism.
-- **Capability clocks** (`kind=capability`) are the abstraction for the dangerous-capability list (README §19): the engine tracks progress; narration never describes procedure.
+- **An Operation is a Clock** with `kind=operation`, an `owner` seat and `holds_slot=True`. Slots (spec #25) are counted by summing open operation clocks per seat; there is no separate slot ledger.
+- **Objectives are Clocks** too (`kind=objective`), so Goals mode (spec #22) scores clock state and needs no second mechanism.
+- **Capability clocks** (`kind=capability`) are the abstraction for the dangerous-capability list (spec §19): the engine tracks progress; narration never describes procedure.
 - **Seats are not people.** Human players, AI factions, press outlets and NPCs are all `Seat`s because they all need `project()`. Only `kind=player` seats hold slots and a persona. A faction is a seat with `controller=ai`, run by an agent in permanent deputy mode (build plan decision 1).
-- **The player's agent is an Entity** (`kind=person`) referenced by `Seat.agent`. `agent=None` on a player seat means blinded (README §10): public feed only, one slot, no deputy.
+- **The player's agent is an Entity** (`kind=person`) referenced by `Seat.agent`. `agent=None` on a player seat means blinded (spec §10): public feed only, one slot, no deputy.
 - **`Fact.canary`** is a test-only field: fixtures put a unique string there and the leak scan looks for it in outbound text. Play never sets it.
 
 ---
 
 ## 4. The agent boundary and `project()` **[decided]**
 
-README §7 and §10. The one rule that makes secrets possible:
+spec §7 and §10. The one rule that makes secrets possible:
 
 > Anything that writes prose, suggests a move, or acts for a seat receives a `View`, never a `State`.
 
@@ -168,9 +168,9 @@ Properties the tests keep:
 | Politics | lobby, legislate, appoint, dismiss, declare |
 | Movement | travel, wait |
 
-- `FREE_VERBS` (negotiate, offer, accept, withdraw, declare, wait) never hold a slot: talk is free (README #25).
-- `IRREVERSIBLE_VERBS` (declare, transfer, dismiss) are what a deputy will not do without a standing order naming them (README §9).
-- `means` lists assets the actor is committing. Validation fails with `means_not_held` when the actor's entity does not control them. This is the "claim an army" defence (README §10) and it lives in the referee, not in a prompt.
+- `FREE_VERBS` (negotiate, offer, accept, withdraw, declare, wait) never hold a slot: talk is free (spec #25).
+- `IRREVERSIBLE_VERBS` (declare, transfer, dismiss) are what a deputy will not do without a standing order naming them (spec §9).
+- `means` lists assets the actor is committing. Validation fails with `means_not_held` when the actor's entity does not control them. This is the "claim an army" defence (spec §10) and it lives in the referee, not in a prompt.
 - `spin` is the one free-text field, capped at 280 characters, and it is always Public: it is a statement to the world, never an instruction to the engine.
 
 Adding a verb is a schema change: bump `SCHEMA_VERSION`, add a fold case if it needs one, add it to the strategies, note it in the changelog.
@@ -204,13 +204,13 @@ Adding a verb is a schema change: bump `SCHEMA_VERSION`, add a fold case if it n
 
 The type bounds are generous on purpose; the **clamp table** (build plan Layer 3, accepted as starting numbers) is tighter and is applied in code per outcome tier. A delta that parses but exceeds the clamp is cut to the limit and logged as `delta_rejected(reason=clamped)` alongside the applied remainder.
 
-A test (`test_deltas_have_no_free_form_fields`) walks the JSON schema of every delta and fails on any object-typed field or any uncapped non-ID string. That test is the mechanical form of README §12's "typed deltas, no free-form state writes".
+A test (`test_deltas_have_no_free_form_fields`) walks the JSON schema of every delta and fails on any object-typed field or any uncapped non-ID string. That test is the mechanical form of spec §12's "typed deltas, no free-form state writes".
 
 ---
 
 ## 7. `reveal()` **[decided]** (build plan decision 4)
 
-Chapter breaks and season ends (README §15) widen the ACL on past covert facts. There is no reveal event kind. `reveal()` is a pure function:
+Chapter breaks and season ends (spec §15) widen the ACL on past covert facts. There is no reveal event kind. `reveal()` is a pure function:
 
 ```
 reveal(state: State, policy: RevealPolicy, tick: int) -> tuple[KnowledgeGrant, ...]
@@ -218,13 +218,13 @@ reveal(state: State, policy: RevealPolicy, tick: int) -> tuple[KnowledgeGrant, .
 RevealPolicy = Partial(fraction: float, min_age_ticks: int) | Full
 ```
 
-It selects covert facts and clocks older than `min_age_ticks`, picks `fraction` of them deterministically (seeded from `campaign_id` and `tick`), and emits one `KnowledgeGrant(make_public=True)` per item. The orchestrator applies those grants like any other delta, so the log shows exactly what was revealed, when and why. `Partial` at chapter breaks, `Full` at season end, per README §15. Lands in Layer 3 with the rest of the pure core.
+It selects covert facts and clocks older than `min_age_ticks`, picks `fraction` of them deterministically (seeded from `campaign_id` and `tick`), and emits one `KnowledgeGrant(make_public=True)` per item. The orchestrator applies those grants like any other delta, so the log shows exactly what was revealed, when and why. `Partial` at chapter breaks, `Full` at season end, per spec §15. Lands in Layer 3 with the rest of the pure core.
 
 ---
 
 ## 8. The four-stage pipeline **[decided]**
 
-README §13, revised under H3/H15: **Structure lives in the agent**, so the referee's pipeline starts from an `Intent`.
+spec §13, revised under H3/H15: **Structure lives in the agent**, so the referee's pipeline starts from an `Intent`.
 
 ```
 0. Structure   (agent, Layer 6)      text -> Intent | ClarifyingQuestion        logs intent_filed / clarification_asked
@@ -240,7 +240,7 @@ Starting odds (`core/resolution.py`): Impossible 0%, Long shot 20%, Contested 50
 
 ### 8.1 The referee in code (`core/referee.py`) **[decided]**
 
-- **`validate(state, intent, safety=None) -> Rejection | None`.** In order: actor is a seat and not fallen; not a duplicate ID; outlets may only investigate, leak, declare, negotiate, wait; blinded seats may not use irreversible verbs; every target exists and is not dead, dissolved, lost or closed; every `means` asset is controlled by the actor's entity or a direct child (the "claim an army" case, README §10); transfer names an asset; accept names an offered commitment; a slot is free (operations plus queued intents, cap from the seat, 1 when blinded); finally the safety hook. The hook runs last so a classifier never sees an intent the rules already refused.
+- **`validate(state, intent, safety=None) -> Rejection | None`.** In order: actor is a seat and not fallen; not a duplicate ID; outlets may only investigate, leak, declare, negotiate, wait; blinded seats may not use irreversible verbs; every target exists and is not dead, dissolved, lost or closed; every `means` asset is controlled by the actor's entity or a direct child (the "claim an army" case, spec §10); transfer names an asset; accept names an offered commitment; a slot is free (operations plus queued intents, cap from the seat, 1 when blinded); finally the safety hook. The hook runs last so a classifier never sees an intent the rules already refused.
 - **`rate(world, intent) -> FeasibilityBand`** takes `State` or `View`. Impossible only for structural reasons (unknown target, means not held). Free verbs are Assured. Otherwise a score from 0: committed means tier minus opposition tier (clamped ±2; Force verbs count only Force assets), counterparty disposition ±1 at |disposition| ≥ 2, plausibility ±1 on force and information verbs. Score ≤ −2 Long shot, ≤ 0 Contested, 1 Likely, ≥ 2 Assured. A means verb with no means is capped at Long shot. The fixture test: South attacking North looks **Likely** from South's view and is **Contested** in truth, because the hill irregulars are covert.
 - **`roll(seed, band, exposure) -> Roll`.** `seed = blake2b(campaign_id, tick, intent_id)`; the outcome and exposure draws are bytes of `blake2b(seed)`, so the core never imports `random`. 2,000-seed tests hold every table within ±4 points.
 - **`clamp(state, intent, proposal, outcome) -> Clamped`.** Returns `kept` (applied as-is or trimmed to the limit) and `cut` (one entry per trim or drop, for `delta_rejected`). The table: tier ±1 on at most 2 assets; a failure only lowers the actor's own assets and touches no one else's; meter changes **summed per meter per tick** against `max_delta_per_tick`; disposition ±1, ±2 when the intent is public and names the pair; clock segments 0/1/2/2 by outcome with a new clock allowed only on failure (complication) or opportunity; operation clocks are opened by the engine, never proposed; `dead`/`dissolved` only under hard or brutal lethality and only when a threat clock targets the entity; captured/turned/dead on a seat's agent only when `agent_harm` is on; `make_public` grants only from leak or declare; slots ±1; at most 6 objects per intent. Property test: idempotent and never widens a magnitude.
@@ -252,14 +252,14 @@ Rules the referee keeps regardless of what the model proposes:
 - A proposal is a request. Only `delta_applied` events change state, and only after clamp.
 - `entity_status=dead|dissolved` is applied only when `Settings.lethality` allows it and the target had a clock at risk (`lethality_disallows` otherwise).
 - Fail-with-complication may only lower the actor's own assets.
-- A vote outcome can never produce a `cancelled` operation (`vote_cannot_cancel`), per README #14.
+- A vote outcome can never produce a `cancelled` operation (`vote_cannot_cancel`), per spec #14.
 - Nothing for an absent seat is irreversible outside a formal session (Layer 10 item 2).
 
 ---
 
 ## 9. The tick state machine **[decided]**
 
-README §13. Six stages, each persisted as `tick_stage_completed(stage)`, so a crash resumes from the last completed stage and never re-runs a model call that already landed.
+spec §13. Six stages, each persisted as `tick_stage_completed(stage)`, so a crash resumes from the last completed stage and never re-runs a model call that already landed.
 
 ```
 FREEZE   tick_opened(intents_frozen)   pending intents move to frozen; late orders go to the next tick
@@ -293,7 +293,7 @@ Stores (`engine/store.py`) enforce append-only: `seq` must be exactly the next i
 
 ### 9.2 Claude adapters (`engine/llm.py`) **[decided]**
 
-- **Transport is the Claude Code CLI** (`claude -p`), not the Anthropic SDK. It runs on the host's Claude subscription, so no API key exists in the repo, its environment, or CI. Every call strips setting sources, tools and hooks (`--setting-sources "" --tools "" --no-session-persistence`); `--bare` is avoided because it also drops the login. The CLI's JSON result carries `structured_output`, the model, token counts and a list-price `total_cost_usd`; those become one `CallCost` on the stage marker. On a subscription the real charge is zero, so `usd` is the list-price shadow, which is what README #32 wants measured. Swapping to the SDK later is one new `Transport` class; the `Request`/`Reply` dataclasses do not change.
+- **Transport is the Claude Code CLI** (`claude -p`), not the Anthropic SDK. It runs on the host's Claude subscription, so no API key exists in the repo, its environment, or CI. Every call strips setting sources, tools and hooks (`--setting-sources "" --tools "" --no-session-persistence`); `--bare` is avoided because it also drops the login. The CLI's JSON result carries `structured_output`, the model, token counts and a list-price `total_cost_usd`; those become one `CallCost` on the stage marker. On a subscription the real charge is zero, so `usd` is the list-price shadow, which is what spec #32 wants measured. Swapping to the SDK later is one new `Transport` class; the `Request`/`Reply` dataclasses do not change.
 - **Resolver** (`ClaudeResolver`, Sonnet tier): the system prompt is `prompts/resolver.md`; the user turn is the full `State` as JSON (truth) plus each frozen intent with its rolled outcome and band. Output is constrained by `--json-schema` to `{proposals: [{intent_id, deltas: [Delta]}]}` where the Delta schema is the union's own JSON Schema with `delta_id` removed; the engine mints IDs as `derived_id(campaign, tick, intent, n)` so a re-run gives the same IDs. Each proposal is validated against `list[Delta]`; a reply with any invalid proposal is retried once with the errors appended, then the still-invalid proposals are dropped and recorded on `resolver.dropped`. Malformed output never raises (property-tested).
 - **Narrator** (`ClaudeNarrator`, Haiku tier): takes `View` and the deltas visible in it; the type is the boundary and a test asserts the signature. Output schema is `{text}`.
 - **Recordings** (`RecordedTransport`): request key is blake2b over model, system prompt, user prompt and schema; replies are stored under `tests/recordings/*.json`. A missing key fails the test (`MissingRecordingError`) unless `REVISIONIST_RECORD=1`, which records through the live CLI. CI never calls a model. Recordings are reviewed in the PR like any fixture.
@@ -314,7 +314,7 @@ Stores (`engine/store.py`) enforce append-only: `seq` must be exactly the next i
 
 ## 10. Settings the engine reads **[decided]**
 
-`core/settings.py`, from README §5 and the H19 decisions. Defaults are the README defaults: plausible, tendencies, **hard** lethality, **cutthroat** betrayal, elimination on, agent harm on, Goals mode, 24-hour ticks, 7 world-days per tick, 3 starting slots, cap 5, max 10 human seats. `lines` and `veils` are sorted unique tuples so the exported schema is stable; `content_rating` is `None` until Session Zero sets one (README #30).
+`core/settings.py`, from spec §5 and the H19 decisions. Defaults are the spec defaults: plausible, tendencies, **hard** lethality, **cutthroat** betrayal, elimination on, agent harm on, Goals mode, 24-hour ticks, 7 world-days per tick, 3 starting slots, cap 5, max 10 human seats. `lines` and `veils` are sorted unique tuples so the exported schema is stable; `content_rating` is `None` until Session Zero sets one (spec #30).
 
 ---
 
@@ -322,7 +322,7 @@ Stores (`engine/store.py`) enforce append-only: `seq` must be exactly the next i
 
 Two call sites, both in the referee, both pure protocols with a fixture implementation until Layer 10:
 
-- `check_intent(view, intent, settings) -> ok | Refusal` at Validate. Lines and veils from `Settings`, the real-person rules from README §19, and the capability-clock abstraction. A refusal logs `intent_rejected(reason=safety_line)` and returns the reason to the agent so the player gets an in-world answer.
+- `check_intent(view, intent, settings) -> ok | Refusal` at Validate. Lines and veils from `Settings`, the real-person rules from spec §19, and the capability-clock abstraction. A refusal logs `intent_rejected(reason=safety_line)` and returns the reason to the agent so the player gets an in-world answer.
 - `check_text(seat, text) -> ok | Refusal` after Narrate. Outbound prose scanned before delivery: canaries in test, classifiers in production. A hit logs `safety_refused` (Layer 10 kind) and the narration is regenerated once, then dropped.
 
 ---
@@ -349,7 +349,7 @@ Two call sites, both in the referee, both pure protocols with a fixture implemen
 - **[decided]** `Meter.max_delta_per_tick` is summed per meter per intent in `clamp`, so two small deltas cannot beat the cap. Cross-intent summing within one tick is the orchestrator's job (Layer 4) via the same `meter_total` rule.
 - **[proposed]** The `rate` scoring weights (means−opposition ±2, disposition ±1, plausibility ±1) are first numbers. The shape (one function over `State` or `View`) is decided; the weights are not.
 - **[open]** `Label` cap (60 chars) and `reason` cap (200) are guesses; retune when the first recorded fixtures show what the resolver actually writes. Layer 5.
-- **[open]** Co-GM event lead time and season length default remain from README §21.
+- **[open]** Co-GM event lead time and season length default remain from spec §21.
 
 ---
 
@@ -459,12 +459,12 @@ Josh chose the dispatch model, the encryption design, the recordings handling an
 ### 16.1 Seats, invites and dispatch
 
 - `worlds/salt-strait-duo.yaml` is salt-strait with Ostrel as a second human seat with its own agent; a test keeps the two files in step. The CLI's `order`, `briefing` and `status` take `--seat` when a campaign has several humans.
-- **Invites.** The host issues a single-use code bound to a seat (`revisionist discord invite`), valid 72 hours. Only its blake2b hash is stored (`discord_invites`, migration 0005). A player redeems it with `/join`: one transaction binds them and spends the code, and a refused link leaves it unspent. Unknown, spent and expired codes get the same answer. On success the bot sends a test DM, the README §17 onboarding check.
+- **Invites.** The host issues a single-use code bound to a seat (`revisionist discord invite`), valid 72 hours. Only its blake2b hash is stored (`discord_invites`, migration 0005). A player redeems it with `/join`: one transaction binds them and spends the code, and a refused link leaves it unspent. Unknown, spent and expired codes get the same answer. On success the bot sends a test DM, the spec §17 onboarding check.
 - **Dispatch is the DM.** The server owner can read every channel and private thread, and the owner also plays, so per-player channels or threads would protect nothing. Briefings go by DM only. A closed DM holds the briefing (`BriefingDelivered(channel="held")`, nothing sent) and `/dispatch` reads the latest one back from the log. A human seat nobody holds yet is also held, never written to the host's briefings directory.
 
 ### 16.2 What a view shows about other seats
 
-README §17: how a seat is run is never shown. `View.seats` holds a `SeatFace` (ID, kind, name, embodied entity) for every seat and `View.me` the viewer's own seat in full; `referee.own_seat` reads a seat in full only from `State` or as `View.me`. A property test changes another seat's controller, status, agent, persona, slots and orders and checks the view is byte-identical. `SCHEMA_VERSION` 3. The structure, brief and narrator prompts embed the View, so 4 recorded entries were re-keyed offline, each marked `rekeyed_from`; they are to be re-recorded live.
+spec §17: how a seat is run is never shown. `View.seats` holds a `SeatFace` (ID, kind, name, embodied entity) for every seat and `View.me` the viewer's own seat in full; `referee.own_seat` reads a seat in full only from `State` or as `View.me`. A property test changes another seat's controller, status, agent, persona, slots and orders and checks the view is byte-identical. `SCHEMA_VERSION` 3. The structure, brief and narrator prompts embed the View, so 4 recorded entries were re-keyed offline, each marked `rekeyed_from`; they are to be re-recorded live.
 
 ### 16.3 Visibility and spin
 
@@ -476,7 +476,7 @@ One channel, `#chronicle` (`engine/discord/template.py`), set with `revisionist 
 
 ### 16.5 The human boundary
 
-README §7: the opacity boundary is the person. `core/canary.py` scans everything a person can read (their seats' narrations and questions, the press, every statement; in the test, every DM, reply and channel post they received) against the union of what all their seats may know. `revisionist leaks --humans` runs it from the Discord seat links, counting the host as holder of every unlinked human seat. `tests/test_human_boundary.py` plays 12 ticks of the duo world with a transport that echoes each prompt, View JSON and all, and also scans the host's briefings directory and the bot's log; a negative control shows it fails on a planted leak.
+spec §7: the opacity boundary is the person. `core/canary.py` scans everything a person can read (their seats' narrations and questions, the press, every statement; in the test, every DM, reply and channel post they received) against the union of what all their seats may know. `revisionist leaks --humans` runs it from the Discord seat links, counting the host as holder of every unlinked human seat. `tests/test_human_boundary.py` plays 12 ticks of the duo world with a transport that echoes each prompt, View JSON and all, and also scans the host's briefings directory and the bot's log; a negative control shows it fails on a planted leak.
 
 The host's own surfaces were closed to match: a withheld narration is no longer written to a file; the CLI refuses `order`, `briefing` and `status` for a seat another player holds; the `claude` child gets no `REVISIONIST_*` variable; and transport errors quote neither the prompt nor the model's output, since they reach logs and `schedule.last_status`.
 
@@ -500,7 +500,7 @@ None of this protects players from the host, who holds the master key and the bo
 
 ### 16.7 Perceived odds
 
-README §7: shown only once an order is filed and locked. `/status` and `revisionist status` show the perceived band of each locked pending order, from `feasibility_rated` at the cutoff, and a briefing ends with how the agent read last tick's orders. Never the true band, never before the cutoff (so odds cannot be shopped for by re-filing), nothing for a blinded seat.
+spec §7: shown only once an order is filed and locked. `/status` and `revisionist status` show the perceived band of each locked pending order, from `feasibility_rated` at the cutoff, and a briefing ends with how the agent read last tick's orders. Never the true band, never before the cutoff (so odds cannot be shopped for by re-filing), nothing for a blinded seat.
 
 ### 16.8 Not covered by the tests
 
@@ -511,7 +511,7 @@ Everything against the real Discord API: invites redeemed by a real second accou
 
 ## 17. Secret goals and winning (Layer 10 item 1) [decided 2026-10-20]
 
-README §15 and decisions 23 and 36-38. Built in PRs 1a-1e; this section grows with them.
+spec §15 and decisions 23 and 36-38. Built in PRs 1a-1e; this section grows with them.
 
 ### 17.1 Win conditions (1a)
 
@@ -539,11 +539,11 @@ An ID the state does not hold is unmet, so nothing is met in an empty world. Pro
 
 **Compatibility.** `State.goals` is a late field: it is left out of serialisation while empty (`Model.late_fields`), so every older state hashes, and every view serialises, byte for byte as before. Old logs replay and the recordings keep their keys. Goal records are sealed with the campaign key, never a seat key, because the fold needs them; erasing a player keeps their goal. The resolver's truth leaves goals out: no model weighs whether, or how, a goal is met. The player's own agent does see its seat's goal, through the view.
 
-**Deferred.** README §15 lists "exiled" as an entity status. Adding it changes the resolver's output schema and so every resolver recording key; it waits for the next live re-record.
+**Deferred.** spec §15 lists "exiled" as an entity status. Adding it changes the resolver's output schema and so every resolver recording key; it waits for the next live re-record.
 
 ### 17.2 Goal intelligence (1b)
 
-README §7 and decision 37: a rival's goal is learned by working for it, and the engine, not a model, decides what is learned.
+spec §7 and decision 37: a rival's goal is learned by working for it, and the engine, not a model, decides what is learned.
 
 - **Pieces.** An `investigate` intent whose target is another player seat's entity, and whose roll is a partial or better, earns that seat's next goal piece. A piece is an ordinary Fact about the target entity, Private to the seeker, applied in APPLY as `delta_applied` against the intent. The pieces come in a fixed order: `goal_exists` ("has a secret aim"), `goal_domain` (office, an asset kind, a person, standing, a treaty, a relationship), `goal_object` (the name of the thing), `goal_condition` (the whole condition in a few words, from `intel.render`). The next piece is the first the seeker does not already hold; once all four are held, nothing more is learned. One piece per intent per tick, so a multi-tick investigation earns one a tick.
 - **Misleading partials.** On a partial success the object and the condition may be false (`truth=False` in canon): the target's planted decoy if there is one, otherwise, on a seeded roll, another object of the same kind. The domain is never the lie. A full success always tells the truth.
@@ -555,7 +555,7 @@ README §7 and decision 37: a rival's goal is learned by working for it, and the
 
 ### 17.3 `/establish` and the world compiler (1c)
 
-README §5 step 2. `revisionist establish "<place, date>"` (with `--plausibility`, `--inertia`, `--lethality`, `--betrayal`, `--tone`, `--tick-hours`) and the host's `/establish` lock a point in history:
+spec §5 step 2. `revisionist establish "<place, date>"` (with `--plausibility`, `--inertia`, `--lethality`, `--betrayal`, `--tone`, `--tick-hours`) and the host's `/establish` lock a point in history:
 
 1. `engine/session_zero.draft_world` asks the frontier model (`SESSION_ZERO_MODEL`, call class `session_zero`, `prompts/establish.md`) for a whole world file in the fixed schema, given the place, the date and the table's settings for tone.
 2. The draft is checked: it must parse as a `WorldFile`, pass the Layer 7 compiler, and pass `world_compile.check_history`: a start, 8-12 roster characters, no human seats, no goals. The roster is checked like everything else: each character is a person, listed once, and controls the means it is given; `composite` has no default, so every character is labelled real or composite.
@@ -564,13 +564,13 @@ README §5 step 2. `revisionist establish "<place, date>"` (with `--plausibility
 
 **Phase.** `State.phase` is `play` for every campaign from a hand-written world (a late field, so older states are unchanged); `session_zero_opened` sets `session_zero`. `run_tick` and `play_tick` raise `NotInPlayError` outside play, before any faction spends a model call; `revisionist tick` exits 2, and the scheduler and `/advance` report `waiting: session zero`.
 
-**Who may establish.** The host only, for now. README §5 has `/establish` pass by the co-GM vote at three or more humans; that comes with votes (Layer 10 item 7). The new campaign becomes the host's current one; Discord's `/establish` uses the default settings.
+**Who may establish.** The host only, for now. spec §5 has `/establish` pass by the co-GM vote at three or more humans; that comes with votes (Layer 10 item 7). The new campaign becomes the host's current one; Discord's `/establish` uses the default settings.
 
 **Tests** use two hand-written drafts (Florence, April 1478; Washington, October 1962) under `tests/drafts/`, labelled as stand-ins to be re-recorded live; no recording exists for this prompt yet.
 
 ### 17.4 Character, goal and brief (1d)
 
-README §5 steps 3-5, run by each player through their agent, privately. In `engine/session_zero.py`, on the CLI (`revisionist character roster|search|claim|pick`, `revisionist goal suggest|own|confirm|flags|approve`, `revisionist history`, `revisionist agent`, `revisionist begin`) and on Discord (`/character`, `/goal`, `/history`, `/agent`, `/begin`).
+spec §5 steps 3-5, run by each player through their agent, privately. In `engine/session_zero.py`, on the CLI (`revisionist character roster|search|claim|pick`, `revisionist goal suggest|own|confirm|flags|approve`, `revisionist history`, `revisionist agent`, `revisionist begin`) and on Discord (`/character`, `/goal`, `/history`, `/agent`, `/begin`).
 
 **Seats appear at the claim.** During Session Zero a host's invite (`revisionist discord invite` with no `--seat`) mints a seat ID; `/join` links the player to it, and every seat command but the Session Zero ones answers "pick your character first". `character_claimed(seat, entity)` creates the player seat in the fold, embodying the character, and marks the roster entry taken. **One character, one player, at the store:** the claim's event ID is derived from the campaign and the character, and every store refuses a repeated event ID (SQLite and Postgres by their UNIQUE column, the memory store by a set), so two players racing for one person cannot both land.
 

@@ -1,4 +1,4 @@
-"""Layer 10 item 1e: the dashboard and the season's end (README §15).
+"""Layer 10 item 1e: the dashboard and the season's end (spec §15).
 
 Winning is decided at season end: Lasting goals ever met, Undoable goals that
 still hold. The full reveal makes every goal and covert secret public, and the

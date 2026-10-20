@@ -1,4 +1,4 @@
-"""The tick scheduler (build plan Layer 8; README §9).
+"""The tick scheduler (build plan Layer 8; spec §9).
 
 A poll, not a daemon: a systemd timer runs ``revisionist scheduler run`` every few
 minutes, and each run ticks every campaign that is due, at most once each.

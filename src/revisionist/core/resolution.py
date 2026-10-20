@@ -1,4 +1,4 @@
-"""Enums shared by the referee and the log (README §13)."""
+"""Enums shared by the referee and the log (spec §13)."""
 
 from enum import StrEnum
 

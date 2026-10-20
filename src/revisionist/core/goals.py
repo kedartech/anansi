@@ -1,4 +1,4 @@
-"""Secret goals and win conditions (README §15, decisions 23, 36-38).
+"""Secret goals and win conditions (spec §15, decisions 23, 36-38).
 
 A goal compiles at Session Zero into a ``WinCondition``: a closed set of
 checks over State, combined with all-of and any-of. No model ever decides
@@ -168,7 +168,7 @@ _LASTING_STATUSES = frozenset({EntityStatus.DEAD, EntityStatus.DISSOLVED})
 
 
 def goal_kind(c: WinCondition) -> GoalKind:
-    """The fixed table (README §15). Only death and dissolution cannot be undone."""
+    """The fixed table (spec §15). Only death and dissolution cannot be undone."""
     if isinstance(c, AllOf | AnyOf):
         kinds = {goal_kind(x) for x in c.conditions}
         return GoalKind.LASTING if kinds == {GoalKind.LASTING} else GoalKind.UNDOABLE
@@ -272,7 +272,7 @@ _FINAL = frozenset({EntityStatus.DEAD, EntityStatus.DISSOLVED})
 
 
 def vet(view: View, state: State, c: WinCondition) -> list[str]:
-    """Why ``c`` cannot be this seat's goal, or nothing (README §5 step 4).
+    """Why ``c`` cannot be this seat's goal, or nothing (spec §5 step 4).
 
     A goal names only what the seat knows of, is not met already, and is not
     impossible from the start: no reviving the dead, no holding a lost office,
@@ -316,7 +316,7 @@ EASY, HARD = 3, 8
 
 
 class Balance(Model):
-    """One character and goal scored on a fixed rubric (README §5). Private: never logged."""
+    """One character and goal scored on a fixed rubric (spec §5). Private: never logged."""
 
     power: int
     difficulty: int

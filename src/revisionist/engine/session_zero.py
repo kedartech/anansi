@@ -1,4 +1,4 @@
-"""Historical Session Zero (Layer 10 item 1; README §5).
+"""Historical Session Zero (Layer 10 item 1; spec §5).
 
 ``establish`` locks a point in history: the GM drafts the world bible from the
 record at that date, the Layer 7 compiler validates it, and only a draft that
@@ -50,7 +50,7 @@ from revisionist.engine.llm import RESOLVER_MODEL, Request, Transport, prompt_te
 from revisionist.engine.store import EventStore, Sealer, StoreError, load_state
 
 SESSION_ZERO_MODEL = RESOLVER_MODEL
-"""Session Zero runs on the frontier model, like the resolver (README §20)."""
+"""Session Zero runs on the frontier model, like the resolver (spec §20)."""
 
 DRAFT_SCHEMA = WorldFile.model_json_schema()
 PLACE_MAX = 80
@@ -144,7 +144,7 @@ def establish(
     return campaign_id
 
 
-# --- the private steps: character, goal, brief, agent (README §5 steps 3-5) --------
+# --- the private steps: character, goal, brief, agent (spec §5 steps 3-5) --------
 
 
 class StepRefusedError(ValueError):
@@ -578,7 +578,7 @@ SUGGESTED = "Suggested route (a suggestion, not a rule):"
 def history_brief(
     store: EventStore, campaign_id: CampaignId, seat: SeatId, transport: Transport
 ) -> str:
-    """The tick-0 brief (README §5 step 5): the record to the start, the goal as history
+    """The tick-0 brief (spec §5 step 5): the record to the start, the goal as history
     saw it, and one labelled suggestion. Logged as the seat's private narration."""
     state = _open(store, campaign_id)
     _seat_of(state, seat)
@@ -613,7 +613,7 @@ def history_brief(
 
 
 def design_agent(store: EventStore, campaign_id: CampaignId, seat: SeatId, persona: Persona) -> str:
-    """The player's agent, as they design it (README §10). Narrative only."""
+    """The player's agent, as they design it (spec §10). Narrative only."""
     state = _open(store, campaign_id)
     _seat_of(state, seat)
     if state.seats[seat].agent is not None:
@@ -659,7 +659,7 @@ def flagged(store: EventStore, campaign_id: CampaignId) -> list[tuple[SeatId, go
 
 
 def approve(store: EventStore, campaign_id: CampaignId, seat: SeatId) -> str:
-    """The host lets one flagged goal stand, without seeing it (README §5)."""
+    """The host lets one flagged goal stand, without seeing it (spec §5)."""
     state = _open(store, campaign_id)
     pending = dict(flagged(store, campaign_id))
     if seat not in pending:

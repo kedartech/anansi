@@ -64,7 +64,7 @@ def _is_id(field: str) -> bool:
 
 
 def test_deltas_have_no_free_form_fields() -> None:
-    """No dict/Any payloads; every string is an ID, an enum or capped (README §12)."""
+    """No dict/Any payloads; every string is an ID, an enum or capped (spec §12)."""
     for cls in get_args(get_args(d.Delta)[0]):
         schema = cls.model_json_schema()
         for field, spec in schema["properties"].items():

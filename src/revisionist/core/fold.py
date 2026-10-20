@@ -1,4 +1,4 @@
-"""The fold: events in, state out (README #19, build plan Layer 2).
+"""The fold: events in, state out (spec #19, build plan Layer 2).
 
 ``apply`` is total over the mutating kinds and raises ``FoldError`` on
 anything it cannot honour: a sequence gap, an unknown ID, a hash mismatch at

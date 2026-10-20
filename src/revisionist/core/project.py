@@ -1,8 +1,8 @@
 """``project(state, seat) -> View``: the only read path for anything that writes prose.
 
-README §7. An item is in a seat's view when its scope is visible to that
+spec §7. An item is in a seat's view when its scope is visible to that
 seat. Entities have no scope and are always visible. Every seat appears only
-as a ``SeatFace`` (README §17: how a seat is run is never shown); the viewer
+as a ``SeatFace`` (spec §17: how a seat is run is never shown); the viewer
 also gets its own seat in full as ``View.me``. Other seats' pending intents
 are never in a view.
 """

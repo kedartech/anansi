@@ -1,4 +1,4 @@
-"""Session Zero output that the engine reads (README §5)."""
+"""Session Zero output that the engine reads (spec §5)."""
 
 from enum import StrEnum
 

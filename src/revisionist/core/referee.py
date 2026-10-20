@@ -1,4 +1,4 @@
-"""The referee (README §11, §13; build plan Layer 3). Pure. No LLM anywhere.
+"""The referee (spec §11, §13; build plan Layer 3). Pure. No LLM anywhere.
 
 Five functions, each a total function of its inputs:
 
@@ -83,7 +83,7 @@ DEAL_VERBS: frozenset[Verb] = frozenset(
 OUTLET_VERBS: frozenset[Verb] = frozenset(
     {Verb.INVESTIGATE, Verb.LEAK, Verb.DECLARE, Verb.NEGOTIATE, Verb.WAIT}
 )
-"""A press outlet reports; it does not raise armies (README §6)."""
+"""A press outlet reports; it does not raise armies (spec §6)."""
 
 PUBLIC_GRANT_VERBS: frozenset[Verb] = frozenset({Verb.LEAK, Verb.DECLARE})
 """Only these may make a secret public in one step (build plan L3: exposure escalates
@@ -765,7 +765,7 @@ def _pick_key(state: State, tick: int, target: str) -> str:
 
 
 def reveal(state: State, policy: RevealPolicy, tick: int) -> tuple[d.KnowledgeGrant, ...]:
-    """Chapter-break grants (README §15). Covert facts and clocks become public.
+    """Chapter-break grants (spec §15). Covert facts and clocks become public.
 
     Deterministic: the subset chosen under ``Partial`` depends only on the
     campaign, the tick and the item IDs, so a replay reveals the same things.

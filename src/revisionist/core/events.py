@@ -1,4 +1,4 @@
-"""The event log (README §12, decision #19).
+"""The event log (spec §12, decision #19).
 
 The log is canon. State is a projection of it. Every payload below is a kind
 of event the log can hold; ``Event`` is the envelope.
@@ -256,7 +256,7 @@ class BriefingDelivered(Model):
 
 
 class SessionZeroOpened(Model):
-    """The table locked a point in history with ``/establish`` (README §5 step 2).
+    """The table locked a point in history with ``/establish`` (spec §5 step 2).
 
     Ticks wait until Session Zero closes. ``notes`` is where the GM logs each
     reading it chose where historians disagree or the record is silent.
@@ -275,7 +275,7 @@ class CharacterListed(Model):
 
 
 class CharacterClaimed(Model):
-    """A player takes a character from the roster (README §5 step 3).
+    """A player takes a character from the roster (spec §5 step 3).
 
     The fold creates the player's seat here, embodying the character. The
     engine gives this event an ID derived from the campaign and the character,
@@ -294,7 +294,7 @@ class SessionZeroClosed(Model):
 
 
 class SeasonEnded(Model):
-    """The season is over and its winners decided (README §15, decision 36).
+    """The season is over and its winners decided (spec §15, decision 36).
 
     Logged right after the full reveal's grants, ``revealed`` of them, and it
     makes every goal public. ``winners`` is whatever ``season_winners`` says;
@@ -310,7 +310,7 @@ class SeasonEnded(Model):
 
 
 class GoalSet(Model):
-    """A seat's secret goal, fixed at Session Zero (README §15). Private to the owner."""
+    """A seat's secret goal, fixed at Session Zero (spec §15). Private to the owner."""
 
     kind: Literal["goal_set"] = "goal_set"
     goal: Goal
@@ -345,7 +345,7 @@ class GoalOption(Model):
 
 
 class GoalProposed(Model):
-    """The goals a player's agent offered on one route (README §5 step 4). A record,
+    """The goals a player's agent offered on one route (spec §5 step 4). A record,
     Private to the seat and sealed with its key: these are the player's own words."""
 
     kind: Literal["goal_proposed"] = "goal_proposed"

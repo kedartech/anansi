@@ -1,4 +1,4 @@
-"""State and View (README §7, §12).
+"""State and View (spec §7, §12).
 
 ``State`` is the full truth, a projection of the event log. ``View`` is what
 one seat knows. They are different classes on purpose: a narrator, agent,
@@ -74,7 +74,7 @@ class _World(Model):
 class SeatFace(Model):
     """What any seat may know about another: who it is, never how it is run.
 
-    README §17: whether a seat is human or AI, its agent, its persona, its
+    spec §17: whether a seat is human or AI, its agent, its persona, its
     status (blinded, fallen) and its deputy are never shown to other seats.
     """
 

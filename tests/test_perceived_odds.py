@@ -1,4 +1,4 @@
-"""Layer 9b: perceived odds (README §7).
+"""Layer 9b: perceived odds (spec §7).
 
 A player sees how their own agent rated an order once it is locked at the
 cutoff, never the true band, never before, and not at all when blinded. The

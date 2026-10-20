@@ -1,4 +1,4 @@
-"""Visibility and the knowledge ACL (README §7).
+"""Visibility and the knowledge ACL (spec §7).
 
 Every event, fact and intent carries a ``Scope``. ``project()`` (Layer 2)
 includes an item in a seat's view only when ``scope.visible_to(seat)``.

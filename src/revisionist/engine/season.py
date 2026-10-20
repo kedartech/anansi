@@ -1,4 +1,4 @@
-"""The end of a season (Layer 10 item 1e; README §15).
+"""The end of a season (Layer 10 item 1e; spec §15).
 
 The host ends the season between ticks. The full reveal is ``reveal(Full)``
 applied as ordinary knowledge grants (decision 4), then ``season_ended`` names

@@ -1,4 +1,4 @@
-"""Layer 10 item 1d: the character, goal and brief steps of Session Zero (README §5).
+"""Layer 10 item 1d: the character, goal and brief steps of Session Zero (spec §5).
 
 Every model call is scripted by ``Table``, which reads the IDs it needs out of
 the view in the prompt, as a model would. Nothing here is a model output.

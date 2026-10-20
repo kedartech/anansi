@@ -1,4 +1,4 @@
-"""The dashboard and the season's end (README §15).
+"""The dashboard and the season's end (spec §15).
 
 A dashboard is built from one seat's ``View`` only: its standing, means and
 slots, a few of its own meters, its goal's progress (it sees only its own
@@ -112,7 +112,7 @@ def render(d: Dashboard) -> list[str]:
 
 
 def season_report(before: State, revealed: int = 0) -> list[str]:
-    """The full reveal (README §15), from the state just before it.
+    """The full reveal (spec §15), from the state just before it.
 
     That state still knows who had gathered which pieces on whom. Every winner
     is listed, or that there were none; ``revealed`` is how many covert secrets

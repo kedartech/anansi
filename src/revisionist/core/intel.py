@@ -1,4 +1,4 @@
-"""Intelligence on secret goals (README §7, decision 37).
+"""Intelligence on secret goals (spec §7, decision 37).
 
 A rival's goal is learned only by working for it. Each successful
 ``investigate`` against a seat returns one **piece**, in a fixed order from
@@ -106,7 +106,7 @@ def _object(leaf: Leaf) -> str:
 
 
 def domain(state: State, leaf: Leaf) -> str:
-    """The kind of thing a goal is about (README §7: office, wealth, a person, ...)."""
+    """The kind of thing a goal is about (spec §7: office, wealth, a person, ...)."""
     match leaf:
         case HoldsOffice():
             return "office"
@@ -267,7 +267,7 @@ def piece(state: State, intent: Intent, outcome: OutcomeTier, seed: str) -> d.Fa
 
 def decoys(state: State, intent: Intent, outcome: OutcomeTier) -> list[d.FactAssert]:
     """A ``forge`` naming your own seat's entity plants a false domain and object for
-    rival spies to find, about the first other thing it names (README §7).
+    rival spies to find, about the first other thing it names (spec §7).
 
     The decoy is covert and known only to you; an investigation's partial
     success returns it in place of the truth.

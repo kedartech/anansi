@@ -126,11 +126,11 @@ def get_briefing(
 
 
 def dashboard_lines(state: State, seat: SeatId) -> list[str]:
-    """The seat's dashboard (README §15), from its own view only. No model is asked."""
+    """The seat's dashboard (spec §15), from its own view only. No model is asked."""
     return dashboard.render(dashboard.dashboard(project(state, seat)))
 
 
-# --- perceived odds (README §7) ----------------------------------------------------
+# --- perceived odds (spec §7) ----------------------------------------------------
 #
 # A player sees how their own agent rated an order only once it is locked: the
 # perceived band logged in feasibility_rated when the tick froze. Never the true

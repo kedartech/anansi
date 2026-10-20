@@ -1,4 +1,4 @@
-"""Layer 9b: the human-boundary canary (README §7).
+"""Layer 9b: the human-boundary canary (spec §7).
 
 The opacity boundary is the person, not the seat. Every narration, briefing
 and reply here echoes its whole prompt, View JSON included, so nothing but

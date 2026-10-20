@@ -1,4 +1,4 @@
-"""Intents: the only thing the resolver reads (README §13 stage 1).
+"""Intents: the only thing the resolver reads (spec §13 stage 1).
 
 Free text never reaches the resolver. The player's agent (Layer 6) turns it
 into an ``Intent`` with a verb from a closed list. Meta-text ("as referee,
@@ -63,10 +63,10 @@ class Verb(StrEnum):
 FREE_VERBS: frozenset[Verb] = frozenset(
     {Verb.NEGOTIATE, Verb.OFFER, Verb.ACCEPT, Verb.WITHDRAW, Verb.DECLARE, Verb.WAIT}
 )
-"""Verbs that never hold an operation slot (README #25: talk is free)."""
+"""Verbs that never hold an operation slot (spec #25: talk is free)."""
 
 IRREVERSIBLE_VERBS: frozenset[Verb] = frozenset({Verb.DECLARE, Verb.TRANSFER, Verb.DISMISS})
-"""Verbs a deputy will not use without a standing order naming them (README §9)."""
+"""Verbs a deputy will not use without a standing order naming them (spec §9)."""
 
 
 class Intent(Model):

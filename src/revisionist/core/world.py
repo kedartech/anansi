@@ -168,7 +168,7 @@ class GoalDecl(Model):
     """A player seat's secret goal. In a world file the condition names keys, not IDs.
 
     The compiler gives the goal its objective clock and its kind; neither is
-    written here, because the kind comes from a fixed table (README §15).
+    written here, because the kind comes from a fixed table (spec §15).
     """
 
     key: Key
@@ -216,7 +216,7 @@ class WorldFile(Model):
     """A point in history, "Florence, April 1478". Set, it opens Session Zero."""
     roster: tuple[CharacterDecl, ...] = ()
     notes: tuple[Annotated[str, StringConstraints(max_length=200)], ...] = ()
-    """Readings the GM chose where the record is disputed or silent (README §5)."""
+    """Readings the GM chose where the record is disputed or silent (spec §5)."""
 
 
 __all__ = [

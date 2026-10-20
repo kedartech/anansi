@@ -1,4 +1,4 @@
-"""Layer 10 item 1a: secret goals and win conditions (README §15).
+"""Layer 10 item 1a: secret goals and win conditions (spec §15).
 
 No model decides whether a goal is met: ``goal_met`` does, from State alone.
 A Lasting goal stays met whatever happens after; an Undoable one counts only

@@ -1,10 +1,10 @@
-"""Canary scan over outbound text (build plan Layer 5; README §12).
+"""Canary scan over outbound text (build plan Layer 5; spec §12).
 
 Covert facts in fixtures carry a unique ``canary`` string. After a tick, every
 narration and briefing is checked for canaries its recipient should not know.
 Pure: takes the state and the events, returns the hits. Zero tolerance in tests.
 
-Layer 9b adds the human boundary (README §7): the opacity boundary is the
+Layer 9b adds the human boundary (spec §7): the opacity boundary is the
 person, not the seat, so a person's check is against the union of what all
 their seats may know, over everything that person can read.
 """

@@ -88,7 +88,7 @@ class RecordingDeliverer:
 
 
 class KeywordSafety:
-    """Hard-line keyword classifier (README §17). Real classifiers arrive in Layer 10.
+    """Hard-line keyword classifier (spec §17). Real classifiers arrive in Layer 10.
 
     Refuses an intent whose free text (``spin``, ``condition``) contains any word
     from ``state.settings.lines`` or the extra words given here.

@@ -572,7 +572,7 @@
       },
       "Character": {
         "additionalProperties": false,
-        "description": "A real person from the chosen moment that a player may claim (README \u00a75 step 3).\n\nJudged by agency in history, not fame. Where the record names no one, the\ncharacter is a composite: named, built from what people in that role did,\nand labelled as such in the brief.",
+        "description": "A real person from the chosen moment that a player may claim (spec \u00a75 step 3).\n\nJudged by agency in history, not fame. Where the record names no one, the\ncharacter is a composite: named, built from what people in that role did,\nand labelled as such in the brief.",
         "properties": {
           "claimed_by": {
             "anyOf": [
@@ -625,7 +625,7 @@
       },
       "CharacterClaimed": {
         "additionalProperties": false,
-        "description": "A player takes a character from the roster (README \u00a75 step 3).\n\nThe fold creates the player's seat here, embodying the character. The\nengine gives this event an ID derived from the campaign and the character,\nso a second claim of the same person fails at the store, not just here.",
+        "description": "A player takes a character from the roster (spec \u00a75 step 3).\n\nThe fold creates the player's seat here, embodying the character. The\nengine gives this event an ID derived from the campaign and the character,\nso a second claim of the same person fails at the store, not just here.",
         "properties": {
           "entity_id": {
             "title": "Entity Id",
@@ -2343,7 +2343,7 @@
       },
       "GoalProposed": {
         "additionalProperties": false,
-        "description": "The goals a player's agent offered on one route (README \u00a75 step 4). A record,\nPrivate to the seat and sealed with its key: these are the player's own words.",
+        "description": "The goals a player's agent offered on one route (spec \u00a75 step 4). A record,\nPrivate to the seat and sealed with its key: these are the player's own words.",
         "properties": {
           "kind": {
             "const": "goal_proposed",
@@ -2383,7 +2383,7 @@
       },
       "GoalSet": {
         "additionalProperties": false,
-        "description": "A seat's secret goal, fixed at Session Zero (README \u00a715). Private to the owner.",
+        "description": "A seat's secret goal, fixed at Session Zero (spec \u00a715). Private to the owner.",
         "properties": {
           "goal": {
             "$ref": "#/$defs/Goal"
@@ -3317,7 +3317,7 @@
       },
       "SeasonEnded": {
         "additionalProperties": false,
-        "description": "The season is over and its winners decided (README \u00a715, decision 36).\n\nLogged right after the full reveal's grants, ``revealed`` of them, and it\nmakes every goal public. ``winners`` is whatever ``season_winners`` says;\nthe fold checks it, so a log cannot crown anyone the engine did not.",
+        "description": "The season is over and its winners decided (spec \u00a715, decision 36).\n\nLogged right after the full reveal's grants, ``revealed`` of them, and it\nmakes every goal public. ``winners`` is whatever ``season_winners`` says;\nthe fold checks it, so a log cannot crown anyone the engine did not.",
         "properties": {
           "kind": {
             "const": "season_ended",
@@ -3347,7 +3347,7 @@
       },
       "Seat": {
         "additionalProperties": false,
-        "description": "Anything that holds a view of the world (README \u00a76, \u00a77, \u00a710).\n\nHumans, AI factions, press outlets and NPCs are all Seats, because they\nall need ``project(state, seat_id)``. Only ``PLAYER`` seats hold slots\nand an agent persona.",
+        "description": "Anything that holds a view of the world (spec \u00a76, \u00a77, \u00a710).\n\nHumans, AI factions, press outlets and NPCs are all Seats, because they\nall need ``project(state, seat_id)``. Only ``PLAYER`` seats hold slots\nand an agent persona.",
         "properties": {
           "agent": {
             "anyOf": [
@@ -3556,7 +3556,7 @@
       },
       "SessionZeroOpened": {
         "additionalProperties": false,
-        "description": "The table locked a point in history with ``/establish`` (README \u00a75 step 2).\n\nTicks wait until Session Zero closes. ``notes`` is where the GM logs each\nreading it chose where historians disagree or the record is silent.",
+        "description": "The table locked a point in history with ``/establish`` (spec \u00a75 step 2).\n\nTicks wait until Session Zero closes. ``notes`` is where the GM logs each\nreading it chose where historians disagree or the record is silent.",
         "properties": {
           "kind": {
             "const": "session_zero_opened",
@@ -4390,7 +4390,7 @@
       },
       "Character": {
         "additionalProperties": false,
-        "description": "A real person from the chosen moment that a player may claim (README \u00a75 step 3).\n\nJudged by agency in history, not fame. Where the record names no one, the\ncharacter is a composite: named, built from what people in that role did,\nand labelled as such in the brief.",
+        "description": "A real person from the chosen moment that a player may claim (spec \u00a75 step 3).\n\nJudged by agency in history, not fame. Where the record names no one, the\ncharacter is a composite: named, built from what people in that role did,\nand labelled as such in the brief.",
         "properties": {
           "claimed_by": {
             "anyOf": [
@@ -5505,7 +5505,7 @@
       },
       "Seat": {
         "additionalProperties": false,
-        "description": "Anything that holds a view of the world (README \u00a76, \u00a77, \u00a710).\n\nHumans, AI factions, press outlets and NPCs are all Seats, because they\nall need ``project(state, seat_id)``. Only ``PLAYER`` seats hold slots\nand an agent persona.",
+        "description": "Anything that holds a view of the world (spec \u00a76, \u00a77, \u00a710).\n\nHumans, AI factions, press outlets and NPCs are all Seats, because they\nall need ``project(state, seat_id)``. Only ``PLAYER`` seats hold slots\nand an agent persona.",
         "properties": {
           "agent": {
             "anyOf": [
@@ -6132,7 +6132,7 @@
       },
       "Character": {
         "additionalProperties": false,
-        "description": "A real person from the chosen moment that a player may claim (README \u00a75 step 3).\n\nJudged by agency in history, not fame. Where the record names no one, the\ncharacter is a composite: named, built from what people in that role did,\nand labelled as such in the brief.",
+        "description": "A real person from the chosen moment that a player may claim (spec \u00a75 step 3).\n\nJudged by agency in history, not fame. Where the record names no one, the\ncharacter is a composite: named, built from what people in that role did,\nand labelled as such in the brief.",
         "properties": {
           "claimed_by": {
             "anyOf": [
@@ -7247,7 +7247,7 @@
       },
       "Seat": {
         "additionalProperties": false,
-        "description": "Anything that holds a view of the world (README \u00a76, \u00a77, \u00a710).\n\nHumans, AI factions, press outlets and NPCs are all Seats, because they\nall need ``project(state, seat_id)``. Only ``PLAYER`` seats hold slots\nand an agent persona.",
+        "description": "Anything that holds a view of the world (spec \u00a76, \u00a77, \u00a710).\n\nHumans, AI factions, press outlets and NPCs are all Seats, because they\nall need ``project(state, seat_id)``. Only ``PLAYER`` seats hold slots\nand an agent persona.",
         "properties": {
           "agent": {
             "anyOf": [
@@ -7336,7 +7336,7 @@
       },
       "SeatFace": {
         "additionalProperties": false,
-        "description": "What any seat may know about another: who it is, never how it is run.\n\nREADME \u00a717: whether a seat is human or AI, its agent, its persona, its\nstatus (blinded, fallen) and its deputy are never shown to other seats.",
+        "description": "What any seat may know about another: who it is, never how it is run.\n\nspec \u00a717: whether a seat is human or AI, its agent, its persona, its\nstatus (blinded, fallen) and its deputy are never shown to other seats.",
         "properties": {
           "embodies": {
             "title": "Embodies",

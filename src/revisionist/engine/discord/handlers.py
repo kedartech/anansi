@@ -216,9 +216,9 @@ class Handlers:
     # --- host commands ------------------------------------------------------
 
     def establish(self, user_id: str, place: str) -> str:
-        """Host: lock a point in history and draft its world (README §5 step 2).
+        """Host: lock a point in history and draft its world (spec §5 step 2).
 
-        Host only until co-GM votes exist (Layer 10 item 7); README §5 has it pass
+        Host only until co-GM votes exist (Layer 10 item 7); spec §5 has it pass
         by the table's vote at three or more humans.
         """
 

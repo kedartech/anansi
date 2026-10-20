@@ -1,4 +1,4 @@
-"""Deltas: the only thing an LLM may propose (README §11, §12).
+"""Deltas: the only thing an LLM may propose (spec §11, §12).
 
 Each delta is a typed change against an existing ID. There are no free-form
 fields and no deletes. The engine clamps a proposal to the Layer 3 table,

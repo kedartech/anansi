@@ -210,7 +210,7 @@ ROSTER_MIN, ROSTER_MAX = 8, 12
 
 
 def check_history(world: WorldFile) -> list[str]:
-    """What a drafted historical world must also be (README §5), beyond compiling.
+    """What a drafted historical world must also be (spec §5), beyond compiling.
 
     Humans arrive at the character step and goals at the goal step, so a draft
     has neither; the roster offers 8-12 people to choose from.
