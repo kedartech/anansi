@@ -64,7 +64,7 @@ Consequences the code keeps:
 | Cost | `cost_logged` (model calls outside a tick; schema v2) |
 | Admin | `admin_read` |
 | Goals | `goal_set`, `goal_progressed`, `goal_met`, `goal_undone` (schema v6) |
-| Session Zero | `session_zero_opened`, `character_listed` (schema v7) |
+| Session Zero | `session_zero_opened`, `character_listed` (schema v7); `character_claimed`, `session_zero_closed`, records `goal_proposed`, `goal_approved` (schema v8) |
 
 Later layers add `vote_*`, `director_event_proposed`, `agent_harmed`, `seat_fallen`, `player_joined`, `key_attached`, `safety_refused`. Each addition bumps `core.SCHEMA_VERSION`.
 
@@ -566,3 +566,19 @@ README §5 step 2. `revisionist establish "<place, date>"` (with `--plausibility
 **Who may establish.** The host only, for now. README §5 has `/establish` pass by the co-GM vote at three or more humans; that comes with votes (Layer 10 item 7). The new campaign becomes the host's current one; Discord's `/establish` uses the default settings.
 
 **Tests** use two hand-written drafts (Florence, April 1478; Washington, October 1962) under `tests/drafts/`, labelled as stand-ins to be re-recorded live; no recording exists for this prompt yet.
+
+### 17.4 Character, goal and brief (1d)
+
+README §5 steps 3-5, run by each player through their agent, privately. In `engine/session_zero.py`, on the CLI (`revisionist character roster|search|claim|pick`, `revisionist goal suggest|own|confirm|flags|approve`, `revisionist history`, `revisionist agent`, `revisionist begin`) and on Discord (`/character`, `/goal`, `/history`, `/agent`, `/begin`).
+
+**Seats appear at the claim.** During Session Zero a host's invite (`revisionist discord invite` with no `--seat`) mints a seat ID; `/join` links the player to it, and every seat command but the Session Zero ones answers "pick your character first". `character_claimed(seat, entity)` creates the player seat in the fold, embodying the character, and marks the roster entry taken. **One character, one player, at the store:** the claim's event ID is derived from the campaign and the character, and every store refuses a repeated event ID (SQLite and Postgres by their UNIQUE column, the memory store by a set), so two players racing for one person cannot both land.
+
+**Character routes.** *Roster*: the public list, with who is taken. *Search*: a small-model ranker that sees only the free roster and may only return its IDs; anything else is dropped. *Own pick*: the frontier model checks the person existed and was placed to act at the start; the engine refuses someone already in the world under that name, caps the proposed means at three assets of tier 3 or less, and adds them as ordinary entity, asset and `character_listed` events before the claim.
+
+**Goal routes.** *As history went*, *as it could have gone*, or *own*. The agent sees the seat's view and returns win conditions over its IDs; `goals.vet` refuses a condition that names anything the seat does not know of, an office that is not one, or a goal already met or impossible from the start (reviving the dead, holding a lost office, keeping a broken treaty). An own goal that cannot be written as a condition comes back with the agent's rewording. The offered options are logged as a `goal_proposed` record, Private and sealed with the seat key; `confirm N` re-vets the choice, creates its private objective clock and logs `goal_set`. The kind, Lasting or Undoable, is shown with every option and again on confirming. A goal is fixed for the season once confirmed.
+
+**Balance check.** `goals.balance` scores the pair on a fixed rubric from the same state for everyone: power is the character's controlled tiers plus warm ties; difficulty is the sum over unmet parts (an any-of takes its easiest branch) of a base, the target's tier, a rival seat holding it, and the distance on a meter or disposition. A strong character with an easy goal or a weak one with a hard goal is flagged to the player with a suggestion, and needs the host's `revisionist goal approve <seat>` before play begins; the host sees `revisionist goal flags`, which lists seat, scores and flag and never the goal. Scores are never logged; approvals are a `goal_approved` record naming only the goal ID.
+
+**Brief and agent.** `revisionist history` (`/history`) is the tick-0 brief from the agent: "As recorded", the goal in history, a "Suggested route (a suggestion, not a rule)", and a line where the record is thin; it is the seat's private narration. `revisionist agent` (`/agent`) designs the persona: a new person entity under the character, then `agent_assigned`. **Begin** (host) closes Session Zero with `session_zero_closed` once every human seat has a character, a goal and an agent and every flagged goal is approved; the phase becomes play and the first tick runs.
+
+**Not yet.** Changing a goal at a chapter break, the redesign after a fall (item 9), and taking an AI seat mid-campaign (item 10). The four new prompts (`character_search`, `character_pick`, `goal`, `history_brief`) have no recordings; the tests script them.
