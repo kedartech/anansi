@@ -532,6 +532,7 @@ def confirm_goal(store: EventStore, campaign_id: CampaignId, seat: SeatId, numbe
         name="Goal",
         owner=seat,
         segments_total=goals.parts(option.condition),
+        segments_filled=goals.progress(state, option.condition),
         scope=private_to(seat),
     )
     goal = goals.Goal(

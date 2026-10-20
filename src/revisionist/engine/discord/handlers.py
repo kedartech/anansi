@@ -24,13 +24,13 @@ from revisionist.core.ontology import Persona
 from revisionist.core.settings import Settings
 from revisionist.core.visibility import Visibility
 from revisionist.engine import campaign as cmp
-from revisionist.engine import play, session_zero
+from revisionist.engine import play, season, session_zero
 from revisionist.engine import scheduler as sch
 from revisionist.engine.discord.rest import CANNOT_DM, DiscordError, DiscordRest, nonce_for
 from revisionist.engine.discord.tables import Invites, Link, LinkError, SeatLinks, file_bug
 from revisionist.engine.llm import Transport, TransportError
 from revisionist.engine.pg_store import PostgresEventStore
-from revisionist.engine.runner import DelivererFactory
+from revisionist.engine.runner import DelivererFactory, Publishes
 from revisionist.engine.store import load_state
 
 log = logging.getLogger("revisionist.discord")
@@ -236,6 +236,31 @@ class Handlers:
             return ESTABLISHED.format(place=place.strip(), n=len(names), names=", ".join(names))
 
         return self._host_store(user_id, "establish", work)
+
+    def dashboard(self, user_id: str) -> str:
+        return self._as_seat(
+            user_id,
+            "dashboard",
+            lambda store, link: "\n".join(
+                play.dashboard_lines(load_state(store, link.campaign_id), link.seat_id)
+            ),
+        )
+
+    def season_end(self, user_id: str) -> str:
+        """Host: the full reveal, the winners, and the report posted to the public channel."""
+
+        def work(store: PostgresEventStore, campaign_id: CampaignId) -> str:
+            try:
+                lines = season.end_season(store, campaign_id)
+            except season.SeasonError as exc:
+                return str(exc)
+            if self.deliverer_factory is not None:
+                deliverer = self.deliverer_factory(store, campaign_id, self.briefings)
+                if isinstance(deliverer, Publishes):
+                    deliverer.publish()
+            return "\n".join(lines)
+
+        return self._as_host(user_id, "season-end", work)
 
     # --- Session Zero (Layer 10 item 1) -----------------------------------------
 

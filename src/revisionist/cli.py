@@ -36,12 +36,12 @@ from revisionist.core.state import State
 from revisionist.core.visibility import Visibility
 from revisionist.core.world_compile import WorldError
 from revisionist.engine import campaign as cmp
-from revisionist.engine import play, session_zero
+from revisionist.engine import play, season, session_zero
 from revisionist.engine import scheduler as sch
 from revisionist.engine.ids import new_id
 from revisionist.engine.llm import Transport, TransportError
 from revisionist.engine.maintenance import copy_campaign, verify_campaign
-from revisionist.engine.runner import DelivererFactory, play_tick
+from revisionist.engine.runner import DelivererFactory, Publishes, file_deliverer, play_tick
 from revisionist.engine.store import EventStore, Sealer, StoreError, load_state
 from revisionist.engine.tick import NotInPlayError
 
@@ -184,6 +184,49 @@ def establish(
     for ch in sorted(state.roster.values(), key=lambda c: state.entities[c.entity_id].name):
         label = " (composite)" if ch.composite else ""
         typer.echo(f"  {state.entities[ch.entity_id].name}{label}: {ch.pitch}")
+
+
+@app.command()
+def dashboard(seat: PlayerSeat = None) -> None:
+    """Your standing, means, goal progress and what you have learned of rivals' aims."""
+    store = cmp.open_store()
+    state = load_state(store, _campaign(store))
+    me = _me(state, seat)
+    _guard(store, state.campaign_id, me)
+    for line in play.dashboard_lines(state, me):
+        typer.echo(line)
+
+
+season_app = typer.Typer(no_args_is_help=True, help="Host: end the season and read its report.")
+app.add_typer(season_app, name="season")
+
+
+@season_app.command("end")
+def season_end() -> None:
+    """Host: the full reveal and the winners. Ticks stop for good."""
+    store = cmp.open_store()
+    campaign_id = _campaign(store)
+    try:
+        lines = season.end_season(store, campaign_id)
+    except season.SeasonError as exc:
+        raise _fail(str(exc), EXIT_REFUSED) from exc
+    deliverer = (_deliverers() or file_deliverer)(store, campaign_id, cmp.briefings_dir())
+    if isinstance(deliverer, Publishes):
+        deliverer.publish()
+    for line in lines:
+        typer.echo(line)
+
+
+@season_app.command("report")
+def season_report_cmd() -> None:
+    """The season report again, once it has ended."""
+    store = cmp.open_store()
+    try:
+        lines = season.report(store, _campaign(store))
+    except season.SeasonError as exc:
+        raise _fail(str(exc), EXIT_REFUSED) from exc
+    for line in lines:
+        typer.echo(line)
 
 
 @app.command()

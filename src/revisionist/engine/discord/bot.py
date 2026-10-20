@@ -33,6 +33,8 @@ COMMANDS = (
     "history",
     "agent",
     "begin",
+    "dashboard",
+    "season-end",
     "advance",
     "pause",
     "resume",
@@ -163,6 +165,16 @@ def register(
     async def begin(interaction: discord.Interaction) -> None:
         user = str(interaction.user.id)
         await answer(interaction, lambda: h.begin(user))
+
+    @tree.command(name="dashboard", description="Your standing, means and goal", guild=guild)
+    async def dashboard(interaction: discord.Interaction) -> None:
+        user = str(interaction.user.id)
+        await answer(interaction, lambda: h.dashboard(user))
+
+    @tree.command(name="season-end", description="Host: end the season, reveal all", guild=guild)
+    async def season_end(interaction: discord.Interaction) -> None:
+        user = str(interaction.user.id)
+        await answer(interaction, lambda: h.season_end(user))
 
     @tree.command(name="advance", description="Host: run the next tick now", guild=guild)
     async def advance(interaction: discord.Interaction) -> None:

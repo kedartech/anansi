@@ -424,6 +424,11 @@ payloads = st.one_of(
     ),
     st.builds(ev.CharacterClaimed, seat_id=seat_ids, entity_id=entity_ids),
     st.builds(ev.SessionZeroClosed),
+    st.builds(
+        ev.SeasonEnded,
+        winners=st.lists(seat_ids, max_size=3).map(tuple),
+        revealed=st.integers(0, 50),
+    ),
     st.builds(ev.GoalSet, goal=goals()),
     st.builds(ev.GoalProgressed, goal_id=goal_ids, parts_met=st.integers(0, 8)),
     st.builds(ev.GoalMet, goal_id=goal_ids),

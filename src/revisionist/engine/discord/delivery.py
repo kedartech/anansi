@@ -20,6 +20,7 @@ from revisionist.core import events as ev
 from revisionist.core.canary import scan_text
 from revisionist.core.ids import CampaignId, SeatId, derived_id
 from revisionist.core.ontology import Controller, SeatKind
+from revisionist.engine import season
 from revisionist.engine.discord.rest import (
     HELD_LABEL,
     PUBLIC_LABEL,
@@ -63,7 +64,8 @@ class RoutingDeliverer:
         return self.discord.deliver(seat_id, text, idempotency_key)
 
     def publish(self) -> list[str]:
-        """Post every statement and admin read not yet posted. Returns the keys it used."""
+        """Post every statement, admin read and season report not yet posted.
+        Returns the keys it used."""
         if self.public_channel is None:
             return []
         state = load_state(self.store, self.campaign_id)
@@ -77,6 +79,13 @@ class RoutingDeliverer:
                     f"Admin read: the host opened {n} private record{'s' if n != 1 else ''}."
                     " It is in the campaign log.",
                     key,
+                )
+                keys.append(key)
+                continue
+            if isinstance(e.payload, ev.SeasonEnded):
+                key = derived_id(self.campaign_id, "season_ended", e.event_id)
+                self.discord.post(
+                    self.public_channel, "\n".join(season.report(self.store, self.campaign_id)), key
                 )
                 keys.append(key)
                 continue
