@@ -2,10 +2,12 @@
 
 The solo slice is played from here: ``wyrd new salt-strait``, then
 ``wyrd briefing``, ``wyrd order "..."``, ``wyrd tick``, repeat. The
-campaign lives in ``$WYRD_DB`` (default ``./wyrd.db``); every command works
-on the newest campaign in that file.
+campaign lives in ``$WYRD_DB`` (default ``./wyrd.db``, or a ``postgresql://``
+URL); every command works on the newest campaign there. ``wyrd db`` holds the
+Postgres maintenance commands (Layer 8).
 """
 
+import os
 from collections.abc import Callable
 from typing import Annotated
 
@@ -23,8 +25,9 @@ from wyrd.core.world_compile import WorldError
 from wyrd.engine import campaign as cmp
 from wyrd.engine.agent import Agent, receive_order
 from wyrd.engine.llm import ClaudeNarrator, ClaudeResolver, Transport, TransportError
+from wyrd.engine.maintenance import copy_campaign, verify_campaign
 from wyrd.engine.providers import KeywordSafety, ScriptedResolver, TemplateNarrator
-from wyrd.engine.store import SqliteStore, load_state
+from wyrd.engine.store import EventStore, StoreError, load_state
 from wyrd.engine.tick import Providers, file_intent, run_tick
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
@@ -46,7 +49,7 @@ def _fail(message: str, code: int = EXIT_ERROR) -> typer.Exit:
     return typer.Exit(code)
 
 
-def _campaign(store: SqliteStore) -> CampaignId:
+def _campaign(store: EventStore) -> CampaignId:
     try:
         return cmp.current_campaign(store)
     except LookupError as exc:
@@ -173,7 +176,7 @@ def tick(offline: Offline = False) -> None:
     campaign_id = _campaign(store)
     state = load_state(store, campaign_id)
     deliverer = cmp.FileDeliverer(
-        cmp.briefings_dir(cmp.db_path()),
+        cmp.briefings_dir(),
         {s.seat_id: s.name for s in state.seats.values()},
         state.tick,
     )
@@ -199,7 +202,7 @@ def tick(offline: Offline = False) -> None:
         raise _fail(render_leaks(found), EXIT_LEAK)
 
 
-def _faction_turns(store: SqliteStore, campaign_id: CampaignId, transport: Transport) -> None:
+def _faction_turns(store: EventStore, campaign_id: CampaignId, transport: Transport) -> None:
     """Each AI faction's deputy files up to three intents from its own view."""
     for seat in cmp.faction_seats(load_state(store, campaign_id)):
         agent = Agent.for_seat(load_state(store, campaign_id), seat, transport)
@@ -249,6 +252,82 @@ def leaks() -> None:
     typer.echo(render_leaks(found))
     if found:
         raise typer.Exit(EXIT_LEAK)
+
+
+# --- wyrd db ------------------------------------------------------------------
+
+db_app = typer.Typer(no_args_is_help=True, help="Postgres migrations, copy and verify.")
+app.add_typer(db_app, name="db")
+
+CampaignOpt = Annotated[
+    str | None, typer.Option("--campaign", help="One campaign ID (default: every campaign)")
+]
+
+
+@db_app.command("migrate")
+def db_migrate(
+    app_role: Annotated[
+        str, typer.Option("--app-role", envvar="WYRD_APP_ROLE", help="Role the runtime uses")
+    ] = "wyrd_app",
+) -> None:
+    """Apply pending migrations as the admin in ``$WYRD_ADMIN_DSN``."""
+    admin = os.environ.get("WYRD_ADMIN_DSN")
+    if not admin:
+        raise _fail("WYRD_ADMIN_DSN is not set")
+    from wyrd.engine.pg_store import migrate
+
+    applied = migrate(admin, app_role)
+    typer.echo(f"applied {', '.join(applied)}" if applied else "up to date")
+
+
+@db_app.command("copy")
+def db_copy(
+    source: Annotated[str, typer.Option("--from", help="SQLite file to copy from")],
+    target: Annotated[str, typer.Option("--to", help="postgresql:// URL to copy into")],
+    campaign: CampaignOpt = None,
+) -> None:
+    """Copy campaigns event for event, with the latest snapshot, then verify the copy."""
+    if not cmp.is_postgres(source) and not os.path.isfile(source):
+        raise _fail(f"no database at {source}")
+    src, dst = cmp.open_store(source), cmp.open_store(target)
+    failed = False
+    for campaign_id in [CampaignId(campaign)] if campaign else src.campaign_ids():
+        try:
+            done = copy_campaign(src, dst, campaign_id)
+        except StoreError as exc:
+            typer.echo(f"FAIL {campaign_id}: {exc}", err=True)
+            failed = True
+            continue
+        v = done.verified
+        if not v.ok:
+            typer.echo(f"FAIL {campaign_id}: {v.problem}", err=True)
+            failed = True
+            continue
+        typer.echo(
+            f"copied {campaign_id}: {done.copied} events ({done.already} already there), "
+            f"tick {v.tick}, hash {v.state_hash}"
+        )
+    if failed:
+        raise typer.Exit(EXIT_ERROR)
+
+
+@db_app.command("verify")
+def db_verify(campaign: CampaignOpt = None) -> None:
+    """Replay every campaign from event 0 and check each hash and the latest snapshot."""
+    store = cmp.open_store()
+    ids = [CampaignId(campaign)] if campaign else store.campaign_ids()
+    if not ids:
+        raise _fail("no campaigns to verify")
+    failed = False
+    for campaign_id in ids:
+        v = verify_campaign(store, campaign_id)
+        if v.ok:
+            typer.echo(f"ok {campaign_id}: {v.events} events, tick {v.tick}, hash {v.state_hash}")
+        else:
+            typer.echo(f"FAIL {campaign_id}: {v.problem}", err=True)
+            failed = True
+    if failed:
+        raise typer.Exit(EXIT_ERROR)
 
 
 __all__ = ["EXIT_ERROR", "EXIT_LEAK", "EXIT_REFUSED", "app", "transport_factory"]

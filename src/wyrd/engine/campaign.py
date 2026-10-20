@@ -23,7 +23,7 @@ from wyrd.core.world import WorldFile
 from wyrd.core.world_compile import compile_world
 from wyrd.engine.ids import new_id
 from wyrd.engine.llm import ClaudeCli, Transport, prompt_versions
-from wyrd.engine.store import SqliteStore, load_state
+from wyrd.engine.store import EventStore, SqliteStore, load_state
 
 WORLDS_DIR = Path(__file__).resolve().parents[3] / "worlds"
 """Bundled world bibles. ``wyrd new salt-strait`` reads ``worlds/salt-strait.yaml``."""
@@ -33,13 +33,28 @@ def versions() -> Versions:
     return Versions(engine=__version__, schema_version=SCHEMA_VERSION, prompt=prompt_versions())
 
 
+def db_target() -> str:
+    """``$WYRD_DB``: a ``postgresql://`` URL or a SQLite file path (default ``./wyrd.db``)."""
+    return os.environ.get("WYRD_DB", "wyrd.db")
+
+
+def is_postgres(target: str) -> bool:
+    return target.startswith(("postgresql://", "postgres://"))
+
+
 def db_path() -> Path:
-    """``$WYRD_DB`` or ``./wyrd.db``."""
-    return Path(os.environ.get("WYRD_DB", "wyrd.db"))
+    """The SQLite file ``$WYRD_DB`` names."""
+    return Path(db_target())
 
 
-def open_store(path: Path | None = None) -> SqliteStore:
-    return SqliteStore(path or db_path())
+def open_store(target: Path | str | None = None) -> EventStore:
+    target = str(target) if target is not None else db_target()
+    if is_postgres(target):
+        # Imported here so SQLite play never needs the ``postgres`` extra.
+        from wyrd.engine.pg_store import PostgresEventStore
+
+        return PostgresEventStore(target)
+    return SqliteStore(target)
 
 
 def world_path(name: str) -> Path:
@@ -57,13 +72,13 @@ def load_world(path: Path) -> WorldFile:
     return WorldFile.model_validate(yaml.safe_load(path.read_text()))
 
 
-def new_campaign(store: SqliteStore, world: WorldFile) -> CampaignId:
+def new_campaign(store: EventStore, world: WorldFile) -> CampaignId:
     campaign_id = CampaignId(new_id())
     store.append_all(compile_world(world, campaign_id, versions()))
     return campaign_id
 
 
-def current_campaign(store: SqliteStore) -> CampaignId:
+def current_campaign(store: EventStore) -> CampaignId:
     """The newest campaign in the file."""
     ids = store.campaign_ids()
     if not ids:
@@ -89,7 +104,7 @@ def faction_seats(state: State) -> list[SeatId]:
 
 
 def log_cost(
-    store: SqliteStore,
+    store: EventStore,
     campaign_id: CampaignId,
     purpose: str,
     costs: Sequence[CallCost],
@@ -136,8 +151,16 @@ class FileDeliverer:
         return "file"
 
 
-def briefings_dir(store_path: Path) -> Path:
-    return store_path.parent / f"{store_path.stem}-briefings"
+def briefings_dir(target: str | None = None) -> Path:
+    """``$WYRD_BRIEFINGS_DIR``, else ``<db>-briefings`` beside a SQLite file, else
+    ``./wyrd-briefings`` for Postgres."""
+    if override := os.environ.get("WYRD_BRIEFINGS_DIR"):
+        return Path(override)
+    target = target if target is not None else db_target()
+    if is_postgres(target):
+        return Path("wyrd-briefings")
+    path = Path(target)
+    return path.parent / f"{path.stem}-briefings"
 
 
 __all__ = [
@@ -146,8 +169,10 @@ __all__ = [
     "briefings_dir",
     "current_campaign",
     "db_path",
+    "db_target",
     "faction_seats",
     "human_seat",
+    "is_postgres",
     "live_transport",
     "load_world",
     "log_cost",
