@@ -1,0 +1,47 @@
+{
+ "9168d0e6b2a97a1c3515d8e3": {
+  "call_class": "brief",
+  "model": "claude-haiku-5-5",
+  "prompt_head": "## Reader: Regent of the North, tick 1\n## What this seat knows\n{\"campaign_id\":\"01ARZ3NDEKTSV4RRFFQ69G5FA0\",\"tick\":1,\"set",
+  "reply": {
+   "cached_tokens": 5193,
+   "input_tokens": 2,
+   "model": "claude-haiku-5-5",
+   "output": {
+    "dilemma": "The Southern sabotage operation is one stage from completion and its target is still hidden from us, so it can finish before we have any chance to answer it.",
+    "moves": [
+     "Quietly task our people to learn what the Southern sabotage is aimed at before it closes.",
+     "Send the South a formal demand to stand down its sabotage under the signed truce.",
+     "Hold the hill arming back as bargaining weight and open talks with the South on the truce terms."
+    ],
+    "text": "Regent, the South has a sabotage operation running that is one step from finishing. We cannot yet see what it is aimed at. The truce we signed is public and still stands on paper, but our relations sit at a cold minus one, and I would not lean on it. Our own hill irregulars are being armed. That work is one stage of four complete and is known only to this office. Stability stands at sixty. Each stage we add to the hill work widens the window in which someone could discover it. I would rather settle what we intend before the South settles it for us."
+   },
+   "output_tokens": 1844,
+   "usd": 0.0019608
+  }
+ },
+ "f8594f5933afa943b6f18130": {
+  "call_class": "structure",
+  "model": "claude-haiku-5-5",
+  "prompt_head": "## Seat: Regent of the North (chief of staff)\n## What this seat knows\n{\"campaign_id\":\"01ARZ3NDEKTSV4RRFFQ69G5FA0\",\"tick\"",
+  "reply": {
+   "cached_tokens": 6093,
+   "input_tokens": 2,
+   "model": "claude-haiku-5-5",
+   "output": {
+    "intent": {
+     "duration_ticks": 1,
+     "means": [],
+     "spin": "The northern passes will be held through winter.",
+     "targets": [
+      "01ARZ3NDEKTSV4RRFFQ69G5ES0"
+     ],
+     "verb": "declare"
+    },
+    "kind": "intent"
+   },
+   "output_tokens": 453,
+   "usd": 0.00106473
+  }
+ }
+}

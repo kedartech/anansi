@@ -27,9 +27,9 @@ from typing import Protocol
 from pydantic import Field
 
 from anansi import __version__
+from anansi.core import SCHEMA_VERSION, referee
 from anansi.core import delta as d
 from anansi.core import events as ev
-from anansi.core import referee
 from anansi.core._base import Model
 from anansi.core.events import CallCost, Event, Versions
 from anansi.core.fold import replay, state_hash
@@ -211,7 +211,7 @@ def file_intent(
     return rejection
 
 
-_VERSIONS = Versions(engine=__version__, schema_version="1")
+_VERSIONS = Versions(engine=__version__, schema_version=SCHEMA_VERSION)
 
 
 # --- the tick ----------------------------------------------------------------
@@ -470,6 +470,10 @@ def _clamp_all(
     cuts.extend(capped.cut)
     by_id = {x.delta_id: x for x in capped.kept}
     kept = [(iid, by_id[x.delta_id]) for iid, x in kept if x.delta_id in by_id]
+    folds = referee.admissible(state, [x for _, x in kept])
+    cuts.extend(folds.cut)
+    ok = {x.delta_id for x in folds.kept}
+    kept = [(iid, x) for iid, x in kept if x.delta_id in ok]
     return kept, cuts
 
 

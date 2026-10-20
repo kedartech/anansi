@@ -213,6 +213,11 @@ def _mutate(state: State, event: Event) -> State:
 # --- deltas -------------------------------------------------------------------
 
 
+def apply_delta(state: State, delta: d.Delta, tick: int) -> State:
+    """Fold one delta as ``delta_applied`` at ``tick`` would. Raises ``FoldError`` if it cannot."""
+    return _apply_delta(state, delta, tick)
+
+
 def _apply_delta(state: State, delta: d.Delta, tick: int) -> State:
     match delta:
         case d.AssetTierDelta():

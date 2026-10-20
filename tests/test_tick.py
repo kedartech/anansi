@@ -307,3 +307,51 @@ def test_outlet_narration_is_public_and_cannot_see_secrets(store: EventStore) ->
     assert fx.CANARY not in herald.payload.text  # type: ignore[union-attr]
     sent = next(text for seat, text, _ in deliverer.sent if seat == fx.HERALD)
     assert fx.CANARY not in sent and fx.A_NORTH_SECRET_ARMY not in sent
+
+
+def test_a_delta_the_fold_would_refuse_is_cut_not_fatal(store: EventStore) -> None:
+    """Live failure, salt-strait tick 1: the resolver asserted a fact about an asset.
+
+    The fold wants an entity as a fact's subject. Before the admissibility pass the
+    delta survived clamp, the APPLY batch failed to fold, and every retry failed the
+    same way. Now that one delta is rejected and the rest of the tick lands.
+    """
+
+    def script(state: State, intent: Intent, roll: Roll) -> list[d.Delta]:
+        return [
+            d.FactAssert(
+                delta_id=DeltaId(derived_id("bad", state.tick, intent.intent_id)),
+                reason="names an asset where an entity belongs",
+                fact_id=fx.FactId(derived_id("f", state.tick, intent.intent_id)),
+                subject=fx.EntityId(fx.A_NORTH_ARMY),
+                predicate="is_weak_to",
+                obj="storm surge",
+                scope=PUBLIC,
+            ),
+            d.FactAssert(
+                delta_id=DeltaId(derived_id("dup", state.tick, intent.intent_id)),
+                reason="reuses an existing fact ID",
+                fact_id=fx.F_PUBLIC_TREATY,
+                subject=fx.E_NORTH,
+                predicate="signed",
+                obj="treaty",
+                scope=PUBLIC,
+            ),
+            *_script(state, intent, roll),
+        ]
+
+    _file_some(store, 0, 1)
+    providers, _ = _providers(ScriptedResolver(script))
+    result = run_tick(store, fx.CAMPAIGN, providers)
+    assert not result.quiet and result.applied >= 1
+    events = list(store.read(fx.CAMPAIGN))
+    refused = [
+        e.payload
+        for e in events
+        if isinstance(e.payload, ev.DeltaRejected)
+        and e.payload.reason is RejectionReason.TARGET_UNKNOWN
+    ]
+    assert any("unknown entity" in r.detail for r in refused)
+    assert any("duplicate fact" in r.detail for r in refused)
+    assert load_state(store, fx.CAMPAIGN).tick == 1
+    assert state_hash(replay(events[:-1])) == result.state_hash

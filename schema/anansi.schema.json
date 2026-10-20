@@ -1091,6 +1091,48 @@
         "title": "Controller",
         "type": "string"
       },
+      "CostLogged": {
+        "additionalProperties": false,
+        "description": "Model calls made outside a tick (structuring an order, a briefing, a deputy turn).\n\nTick costs live on ``tick_closed``; everything else lands here so ``anansi cost``\ncan account for every call. A record kind: it changes no state.",
+        "properties": {
+          "costs": {
+            "items": {
+              "$ref": "#/$defs/CallCost"
+            },
+            "title": "Costs",
+            "type": "array"
+          },
+          "kind": {
+            "const": "cost_logged",
+            "default": "cost_logged",
+            "title": "Kind",
+            "type": "string"
+          },
+          "purpose": {
+            "maxLength": 60,
+            "title": "Purpose",
+            "type": "string"
+          },
+          "seat_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Seat Id"
+          }
+        },
+        "required": [
+          "purpose",
+          "costs"
+        ],
+        "title": "CostLogged",
+        "type": "object"
+      },
       "DeltaApplied": {
         "additionalProperties": false,
         "properties": {
@@ -3052,6 +3094,7 @@
             "clarification_asked": "#/$defs/ClarificationAsked",
             "clock_created": "#/$defs/ClockCreated",
             "commitment_created": "#/$defs/CommitmentCreated",
+            "cost_logged": "#/$defs/CostLogged",
             "delta_applied": "#/$defs/DeltaApplied",
             "delta_proposed": "#/$defs/DeltaProposed",
             "delta_rejected": "#/$defs/DeltaRejected",
@@ -3164,6 +3207,9 @@
           },
           {
             "$ref": "#/$defs/TickClosed"
+          },
+          {
+            "$ref": "#/$defs/CostLogged"
           },
           {
             "$ref": "#/$defs/AdminRead"

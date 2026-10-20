@@ -52,6 +52,7 @@ Consequences the code keeps:
 | Resolution | `feasibility_rated`, `rolled`, `delta_proposed`, `delta_rejected`, `delta_applied`, `operation_opened`, `operation_resolved`, `scheduled_event_fired` |
 | Output | `narration_written`, `briefing_delivered` |
 | Tick | `tick_opened`, `tick_stage_completed`, `tick_closed` |
+| Cost | `cost_logged` (model calls outside a tick; schema v2) |
 | Admin | `admin_read` |
 
 Later layers add `vote_*`, `director_event_proposed`, `agent_harmed`, `seat_fallen`, `player_joined`, `key_attached`, `safety_refused`. Each addition bumps `core.SCHEMA_VERSION`.

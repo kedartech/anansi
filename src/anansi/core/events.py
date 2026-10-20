@@ -271,6 +271,19 @@ class TickClosed(Model):
     """blake2b of the canonical state JSON after this tick. Replay must match."""
 
 
+class CostLogged(Model):
+    """Model calls made outside a tick (structuring an order, a briefing, a deputy turn).
+
+    Tick costs live on ``tick_closed``; everything else lands here so ``anansi cost``
+    can account for every call. A record kind: it changes no state.
+    """
+
+    kind: Literal["cost_logged"] = "cost_logged"
+    seat_id: SeatId | None = None
+    purpose: str = Field(max_length=60)
+    costs: tuple[CallCost, ...]
+
+
 # --- Admin --------------------------------------------------------------------
 
 
@@ -312,6 +325,7 @@ Payload = Annotated[
     | TickOpened
     | TickStageCompleted
     | TickClosed
+    | CostLogged
     | AdminRead,
     Field(discriminator="kind"),
 ]

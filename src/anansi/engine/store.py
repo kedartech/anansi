@@ -189,6 +189,13 @@ class SqliteStore:
             (state.campaign_id, state.last_seq, state.model_dump_json()),
         )
 
+    def campaign_ids(self) -> list[CampaignId]:
+        """Every campaign in this file, oldest first by first event."""
+        rows = self._conn.execute(
+            "SELECT campaign_id FROM events WHERE seq = 0 ORDER BY event_id"
+        ).fetchall()
+        return [CampaignId(r[0]) for r in rows]
+
     def latest_snapshot(self, campaign_id: CampaignId) -> State | None:
         row = self._conn.execute(
             "SELECT body FROM snapshots WHERE campaign_id = ? ORDER BY seq DESC LIMIT 1",

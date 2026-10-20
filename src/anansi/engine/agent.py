@@ -143,11 +143,15 @@ def _intent_schema(ids: dict[str, list[str]]) -> dict[str, Any]:
     }
 
 
-def _intent_from_model(view: View, raw: Any) -> Intent:
+def _intent_from_model(view: View, raw: Any, n: int = 0) -> Intent:
     """Fill the fields the model must not choose: id, actor, scope, tick.
 
     IDs the seat cannot see are refused here, not left to the schema: a reply can
     come from a recording or a model that ignored ``--json-schema``.
+
+    ``n`` keeps two intents with the same verb in one tick apart: the ID is
+    derived from the seat's count of pending intents plus the reply index, so
+    it stays a pure function of the view.
     """
     if not isinstance(raw, dict) or not _ids_visible(view, raw):
         raise ValidationError.from_exception_data("intent", [])
@@ -155,7 +159,13 @@ def _intent_from_model(view: View, raw: Any) -> Intent:
         {
             **raw,
             "intent_id": IntentId(
-                derived_id(view.campaign_id, view.tick, view.viewer, raw.get("verb", ""))
+                derived_id(
+                    view.campaign_id,
+                    view.tick,
+                    view.viewer,
+                    raw.get("verb", ""),
+                    len(view.own_pending) + n,
+                )
             ),
             "actor": view.viewer,
             "scope": private_to(view.viewer),
@@ -176,6 +186,8 @@ class Agent:
     transport: Transport
     model: str = AGENT_MODEL
     dropped: list[str] = field(default_factory=list)
+    spent: list[CallCost] = field(default_factory=list)
+    """Every model call this agent made, for ``cost_logged``."""
 
     @classmethod
     def for_seat(cls, state: State, seat: SeatId, transport: Transport) -> "Agent":
@@ -259,11 +271,12 @@ class Agent:
                 max_usd=0.25,
             )
         )
+        self.spent.append(reply.cost("deputy"))
         output = reply.output if isinstance(reply.output, dict) else {}
         intents: list[Intent] = []
-        for raw in output.get("intents", []):
+        for n, raw in enumerate(output.get("intents", [])):
             try:
-                intent = _intent_from_model(self.view, raw)
+                intent = _intent_from_model(self.view, raw, n)
             except ValidationError as exc:
                 self.dropped.append(str(exc)[:300])
                 continue

@@ -283,7 +283,7 @@ def test_live_order_round_trip(recorded: RecordedTransport, state: State) -> Non
         recorded.record = True
     store = MemoryStore()
     store.append_all(fx.creation_events())
-    text = "Announce to both banks that the northern passes will be held through winter."
+    text = "Declare publicly to the South that the northern passes will be held through winter."
     result = receive_order(
         store, state, fx.NORTH, text, recorded, versions=Versions(engine="test", schema_version="1")
     )

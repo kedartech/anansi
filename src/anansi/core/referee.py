@@ -23,6 +23,7 @@ from pydantic import Field
 
 from anansi.core import delta as d
 from anansi.core._base import Model
+from anansi.core.fold import FoldError, apply_delta
 from anansi.core.ids import (
     AssetId,
     CampaignId,
@@ -677,6 +678,32 @@ def clamp(
     return Clamped(kept=tuple(kept), cut=tuple(cut))
 
 
+def admissible(state: State, deltas: Sequence[d.Delta]) -> Clamped:
+    """Last pass: drop any delta the fold would refuse, in order, against a scratch state.
+
+    ``clamp`` bounds how much a proposal may change; this bounds what can exist. The
+    resolver is a model and can name an asset where the schema wants an entity, reuse a
+    fact ID, or create something under an owner that is not there. One bad delta must
+    cost that delta, never the tick: a refused fold would fail the tick on every retry.
+    """
+    kept: list[d.Delta] = []
+    cut: list[Cut] = []
+    for delta in deltas:
+        try:
+            state = apply_delta(state, delta, state.tick)
+        except FoldError as exc:
+            cut.append(
+                Cut(
+                    delta_id=delta.delta_id,
+                    reason=RejectionReason.TARGET_UNKNOWN,
+                    detail=str(exc)[:200],
+                )
+            )
+            continue
+        kept.append(delta)
+    return Clamped(kept=tuple(kept), cut=tuple(cut))
+
+
 def cap_meters(state: State, deltas: Sequence[d.Delta]) -> Clamped:
     """Second pass across every intent in a tick: net meter change stays within the cap.
 
@@ -773,6 +800,7 @@ __all__ = [
     "SafetyCheck",
     "Slots",
     "World",
+    "admissible",
     "cap_meters",
     "clamp",
     "rate",

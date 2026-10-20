@@ -376,6 +376,12 @@ payloads = st.one_of(
         state_hash=ulid,
     ),
     st.builds(
+        ev.CostLogged,
+        seat_id=st.none() | seat_ids,
+        purpose=short_text,
+        costs=st.lists(call_costs, max_size=3).map(tuple),
+    ),
+    st.builds(
         ev.AdminRead,
         actor=short_text,
         events=st.lists(event_ids, max_size=4).map(tuple),
