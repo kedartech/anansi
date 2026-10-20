@@ -20,6 +20,7 @@ from revisionist.core import events as ev
 from revisionist.core.canary import scan_text
 from revisionist.core.fold import state_hash
 from revisionist.core.ids import CampaignId
+from revisionist.core.visibility import Visibility
 from revisionist.engine import campaign as cmp
 from revisionist.engine import play
 from revisionist.engine import scheduler as sch
@@ -75,7 +76,10 @@ class Handlers:
 
     # --- seat commands ------------------------------------------------------
 
-    def order(self, user_id: str, text: str) -> str:
+    def order(
+        self, user_id: str, text: str, visibility: str = "private", spin: str | None = None
+    ) -> str:
+        """An order, as ``revisionist order`` takes it. A DM is private with no spin."""
         if not text.strip():
             return EMPTY_ORDER
         return self._as_seat(
@@ -83,7 +87,13 @@ class Handlers:
             "order",
             lambda store, link: (
                 play.give_order(
-                    store, link.campaign_id, link.seat_id, text, self.transport_factory()
+                    store,
+                    link.campaign_id,
+                    link.seat_id,
+                    text,
+                    self.transport_factory(),
+                    visibility=Visibility(visibility),
+                    spin=spin,
                 ).line
             ),
         )

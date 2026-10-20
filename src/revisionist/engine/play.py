@@ -12,6 +12,7 @@ from revisionist.core.ids import CampaignId, SeatId
 from revisionist.core.intent import Intent
 from revisionist.core.project import project
 from revisionist.core.state import State
+from revisionist.core.visibility import PUBLIC, Scope, Visibility, private_to
 from revisionist.engine import campaign as cmp
 from revisionist.engine.agent import Agent, Briefing, StructureResult, receive_order
 from revisionist.engine.llm import Transport
@@ -48,12 +49,44 @@ def object_name(state: State, object_id: str) -> str:
     return object_id
 
 
+ORDER_VISIBILITIES = (Visibility.PRIVATE, Visibility.PUBLIC, Visibility.COVERT)
+"""What a player may choose. Restricted waits for alliances (Layer 10)."""
+SPIN_LIMIT = 280
+
+
+def order_scope(seat: SeatId, visibility: Visibility) -> Scope:
+    if visibility is Visibility.PUBLIC:
+        return PUBLIC
+    if visibility is Visibility.PRIVATE:
+        return private_to(seat)
+    if visibility is Visibility.COVERT:
+        return private_to(seat, covert=True)
+    raise ValueError(f"orders cannot be {visibility.value} yet")
+
+
 def give_order(
-    store: EventStore, campaign_id: CampaignId, seat: SeatId, text: str, transport: Transport
+    store: EventStore,
+    campaign_id: CampaignId,
+    seat: SeatId,
+    text: str,
+    transport: Transport,
+    *,
+    visibility: Visibility = Visibility.PRIVATE,
+    spin: str | None = None,
 ) -> OrderOutcome:
-    """Log the order, structure it, file the intent or ask a question, log the cost."""
+    """Log the order, structure it, file the intent or ask a question, log the cost.
+
+    ``visibility`` and ``spin`` are the player's: the agent never chooses them.
+    Spin is the one public line on an order, published when the tick freezes.
+    """
+    spin = (spin or "").strip() or None
+    if spin is not None and len(spin) > SPIN_LIMIT:
+        raise ValueError(f"spin is at most {SPIN_LIMIT} characters")
+    scope = order_scope(seat, visibility)
     state = load_state(store, campaign_id)
-    result = receive_order(store, state, seat, text, transport, versions=cmp.versions())
+    result = receive_order(
+        store, state, seat, text, transport, versions=cmp.versions(), scope=scope, spin=spin
+    )
     if result.cost is not None:
         cmp.log_cost(store, campaign_id, "structure", [result.cost], seat)
     outcome = result.outcome
@@ -63,7 +96,8 @@ def give_order(
         reason = result.rejection
         return OrderOutcome(result, f"refused: {reason.reason.value}: {reason.detail}")
     targets = ", ".join(object_name(state, t) for t in outcome.targets) or "-"
-    return OrderOutcome(result, f"filed {outcome.intent_id}: {outcome.verb.value} -> {targets}")
+    line = f"filed {outcome.intent_id}: {outcome.verb.value} -> {targets} ({visibility.value})"
+    return OrderOutcome(result, line)
 
 
 def get_briefing(
@@ -101,11 +135,14 @@ def status_lines(state: State, seat: SeatId) -> list[str]:
 
 
 __all__ = [
+    "ORDER_VISIBILITIES",
+    "SPIN_LIMIT",
     "WITHHELD",
     "BriefingOutcome",
     "OrderOutcome",
     "get_briefing",
     "give_order",
     "object_name",
+    "order_scope",
     "status_lines",
 ]
