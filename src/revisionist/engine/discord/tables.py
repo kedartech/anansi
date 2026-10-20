@@ -217,7 +217,7 @@ def file_bug(
     row = conn.execute(
         "INSERT INTO discord_bugs (campaign_id, seat_id, seq, state_hash, notes)"
         " VALUES (%s, %s, %s, %s, %s) RETURNING id",
-        (campaign_id, seat_id, seq, state_hash, notes[:4000]),
+        (campaign_id, seat_id, seq, state_hash, notes),
     ).fetchone()
     assert row is not None
     return int(row[0])

@@ -17,9 +17,12 @@ are wrapped by a host master key (``PgKeyring``, migration 0007).
 import base64
 import json
 import os
+import secrets
+import stat
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Protocol
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Protocol
 
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -32,11 +35,18 @@ from revisionist.core.state import State
 from revisionist.core.visibility import PUBLIC
 from revisionist.engine.store import StoreError
 
+if TYPE_CHECKING:
+    from psycopg import Connection
+
 KEY_BYTES = 32
 NONCE_BYTES = 12
 
 
 class Keyring(Protocol):
+    def create_campaign_key(self, campaign_id: CampaignId) -> str:
+        """Start sealing a campaign. Returns the new key's ID."""
+        ...
+
     def campaign_key(self, campaign_id: CampaignId) -> tuple[str, bytes] | None:
         """``(key ID, key)``, or ``None`` when the campaign is not sealed."""
         ...
@@ -78,6 +88,18 @@ class KeyringSealer:
 
     def sealed(self, campaign_id: CampaignId) -> bool:
         return self.keyring.campaign_key(campaign_id) is not None
+
+    def begin(self, campaign_id: CampaignId) -> None:
+        if not self.sealed(campaign_id):
+            self.keyring.create_campaign_key(campaign_id)
+
+    def seal_text(self, campaign_id: CampaignId, seat_id: SeatId, text: str) -> str:
+        """A seat's words kept outside the log (bug notes), sealed with its key."""
+        if not self.sealed(campaign_id):
+            return text
+        key_id, key = self.keyring.seat_key(campaign_id, seat_id)
+        data = encrypt(key, text.encode(), f"{campaign_id}|text|{key_id}".encode())
+        return f"sealed:{key_id}:" + base64.b64encode(data).decode()
 
     def seal(self, events: Sequence[Event]) -> list[Event]:
         out = []
@@ -186,12 +208,148 @@ class MemoryKeyring:
         self.keys.pop(key_id, None)
 
 
+# --- keys in Postgres, wrapped by the master key (migration 0007) -------------------
+
+MASTER_KEY_ENV = "REVISIONIST_MASTER_KEY_FILE"
+CREDENTIAL = "revisionist-master-key"
+"""The name to give it under systemd's ``$CREDENTIALS_DIRECTORY``, if used."""
+
+
+def master_key_path() -> Path | None:
+    """``$REVISIONIST_MASTER_KEY_FILE``, else a systemd credential, else ``None``.
+
+    The variable holds a path, never the key: the key stays in a file only its
+    owner can read.
+    """
+    if named := os.environ.get(MASTER_KEY_ENV):
+        return Path(named)
+    if creds := os.environ.get("CREDENTIALS_DIRECTORY"):
+        path = Path(creds) / CREDENTIAL
+        return path if path.is_file() else None
+    return None
+
+
+def load_master_key(path: Path) -> bytes:
+    """32 random bytes, raw or base64. Refused if anyone but the owner can read it."""
+    if path.stat().st_mode & (stat.S_IRWXG | stat.S_IRWXO):
+        raise StoreError(f"{path} is readable by others: chmod 600 it")
+    raw = path.read_bytes()
+    if len(raw) == KEY_BYTES:
+        return raw
+    try:
+        decoded = base64.b64decode(raw.strip(), validate=True)
+    except ValueError:
+        decoded = b""
+    if len(decoded) != KEY_BYTES:
+        raise StoreError(f"{path} does not hold a {KEY_BYTES}-byte key")
+    return decoded
+
+
+def new_master_key(path: Path) -> None:
+    """Write a fresh master key, base64, mode 0600. Never overwrites."""
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "w") as f:
+        f.write(base64.b64encode(secrets.token_bytes(KEY_BYTES)).decode() + "\n")
+
+
+class PgKeyring:
+    """``seal_keys``, unwrapped with the master key and cached for the process."""
+
+    def __init__(self, conn: "Connection[Any]", master: bytes) -> None:
+        self.conn = conn
+        self.master = master
+        self._live: dict[tuple[CampaignId, str], tuple[str, bytes] | None] = {}
+        self._keys: dict[str, bytes | None] = {}
+
+    def _aad(self, key_id: str, campaign_id: CampaignId, holder: str) -> bytes:
+        return f"{key_id}|{campaign_id}|{holder}".encode()
+
+    def _create(self, campaign_id: CampaignId, holder: str) -> tuple[str, bytes]:
+        from psycopg import errors
+
+        key_id = secrets.token_hex(16)
+        key = secrets.token_bytes(KEY_BYTES)
+        wrapped = encrypt(self.master, key, self._aad(key_id, campaign_id, holder))
+        try:
+            self.conn.execute(
+                "INSERT INTO seal_keys (key_id, campaign_id, holder, wrapped)"
+                " VALUES (%s, %s, %s, %s)",
+                (key_id, campaign_id, holder, wrapped),
+            )
+        except errors.UniqueViolation:  # another process made it first: use theirs
+            self._live.pop((campaign_id, holder), None)
+            found = self._find(campaign_id, holder)
+            assert found is not None
+            return found
+        self._live[(campaign_id, holder)] = (key_id, key)
+        self._keys[key_id] = key
+        return key_id, key
+
+    def _find(self, campaign_id: CampaignId, holder: str) -> tuple[str, bytes] | None:
+        if (campaign_id, holder) not in self._live:
+            row = self.conn.execute(
+                "SELECT key_id, wrapped FROM seal_keys"
+                " WHERE campaign_id = %s AND holder = %s AND destroyed_at IS NULL",
+                (campaign_id, holder),
+            ).fetchone()
+            found = None
+            if row is not None:
+                key_id = str(row[0])
+                found = (
+                    key_id,
+                    decrypt(self.master, bytes(row[1]), self._aad(key_id, campaign_id, holder)),
+                )
+                self._keys[key_id] = found[1]
+            self._live[(campaign_id, holder)] = found
+        return self._live[(campaign_id, holder)]
+
+    def create_campaign_key(self, campaign_id: CampaignId) -> str:
+        return self._create(campaign_id, "campaign")[0]
+
+    def campaign_key(self, campaign_id: CampaignId) -> tuple[str, bytes] | None:
+        return self._find(campaign_id, "campaign")
+
+    def seat_key(self, campaign_id: CampaignId, seat_id: SeatId) -> tuple[str, bytes]:
+        return self._find(campaign_id, seat_id) or self._create(campaign_id, seat_id)
+
+    def key(self, key_id: str) -> bytes | None:
+        if key_id not in self._keys:
+            row = self.conn.execute(
+                "SELECT campaign_id, holder, wrapped FROM seal_keys"
+                " WHERE key_id = %s AND destroyed_at IS NULL",
+                (key_id,),
+            ).fetchone()
+            self._keys[key_id] = (
+                decrypt(self.master, bytes(row[2]), self._aad(key_id, CampaignId(row[0]), row[1]))
+                if row
+                else None
+            )
+        return self._keys[key_id]
+
+
+def destroy_key(conn: "Connection[Any]", key_id: str, reason: str) -> bool:
+    """Erasure: drop the wrapped key. Needs the admin connection; the app role cannot."""
+    cur = conn.execute(
+        "UPDATE seal_keys SET wrapped = NULL, destroyed_at = now(), destroyed_reason = %s"
+        " WHERE key_id = %s AND destroyed_at IS NULL",
+        (reason[:200], key_id),
+    )
+    return cur.rowcount == 1
+
+
 __all__ = [
+    "CREDENTIAL",
     "KEY_BYTES",
+    "MASTER_KEY_ENV",
     "Keyring",
     "KeyringSealer",
     "MemoryKeyring",
+    "PgKeyring",
     "decrypt",
+    "destroy_key",
     "encrypt",
     "is_sealed_body",
+    "load_master_key",
+    "master_key_path",
+    "new_master_key",
 ]

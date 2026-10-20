@@ -12,6 +12,7 @@ import os
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
+from pathlib import Path
 from typing import TYPE_CHECKING, Annotated
 
 import typer
@@ -391,12 +392,38 @@ def db_verify(campaign: CampaignOpt = None) -> None:
     for campaign_id in ids:
         v = verify_campaign(store, campaign_id)
         if v.ok:
-            typer.echo(f"ok {campaign_id}: {v.events} events, tick {v.tick}, hash {v.state_hash}")
+            sealed = f", sealed, {v.erased} erased" if v.sealed else ""
+            typer.echo(
+                f"ok {campaign_id}: {v.events} events, tick {v.tick}, hash {v.state_hash}{sealed}"
+            )
         else:
             typer.echo(f"FAIL {campaign_id}: {v.problem}", err=True)
             failed = True
     if failed:
         raise typer.Exit(EXIT_ERROR)
+
+
+# --- revisionist admin ------------------------------------------------------------
+
+admin_app = typer.Typer(no_args_is_help=True, help="Host tools: keys, erasure, audited reads.")
+app.add_typer(admin_app, name="admin")
+
+
+@admin_app.command("new-master-key")
+def admin_new_master_key(
+    path: Annotated[Path, typer.Argument(help="Where to write it; must not exist")],
+) -> None:
+    """Write a fresh master key (mode 0600) for sealing campaigns. Back it up off the box:
+    without it, every sealed campaign is unreadable."""
+    try:
+        from revisionist.engine.seal import new_master_key
+    except ImportError as exc:
+        raise _fail("sealing needs the seal extra: install '.[postgres,seal]'") from exc
+    try:
+        new_master_key(path)
+    except FileExistsError as exc:
+        raise _fail(f"{path} exists; a master key is never overwritten") from exc
+    typer.echo(f"wrote {path}; set REVISIONIST_MASTER_KEY_FILE={path}")
 
 
 # --- revisionist scheduler -------------------------------------------------------------
@@ -416,7 +443,9 @@ def _pg_store(
         raise _fail(f"{what} needs REVISIONIST_DB to be a postgresql:// URL{hint}")
     from revisionist.engine.pg_store import PostgresEventStore
 
-    return PostgresEventStore(target)
+    store = cmp.open_store(target)
+    assert isinstance(store, PostgresEventStore)
+    return store
 
 
 def _scheduled(store: "PostgresEventStore", campaign: str | None) -> list[sch.Schedule]:

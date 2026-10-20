@@ -218,6 +218,20 @@ Send the code to the other player privately, never in a server channel. They joi
 
 Create one text channel named `#chronicle` and give the bot **View Channel** and **Send Messages** there, nothing more. Then `revisionist db migrate` (applies `0006_discord_channels`) and `revisionist discord channel public <channel ID>`. From the next tick, every player's spin line is posted there once, as `<seat name>: <text>`, and the press outlet's narration is posted there instead of written to a file. Nothing else goes to a channel: briefings stay in DMs, because the server owner can read every channel and private thread. Create no other channels, roles or threads for the campaign; their names and membership would say who is in it with whom.
 
+### 9.8 Sealing campaigns at rest (Layer 9b)
+
+```
+uv tool install --editable '.[postgres,discord,seal]' --force
+revisionist admin new-master-key ~/.config/revisionist/master.key     # mode 0600, never overwritten
+echo "REVISIONIST_MASTER_KEY_FILE=$HOME/.config/revisionist/master.key" >> ~/.config/revisionist/revisionist.env
+set -a; . ~/.config/revisionist/revisionist-admin.env; set +a
+revisionist db migrate                                    # applies 0007_seal_keys
+```
+
+From then on every **new** campaign is sealed: its events and snapshots are AES-GCM ciphertext in Postgres and in every dump, under a campaign key, and each player's own words (orders, their agent's questions, their private briefings, their bug notes) under a key of their own. All the data keys are stored wrapped by the master key, which never enters the database. Campaigns created before stay plaintext; sealing is forward only. The variable holds a path, not the key, and the file must be readable by its owner only. The scheduler and the bot read it from `revisionist.env`; add it to `revisionist-admin.env` too, so the restore drill (§7) can verify a sealed dump.
+
+**Copy the master key off the box now, somewhere other than the backups.** Without it every sealed campaign is unreadable, by you included, and nothing can recover it.
+
 ## 10. Upgrading a host set up under the old name
 
 The project was called Wyrd Protocol through Layer 9a. Everything it installed carried that name: roles `wyrd_app` and `wyrd_admin`, database `wyrd`, `~/.config/wyrd/wyrd.env` and `wyrd-admin.env`, `~/.local/share/wyrd`, the `wyrd` tool, units `wyrd-scheduler`, `wyrd-backup` and `wyrd-discord`, dumps `wyrd-*.dump` and `WYRD_*` variables. Skip this section if none of that exists. Do every step in one sitting: the per-campaign advisory lock key changed with the rename, so an old and a new process must never run side by side.

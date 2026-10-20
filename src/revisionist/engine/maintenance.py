@@ -7,9 +7,10 @@ snapshots, through the fold, which already checks ``state_hash`` at every
 
 from dataclasses import dataclass
 
+from revisionist.core import events as ev
 from revisionist.core.fold import replay, state_hash
 from revisionist.core.ids import CampaignId
-from revisionist.engine.store import EventStore, StoreError
+from revisionist.engine.store import EventStore, Sealer, StoreError
 
 
 @dataclass(frozen=True)
@@ -19,6 +20,9 @@ class Verified:
     events: int = 0
     tick: int = 0
     state_hash: str = ""
+    sealed: bool = False
+    erased: int = 0
+    """Seat-held records whose key was destroyed: unreadable, and never folded."""
 
     @property
     def ok(self) -> bool:
@@ -46,7 +50,15 @@ def verify_campaign(store: EventStore, campaign_id: CampaignId) -> Verified:
             return Verified(
                 campaign_id, problem=f"snapshot at seq {snapshot.last_seq} differs from the replay"
             )
-    return Verified(campaign_id, events=len(events), tick=full.tick, state_hash=state_hash(full))
+    sealer: Sealer | None = getattr(store, "sealer", None)
+    return Verified(
+        campaign_id,
+        events=len(events),
+        tick=full.tick,
+        state_hash=state_hash(full),
+        sealed=sealer is not None and sealer.sealed(campaign_id),
+        erased=sum(isinstance(e.payload, ev.Sealed) for e in events),
+    )
 
 
 @dataclass(frozen=True)
@@ -73,6 +85,9 @@ def copy_campaign(source: EventStore, target: EventStore, campaign_id: CampaignI
         first = next(i for i, (a, b) in enumerate(zip(have, events, strict=False)) if a != b)
         raise StoreError(f"target diverges from source at seq {first}")
     tail = events[len(have) :]
+    sealer: Sealer | None = getattr(target, "sealer", None)
+    if not have and sealer is not None:  # a fresh copy into a sealing store is sealed
+        sealer.begin(campaign_id)
     if tail:
         target.append_all(tail)
     snapshot = source.latest_snapshot(campaign_id)
