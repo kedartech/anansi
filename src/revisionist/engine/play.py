@@ -5,12 +5,16 @@ these, so the two paths cannot drift. Each returns text for the caller to
 print or send; none prints. Transport errors propagate.
 """
 
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 
+from revisionist.core import events as ev
 from revisionist.core.canary import scan_deliveries
-from revisionist.core.ids import CampaignId, SeatId
+from revisionist.core.events import Event
+from revisionist.core.ids import CampaignId, IntentId, SeatId
 from revisionist.core.intent import Intent
 from revisionist.core.project import project
+from revisionist.core.resolution import FeasibilityBand
 from revisionist.core.state import State
 from revisionist.core.visibility import PUBLIC, Scope, Visibility, private_to
 from revisionist.engine import campaign as cmp
@@ -116,16 +120,68 @@ def get_briefing(
     if brief.dilemma:
         lines.append(f"\nDilemma: {brief.dilemma}")
     lines += [f"  {n}. {move}" for n, move in enumerate(moves, start=1)]
+    lines += _last_cutoff(state, seat, list(store.read(campaign_id)))
     return BriefingOutcome(brief, withheld=False, lines=tuple(lines))
 
 
-def status_lines(state: State, seat: SeatId) -> list[str]:
-    """Where the campaign stands, as ``seat`` sees it."""
+# --- perceived odds (README §7) ----------------------------------------------------
+#
+# A player sees how their own agent rated an order only once it is locked: the
+# perceived band logged in feasibility_rated when the tick froze. Never the true
+# band, never before the cutoff (so odds cannot be shopped for by re-filing), and
+# never for a blinded seat, which has no agent to read anything.
+
+
+def _band(band: FeasibilityBand) -> str:
+    return band.value.replace("_", " ")
+
+
+def _perceived(
+    events: Iterable[Event], seat: SeatId
+) -> dict[IntentId, tuple[int, FeasibilityBand]]:
+    """The latest perceived band per locked intent of ``seat``, with its tick."""
+    rated: dict[IntentId, tuple[int, FeasibilityBand]] = {}
+    for e in events:
+        if isinstance(e.payload, ev.FeasibilityRated) and e.actor == seat:
+            rated[e.payload.intent_id] = (e.tick, e.payload.perceived)
+    return rated
+
+
+def _last_cutoff(state: State, seat: SeatId, events: Sequence[Event]) -> list[str]:
+    if state.seats[seat].agent is None or state.tick == 0:
+        return []
+    filed = {
+        e.payload.intent.intent_id: e.payload.intent
+        for e in events
+        if isinstance(e.payload, ev.IntentFiled) and e.payload.intent.actor == seat
+    }
+    last = [
+        (filed[i], band)
+        for i, (tick, band) in _perceived(events, seat).items()
+        if tick == state.tick - 1 and i in filed
+    ]
+    if not last:
+        return []
+    lines = ["", "At the last cutoff your agent read your orders as:"]
+    for intent, band in last:
+        targets = ", ".join(object_name(state, t) for t in intent.targets) or "-"
+        lines.append(f"  {intent.verb.value} -> {targets}: {_band(band)}")
+    return lines
+
+
+def status_lines(state: State, seat: SeatId, events: Iterable[Event] = ()) -> list[str]:
+    """Where the campaign stands, as ``seat`` sees it. ``events`` (the log) adds
+    the perceived odds of locked orders."""
     view = project(state, seat)
+    rated = _perceived(events, seat) if view.me.agent is not None else {}
     lines = [f"tick {view.tick}  seat {view.me.name}  slots {view.me.slots}"]
     for intent in view.own_pending:
         targets = ", ".join(object_name(state, t) for t in intent.targets) or "-"
-        lines.append(f"  pending {intent.intent_id} {intent.verb.value} -> {targets}")
+        line = f"  pending {intent.intent_id} {intent.verb.value} -> {targets}"
+        if intent.intent_id in rated:
+            tick, band = rated[intent.intent_id]
+            line += f"; read as {_band(band)} at the tick {tick} cutoff"
+        lines.append(line)
     for clock in sorted(view.clocks.values(), key=lambda c: c.name):
         if clock.status.value == "open":
             lines.append(f"  clock {clock.name}: {clock.segments_filled}/{clock.segments_total}")

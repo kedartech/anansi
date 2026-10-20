@@ -154,7 +154,7 @@ def status(seat: PlayerSeat = None) -> None:
     state = load_state(store, _campaign(store))
     me = _me(state, seat)
     _guard(store, state.campaign_id, me)
-    for line in play.status_lines(state, me):
+    for line in play.status_lines(state, me, store.read(state.campaign_id)):
         typer.echo(line)
 
 

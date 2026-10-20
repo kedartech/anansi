@@ -112,7 +112,11 @@ class Handlers:
             user_id,
             "status",
             lambda store, link: "\n".join(
-                play.status_lines(load_state(store, link.campaign_id), link.seat_id)
+                play.status_lines(
+                    load_state(store, link.campaign_id),
+                    link.seat_id,
+                    store.read(link.campaign_id),
+                )
             ),
         )
 
