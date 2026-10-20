@@ -1,0 +1,73 @@
+# A hand-written stand-in for the GM's /establish reply (Layer 10 item 1c).
+# Not a model output: re-record live. Drawn from the documented record of the
+# Cuban Missile Crisis; the start is 16 October 1962, the day the photographs
+# reached the President.
+
+world: draft
+name: Washington, October 1962
+
+entities:
+  - {key: usa, kind: polity, name: United States}
+  - {key: ussr, kind: polity, name: Soviet Union}
+  - {key: cuba, kind: polity, name: Republic of Cuba}
+  - {key: excomm, kind: org, name: ExComm, parent: usa}
+  - {key: joint_chiefs, kind: org, name: The Joint Chiefs, parent: usa}
+  - {key: un, kind: org, name: The United Nations}
+  - {key: jfk, kind: person, name: John F. Kennedy, parent: usa}
+  - {key: rfk, kind: person, name: Robert F. Kennedy, parent: excomm}
+  - {key: mcnamara, kind: person, name: Robert McNamara, parent: excomm}
+  - {key: rusk, kind: person, name: Dean Rusk, parent: excomm}
+  - {key: bundy, kind: person, name: McGeorge Bundy, parent: excomm}
+  - {key: lemay, kind: person, name: Curtis LeMay, parent: joint_chiefs}
+  - {key: stevenson, kind: person, name: Adlai Stevenson, parent: un}
+  - {key: dobrynin, kind: person, name: Anatoly Dobrynin, parent: ussr}
+  - {key: scali, kind: person, name: John Scali}
+  - {key: interpreter, kind: person, name: Ruth Calder, parent: usa, tags: [composite]}
+  - {key: wire, kind: org, name: The Capitol Wire}
+
+assets:
+  - {key: presidency, kind: office, name: The Presidency, tier: 5, controller: jfk}
+  - {key: justice, kind: office, name: Attorney General, tier: 3, controller: rfk}
+  - {key: pentagon, kind: office, name: Secretary of Defense, tier: 4, controller: mcnamara}
+  - {key: state_dept, kind: office, name: Secretary of State, tier: 4, controller: rusk}
+  - {key: nsc_staff, kind: network, name: The NSC staff, tier: 2, controller: bundy}
+  - {key: sac, kind: force, name: Strategic Air Command, tier: 5, controller: lemay}
+  - {key: un_seat, kind: office, name: Ambassador to the UN, tier: 2, controller: stevenson}
+  - {key: embassy, kind: network, name: The Soviet embassy, tier: 2, controller: dobrynin}
+  - {key: abc_desk, kind: info, name: The ABC State Department desk, tier: 1, controller: scali}
+  - {key: photographs, kind: info, name: The U-2 photographs, tier: 2, controller: interpreter}
+  - {key: wire_desk, kind: info, name: Wire desk, tier: 1, controller: wire}
+  - {key: soviet_missiles, kind: force, name: Missiles in Cuba, tier: 4, controller: ussr, location: cuba, scope: {visibility: covert, known_by: [kremlin_seat]}}
+
+relationships:
+  - {key: usa_ussr, a: usa, b: ussr, disposition: -4}
+  - {key: usa_cuba, a: usa, b: cuba, disposition: -5}
+  - {key: ussr_cuba, a: ussr, b: cuba, disposition: 4}
+
+meters:
+  - {key: defcon, owner: usa, name: Readiness, value: 40}
+  - {key: world_opinion, owner: un, name: World opinion of the US, value: 55}
+
+clocks:
+  - {key: missiles_ready, kind: threat, name: The missiles become operational, target: usa, segments_total: 6, segments_filled: 2, exposure: 3, scope: {visibility: covert, known_by: [kremlin_seat]}}
+
+seats:
+  - {key: kremlin_seat, kind: faction, name: The Kremlin, embodies: ussr, standing_orders: [keep the missiles and avoid war]}
+  - {key: havana_seat, kind: faction, name: Havana, embodies: cuba, standing_orders: [deter an invasion]}
+  - {key: chiefs_seat, kind: faction, name: The Joint Chiefs, embodies: joint_chiefs, standing_orders: [press for the air strike]}
+  - {key: wire_seat, kind: outlet, name: The Capitol Wire, embodies: wire}
+
+roster:
+  - {entity: jfk, pitch: "The President, with the photographs on his desk.", reach: "Every lever of the American state.", composite: false, means: [presidency]}
+  - {entity: rfk, pitch: "The Attorney General and the President's closest counsel.", reach: "ExComm and a private line to the Soviet embassy.", composite: false, means: [justice]}
+  - {entity: mcnamara, pitch: "The Secretary of Defense who wants options counted.", reach: "The Pentagon and the blockade plans.", composite: false, means: [pentagon]}
+  - {entity: rusk, pitch: "The Secretary of State, patient and guarded.", reach: "The diplomatic service and the allies.", composite: false, means: [state_dept]}
+  - {entity: bundy, pitch: "The National Security Adviser who runs the room.", reach: "The NSC staff and the flow of paper.", composite: false, means: [nsc_staff]}
+  - {entity: lemay, pitch: "The Air Force chief who wants the strike.", reach: "Strategic Air Command.", composite: false, means: [sac]}
+  - {entity: stevenson, pitch: "The UN ambassador with the photographs to show.", reach: "The Security Council and world opinion.", composite: false, means: [un_seat]}
+  - {entity: dobrynin, pitch: "The Soviet ambassador, told little by his own side.", reach: "The embassy and the back channel.", composite: false, means: [embassy]}
+  - {entity: scali, pitch: "A television reporter a Soviet officer chose to talk to.", reach: "The State Department and an unofficial channel.", composite: false, means: [abc_desk]}
+  - {entity: interpreter, pitch: "A photo interpreter who read the first frames.", reach: "The evidence before anyone else sees it.", composite: true, means: [photographs]}
+
+notes:
+  - Accounts differ on who first proposed the Turkey trade; this world leaves it unproposed at the start.

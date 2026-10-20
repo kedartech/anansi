@@ -26,6 +26,7 @@ COMMANDS = (
     "dispatch",
     "status",
     "join",
+    "establish",
     "advance",
     "pause",
     "resume",
@@ -91,6 +92,14 @@ def register(
     async def status(interaction: discord.Interaction) -> None:
         user = str(interaction.user.id)
         await answer(interaction, lambda: h.status(user))
+
+    @tree.command(name="establish", description="Host: lock a point in history", guild=guild)
+    @app_commands.describe(place='Place and date, e.g. "Florence, April 1478"')
+    async def establish(
+        interaction: discord.Interaction, place: app_commands.Range[str, 1, 80]
+    ) -> None:
+        user = str(interaction.user.id)
+        await answer(interaction, lambda: h.establish(user, place))
 
     @tree.command(name="advance", description="Host: run the next tick now", guild=guild)
     async def advance(interaction: discord.Interaction) -> None:

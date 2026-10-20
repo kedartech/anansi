@@ -11,6 +11,7 @@ from typing import Protocol, runtime_checkable
 
 from revisionist.core.canary import Leak
 from revisionist.core.ids import CampaignId, SeatId
+from revisionist.core.ontology import Phase
 from revisionist.core.report import leak_report
 from revisionist.core.resolution import TickStage
 from revisionist.engine import campaign as cmp
@@ -18,7 +19,14 @@ from revisionist.engine.agent import Agent
 from revisionist.engine.llm import ClaudeNarrator, ClaudeResolver, Transport, TransportError
 from revisionist.engine.providers import KeywordSafety, ScriptedResolver, TemplateNarrator
 from revisionist.engine.store import EventStore, load_state
-from revisionist.engine.tick import Deliverer, Providers, TickResult, file_intent, run_tick
+from revisionist.engine.tick import (
+    Deliverer,
+    NotInPlayError,
+    Providers,
+    TickResult,
+    file_intent,
+    run_tick,
+)
 
 
 @runtime_checkable
@@ -59,6 +67,8 @@ def play_tick(
 ) -> TickRun:
     """Run (or resume) one tick. Transport errors from the tick itself propagate."""
     state = load_state(store, campaign_id)
+    if state.phase is not Phase.PLAY:
+        raise NotInPlayError(state.phase)  # before any faction spends a model call
     deliverer = (deliverer_factory or file_deliverer)(store, campaign_id, briefings)
     if offline:
         providers = Providers(ScriptedResolver(), TemplateNarrator(), deliverer, KeywordSafety())

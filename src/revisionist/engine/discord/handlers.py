@@ -20,9 +20,10 @@ from revisionist.core import events as ev
 from revisionist.core.canary import scan_text
 from revisionist.core.fold import state_hash
 from revisionist.core.ids import CampaignId
+from revisionist.core.settings import Settings
 from revisionist.core.visibility import Visibility
 from revisionist.engine import campaign as cmp
-from revisionist.engine import play
+from revisionist.engine import play, session_zero
 from revisionist.engine import scheduler as sch
 from revisionist.engine.discord.rest import CANNOT_DM, DiscordError, DiscordRest, nonce_for
 from revisionist.engine.discord.tables import Invites, Link, LinkError, SeatLinks, file_bug
@@ -42,6 +43,10 @@ WITHHELD = "That reply was withheld: it named something your seat cannot know."
 NOT_YET = "Not available yet."
 BAD_CODE = "That code doesn't work. Ask the host for a new one."
 ALREADY_SEATED = "You already hold a seat here."
+ESTABLISHED = "Session Zero is open at {place}. {n} characters to choose from: {names}."
+DRAFT_REFUSED = (
+    "The GM's draft of that moment did not hold together. Try again, or name it more precisely."
+)
 NO_DISPATCH = "No briefing yet. One arrives after each tick."
 WELCOME = "This is your dispatch for {seat}. Your briefings arrive here after each tick."
 
@@ -201,6 +206,28 @@ class Handlers:
 
     # --- host commands ------------------------------------------------------
 
+    def establish(self, user_id: str, place: str) -> str:
+        """Host: lock a point in history and draft its world (README §5 step 2).
+
+        Host only until co-GM votes exist (Layer 10 item 7); README §5 has it pass
+        by the table's vote at three or more humans.
+        """
+
+        def work(store: PostgresEventStore) -> str:
+            try:
+                campaign_id = session_zero.establish(
+                    store, place, Settings(), self.transport_factory()
+                )
+            except session_zero.SessionZeroError:
+                log.warning("/establish: the draft for %r did not compile", place)
+                return DRAFT_REFUSED
+            sch.register(store, self.clock())
+            state = load_state(store, campaign_id)
+            names = sorted(state.entities[c].name for c in state.roster)
+            return ESTABLISHED.format(place=place.strip(), n=len(names), names=", ".join(names))
+
+        return self._host_store(user_id, "establish", work)
+
     def advance(self, user_id: str) -> str:
         def work(store: PostgresEventStore, campaign_id: CampaignId) -> str:
             sch.register(store, self.clock()).advance(campaign_id)
@@ -281,6 +308,15 @@ class Handlers:
     def _as_host(
         self, user_id: str, name: str, work: Callable[[PostgresEventStore, CampaignId], str]
     ) -> str:
+        def current(store: PostgresEventStore) -> str:
+            link = SeatLinks(store.conn).for_user(user_id, self.config.guild_id)
+            return work(store, link.campaign_id if link else cmp.current_campaign(store))
+
+        return self._host_store(user_id, name, current)
+
+    def _host_store(
+        self, user_id: str, name: str, work: Callable[[PostgresEventStore], str]
+    ) -> str:
         if not self.config.host_id or user_id != self.config.host_id:
             return HOST_ONLY
         try:
@@ -289,9 +325,7 @@ class Handlers:
             log.exception("/%s: cannot open the store", name)
             return BROKEN
         try:
-            link = SeatLinks(store.conn).for_user(user_id, self.config.guild_id)
-            campaign_id = link.campaign_id if link else cmp.current_campaign(store)
-            return work(store, campaign_id)
+            return work(store)
         except Exception:
             log.exception("/%s failed", name)
             return BROKEN
@@ -303,7 +337,9 @@ __all__ = [
     "ALREADY_SEATED",
     "BAD_CODE",
     "BROKEN",
+    "DRAFT_REFUSED",
     "EMPTY_ORDER",
+    "ESTABLISHED",
     "HOST_ONLY",
     "MODEL_DOWN",
     "NOT_LINKED",

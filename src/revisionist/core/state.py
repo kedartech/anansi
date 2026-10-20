@@ -32,11 +32,13 @@ from revisionist.core.ids import (
 from revisionist.core.intent import Intent
 from revisionist.core.ontology import (
     Asset,
+    Character,
     Clock,
     Commitment,
     Entity,
     Fact,
     Meter,
+    Phase,
     Relationship,
     ScheduledEvent,
     Seat,
@@ -61,8 +63,12 @@ class _World(Model):
     commitments: dict[CommitmentId, Commitment] = Field(default_factory=dict)
     goals: dict[GoalId, Goal] = Field(default_factory=dict)
     """Secret goals (Layer 10). A view holds only its own seat's."""
+    phase: Phase = Phase.PLAY
+    """A campaign from a hand-written world is in play from tick 0."""
+    roster: dict[EntityId, Character] = Field(default_factory=dict)
+    """The characters Session Zero offers. Public."""
 
-    late_fields: ClassVar[frozenset[str]] = frozenset({"goals"})
+    late_fields: ClassVar[frozenset[str]] = frozenset({"goals", "phase", "roster"})
 
 
 class SeatFace(Model):

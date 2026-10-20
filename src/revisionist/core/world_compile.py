@@ -40,6 +40,7 @@ from revisionist.core.ids import (
 from revisionist.core.ontology import (
     Asset,
     AssetKind,
+    Character,
     Clause,
     Clock,
     ClockKind,
@@ -189,6 +190,47 @@ def _check(world: WorldFile, sections: Mapping[str, str], problems: list[str]) -
     _check_commitments(world, sections, problems)
     _check_seats(world, sections, problems)
     _check_goals(world, sections, problems)
+    _check_roster(world, sections, problems)
+
+
+ROSTER_MIN, ROSTER_MAX = 8, 12
+
+
+def check_history(world: WorldFile) -> list[str]:
+    """What a drafted historical world must also be (README §5), beyond compiling.
+
+    Humans arrive at the character step and goals at the goal step, so a draft
+    has neither; the roster offers 8-12 people to choose from.
+    """
+    problems: list[str] = []
+    if not world.start.strip():
+        problems.append("world: no start (place and date)")
+    if not ROSTER_MIN <= len(world.roster) <= ROSTER_MAX:
+        problems.append(f"roster: {len(world.roster)} characters, not {ROSTER_MIN}-{ROSTER_MAX}")
+    for s in world.seats:
+        if s.controller is Controller.HUMAN:
+            problems.append(f"seat {s.key}: a draft has no human seats")
+    if world.goals:
+        problems.append("goals: a draft has none; players choose them")
+    return problems
+
+
+def _check_roster(world: WorldFile, sections: Mapping[str, str], problems: list[str]) -> None:
+    people = {d.key for d in world.entities if d.kind is EntityKind.PERSON}
+    held_by = {d.key: d.controller for d in world.assets}
+    seen: set[str] = set()
+    for c in world.roster:
+        where = f"character {c.entity}"
+        _ref(problems, where, c.entity, "entity", sections)
+        if c.entity in sections and c.entity not in people:
+            problems.append(f"{where}: not a person")
+        if c.entity in seen:
+            problems.append(f"{where}: listed twice")
+        seen.add(c.entity)
+        for m in c.means:
+            _ref(problems, where, m, "asset", sections)
+            if m in held_by and held_by[m] != c.entity:
+                problems.append(f"{where}: does not control {m}")
 
 
 def _check_entities(world: WorldFile, sections: Mapping[str, str], problems: list[str]) -> None:
@@ -496,6 +538,17 @@ def _emit(
             canary=g.canary,
         )
         out.append((ev.GoalSet(goal=goal), goal.scope))
+    for ch in world.roster:
+        character = Character(
+            entity_id=EntityId(ids[ch.entity]),
+            pitch=ch.pitch,
+            reach=ch.reach,
+            composite=ch.composite,
+            means=frozenset(AssetId(ids[m]) for m in ch.means),
+        )
+        out.append((ev.CharacterListed(character=character), PUBLIC))
+    if world.start:
+        out.append((ev.SessionZeroOpened(start=world.start, notes=world.notes), PUBLIC))
     return out
 
 

@@ -279,3 +279,27 @@ class Seat(Model):
     standing_orders: tuple[str, ...] = ()
     """Free text the deputy reads. Structured by the agent, not the resolver."""
     joined_tick: int = 0
+
+
+class Phase(StrEnum):
+    """Where a campaign is in its life (Layer 10). Ticks run only in ``PLAY``."""
+
+    SESSION_ZERO = "session_zero"
+    PLAY = "play"
+    SEASON_OVER = "season_over"
+
+
+class Character(Model):
+    """A real person from the chosen moment that a player may claim (README §5 step 3).
+
+    Judged by agency in history, not fame. Where the record names no one, the
+    character is a composite: named, built from what people in that role did,
+    and labelled as such in the brief.
+    """
+
+    entity_id: EntityId
+    pitch: str = Field(max_length=200)
+    reach: str = Field(max_length=200)
+    composite: bool
+    means: frozenset[AssetId] = frozenset()
+    claimed_by: SeatId | None = None

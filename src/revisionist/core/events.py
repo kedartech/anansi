@@ -7,8 +7,8 @@ State-mutating kinds (the fold in Layer 2 handles exactly these):
 ``CampaignCreated, SettingsSet, EntityCreated, AssetCreated, RelationshipSet,
 MeterCreated, ClockCreated, FactAsserted, CommitmentCreated, SeatCreated,
 AgentAssigned, SeatStatusSet, IntentFiled, IntentRejected, DeltaApplied,
-ScheduledEventFired, GoalSet, GoalProgressed, GoalMet, GoalUndone, TickOpened,
-TickClosed``.
+ScheduledEventFired, SessionZeroOpened, CharacterListed, GoalSet, GoalProgressed,
+GoalMet, GoalUndone, TickOpened, TickClosed``.
 
 Every other kind is a record: it is replayable, searchable and shown by
 ``/why``, but changes no state.
@@ -35,6 +35,7 @@ from revisionist.core.ids import (
 from revisionist.core.intent import Intent
 from revisionist.core.ontology import (
     Asset,
+    Character,
     Clock,
     Commitment,
     Entity,
@@ -253,6 +254,25 @@ class BriefingDelivered(Model):
     idempotency_key: str
 
 
+class SessionZeroOpened(Model):
+    """The table locked a point in history with ``/establish`` (README §5 step 2).
+
+    Ticks wait until Session Zero closes. ``notes`` is where the GM logs each
+    reading it chose where historians disagree or the record is silent.
+    """
+
+    kind: Literal["session_zero_opened"] = "session_zero_opened"
+    start: str = Field(max_length=80)
+    notes: tuple[str, ...] = ()
+
+
+class CharacterListed(Model):
+    """One character on the Session Zero roster. Public: every player sees the roster."""
+
+    kind: Literal["character_listed"] = "character_listed"
+    character: Character
+
+
 # --- Goals ---------------------------------------------------------------------
 
 
@@ -389,6 +409,8 @@ Payload = Annotated[
     | ScheduledEventFired
     | NarrationWritten
     | StatementIssued
+    | SessionZeroOpened
+    | CharacterListed
     | GoalSet
     | GoalProgressed
     | GoalMet
@@ -421,6 +443,8 @@ MUTATING_KINDS: frozenset[str] = frozenset(
         "intent_rejected",
         "delta_applied",
         "scheduled_event_fired",
+        "session_zero_opened",
+        "character_listed",
         "goal_set",
         "goal_progressed",
         "goal_met",

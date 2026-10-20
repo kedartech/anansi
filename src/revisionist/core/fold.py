@@ -27,7 +27,10 @@ from revisionist.core.ontology import (
     ClockStatus,
     Commitment,
     CommitmentStatus,
+    Controller,
+    EntityKind,
     Fact,
+    Phase,
     ScheduledEvent,
     SeatStatus,
 )
@@ -179,6 +182,21 @@ def _mutate(state: State, event: Event) -> State:
             s = _need(state.scheduled, p.scheduled_id, "scheduled event")
             s = s.model_copy(update={"fired": True})
             return state.model_copy(update={"scheduled": _put(state.scheduled, s.scheduled_id, s)})
+        case ev.SessionZeroOpened():
+            humans = any(x.controller is Controller.HUMAN for x in state.seats.values())
+            if state.tick != 0 or state.phase is not Phase.PLAY or humans:
+                raise FoldError("Session Zero opens once, before anyone plays")
+            return state.model_copy(update={"phase": Phase.SESSION_ZERO})
+        case ev.CharacterListed():
+            ch = p.character
+            _fresh(state.roster, ch.entity_id, "character")
+            person = _need(state.entities, ch.entity_id, "entity")
+            if person.kind is not EntityKind.PERSON:
+                raise FoldError(f"character {ch.entity_id} is not a person")
+            for asset_id in ch.means:
+                if _need(state.assets, asset_id, "asset").controller != ch.entity_id:
+                    raise FoldError(f"character {ch.entity_id} does not control {asset_id}")
+            return state.model_copy(update={"roster": _put(state.roster, ch.entity_id, ch)})
         case ev.GoalSet():
             g = p.goal
             _fresh(state.goals, g.goal_id, "goal")
