@@ -1,0 +1,24 @@
+# One scheduler poll. User unit: the Claude CLI login for live ticks lives in
+# this user's home. Install and enable: docs/deploy.md.
+[Unit]
+Description=Wyrd Protocol: tick every due campaign once
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=%h/.config/wyrd/wyrd.env
+# `claude` must be on this PATH for live ticks
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+WorkingDirectory=%h/.local/share/wyrd
+ExecStart=%h/.local/bin/wyrd scheduler run
+TimeoutStartSec=45min
+Nice=10
+UMask=0077
+NoNewPrivileges=yes
+LockPersonality=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+SystemCallArchitectures=native
+# Not MemoryDenyWriteExecute: the Claude CLI runs on Node, whose JIT needs it.
+# Not ProtectHome: the Claude CLI reads its login from the home directory.
