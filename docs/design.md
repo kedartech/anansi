@@ -13,6 +13,7 @@ Module map:
 | `core/settings.py` | Session Zero settings the engine reads |
 | `core/ontology.py` | Entity, Asset, Relationship, Meter, Clock, Fact, ScheduledEvent, Commitment, Seat |
 | `core/intent.py` | `Verb`, `Intent` |
+| `core/goals.py` | secret goals: the `WinCondition` union, `goal_met`, goal kinds, winners (Layer 10) |
 | `core/delta.py` | the `Delta` union |
 | `core/resolution.py` | bands, tiers, stages, rejection reasons, starting odds |
 | `core/events.py` | every event kind, the `Event` envelope |
@@ -61,6 +62,7 @@ Consequences the code keeps:
 | Tick | `tick_opened`, `tick_stage_completed`, `tick_closed` |
 | Cost | `cost_logged` (model calls outside a tick; schema v2) |
 | Admin | `admin_read` |
+| Goals | `goal_set`, `goal_progressed`, `goal_met`, `goal_undone` (schema v6) |
 
 Later layers add `vote_*`, `director_event_proposed`, `agent_harmed`, `seat_fallen`, `player_joined`, `key_attached`, `safety_refused`. Each addition bumps `core.SCHEMA_VERSION`.
 
@@ -501,3 +503,37 @@ README §7: shown only once an order is filed and locked. `/status` and `revisio
 
 Everything against the real Discord API: invites redeemed by a real second account, a real closed DM, the `#chronicle` posts, permissions as Discord applies them. The re-keyed recordings have not been re-recorded live. Master-key custody, a restore onto a new host with the off-box key, and the 10-tick two-person play.
 
+
+---
+
+## 17. Secret goals and winning (Layer 10 item 1) [decided 2026-10-20]
+
+README §15 and decisions 23 and 36-38. Built in PRs 1a-1e; this section grows with them.
+
+### 17.1 Win conditions (1a)
+
+A goal is a `Goal` in `State.goals`: the player's words (`text`, at most 280 characters), a `WinCondition`, a kind, and its objective clock. It is Private to its seat, so `project()` gives a seat its own goal and nobody else's, and `SeatFace` says nothing about goals.
+
+`WinCondition` is a closed union over State, checked by the pure `core/goals.goal_met`:
+
+| Check | Met when |
+|---|---|
+| `holds_office(holder, office)` | the asset is an Office, controlled by `holder`, not lost |
+| `controls_asset(holder, asset)` | the asset is controlled by `holder`, not lost |
+| `entity_is(entity, status)` | the entity has that status |
+| `meter_at(meter, ge\|le, value)` | the meter compares true |
+| `commitment_in_force(commitment)` | the commitment is accepted |
+| `disposition_at(relationship, ge\|le, value)` | the disposition compares true |
+| `all_of(...)`, `any_of(...)` | and, or; at most 8 checks, 3 deep |
+
+An ID the state does not hold is unmet, so nothing is met in an empty world. Progress is the number of top-level parts of an `all_of` that hold (one part otherwise), shown on the goal's objective clock as "2 of 3".
+
+**Kinds, from a fixed table:** `entity_is` dead or dissolved is **Lasting**; every other check is **Undoable**; an all-of or any-of is Lasting only if every part is. A Lasting goal, once met, stays met and is no longer checked. An Undoable goal that stops holding logs `goal_undone` and counts as unmet until it holds again.
+
+**When.** At the end of APPLY each tick, `goals.check` compares every goal with the state and logs only the changes, each Private to the owner: `goal_progressed` (the clock), `goal_met` (first time or again; `met_tick` keeps the first) and `goal_undone`. `season_winners` is every seat whose goal holds: Lasting goals ever met plus Undoable goals holding now.
+
+**World files** declare goals with keys (`goals:` in the YAML). The compiler gives each goal its own private objective clock, adds it to the seat's objectives, and computes the kind. It refuses a goal on a non-player seat, a second goal for one seat, a key of the wrong type, an office that is not an Office, a duplicate canary, and a goal already met at tick 0.
+
+**Compatibility.** `State.goals` is a late field: it is left out of serialisation while empty (`Model.late_fields`), so every older state hashes, and every view serialises, byte for byte as before. Old logs replay and the recordings keep their keys. Goal records are sealed with the campaign key, never a seat key, because the fold needs them; erasing a player keeps their goal.
+
+**Deferred.** README §15 lists "exiled" as an entity status. Adding it changes the resolver's output schema and so every resolver recording key; it waits for the next live re-record.
