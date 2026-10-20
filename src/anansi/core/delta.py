@@ -27,6 +27,7 @@ from anansi.core.ontology import (
     AssetStatus,
     Clause,
     ClockKind,
+    ClockStatus,
     EntityStatus,
 )
 from anansi.core.visibility import Scope
@@ -105,6 +106,14 @@ class ClockCreate(_Delta):
     scope: Scope
 
 
+class ClockStatusSet(_Delta):
+    """Fail or abandon a clock. Resolution happens by filling it (``ClockAdvance``)."""
+
+    kind: Literal["clock_status"] = "clock_status"
+    clock_id: ClockId
+    status: Literal[ClockStatus.FAILED, ClockStatus.ABANDONED]
+
+
 class ClockExposureDelta(_Delta):
     kind: Literal["clock_exposure"] = "clock_exposure"
     clock_id: ClockId
@@ -180,6 +189,7 @@ Delta = Annotated[
     | RelationshipTagSet
     | ClockAdvance
     | ClockCreate
+    | ClockStatusSet
     | ClockExposureDelta
     | FactAssert
     | KnowledgeGrant

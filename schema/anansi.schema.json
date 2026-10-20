@@ -834,6 +834,47 @@
         "title": "ClockStatus",
         "type": "string"
       },
+      "ClockStatusSet": {
+        "additionalProperties": false,
+        "description": "Fail or abandon a clock. Resolution happens by filling it (``ClockAdvance``).",
+        "properties": {
+          "clock_id": {
+            "title": "Clock Id",
+            "type": "string"
+          },
+          "delta_id": {
+            "title": "Delta Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "clock_status",
+            "default": "clock_status",
+            "title": "Kind",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 200,
+            "title": "Reason",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "failed",
+              "abandoned"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "delta_id",
+          "reason",
+          "clock_id",
+          "status"
+        ],
+        "title": "ClockStatusSet",
+        "type": "object"
+      },
       "Commitment": {
         "additionalProperties": false,
         "description": "A treaty, contract or deal. Promises in chat are not Commitments.",
@@ -1021,6 +1062,7 @@
                 "clock_advance": "#/$defs/ClockAdvance",
                 "clock_create": "#/$defs/ClockCreate",
                 "clock_exposure": "#/$defs/ClockExposureDelta",
+                "clock_status": "#/$defs/ClockStatusSet",
                 "commitment_create": "#/$defs/CommitmentCreate",
                 "commitment_status": "#/$defs/CommitmentStatusSet",
                 "disposition": "#/$defs/DispositionDelta",
@@ -1061,6 +1103,9 @@
               },
               {
                 "$ref": "#/$defs/ClockCreate"
+              },
+              {
+                "$ref": "#/$defs/ClockStatusSet"
               },
               {
                 "$ref": "#/$defs/ClockExposureDelta"
@@ -1128,6 +1173,7 @@
                   "clock_advance": "#/$defs/ClockAdvance",
                   "clock_create": "#/$defs/ClockCreate",
                   "clock_exposure": "#/$defs/ClockExposureDelta",
+                  "clock_status": "#/$defs/ClockStatusSet",
                   "commitment_create": "#/$defs/CommitmentCreate",
                   "commitment_status": "#/$defs/CommitmentStatusSet",
                   "disposition": "#/$defs/DispositionDelta",
@@ -1168,6 +1214,9 @@
                 },
                 {
                   "$ref": "#/$defs/ClockCreate"
+                },
+                {
+                  "$ref": "#/$defs/ClockStatusSet"
                 },
                 {
                   "$ref": "#/$defs/ClockExposureDelta"

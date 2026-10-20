@@ -40,7 +40,13 @@ class Scope(Model):
         return self.visibility is Visibility.PUBLIC or seat in self.known_by
 
     def grant(self, *seats: SeatId) -> "Scope":
-        """Return a scope with ``seats`` added. Used by KnowledgeGrant and reveal()."""
+        """Return a scope with ``seats`` added. Used by KnowledgeGrant and reveal().
+
+        A public scope is already known by everyone, so a grant on it is a no-op
+        and ``known_by`` stays empty.
+        """
+        if self.visibility is Visibility.PUBLIC:
+            return self
         return self.model_copy(update={"known_by": self.known_by | frozenset(seats)})
 
 

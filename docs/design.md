@@ -17,6 +17,9 @@ Module map:
 | `core/resolution.py` | bands, tiers, stages, rejection reasons, starting odds |
 | `core/events.py` | every event kind, the `Event` envelope |
 | `core/state.py` | `State` (truth) and `View` (one seat's knowledge) |
+| `core/fold.py` | `apply`, `replay`, `replay_to`, `state_hash` (Layer 2) |
+| `core/project.py` | `project(state, seat) -> View` (Layer 2) |
+| `engine/store.py` | `EventStore` protocol, `MemoryStore`, `SqliteStore`, `load_state` (Layer 2) |
 | `schema/anansi.schema.json` | exported JSON Schema; CI fails on drift |
 
 ---
@@ -156,7 +159,7 @@ Adding a verb is a schema change: bump `SCHEMA_VERSION`, add a fold case if it n
 
 ## 6. Deltas: the only thing a model may propose **[decided]**
 
-`core/delta.py`. A discriminated union of 17 typed changes, each against an existing ID (or creating a new object with an ID the engine minted). Every delta carries a `reason` capped at 200 characters for `/why`.
+`core/delta.py`. A discriminated union of 18 typed changes, each against an existing ID (or creating a new object with an ID the engine minted). Every delta carries a `reason` capped at 200 characters for `/why`.
 
 | Delta | Changes | Hard bound in the type |
 |---|---|---|
@@ -169,6 +172,7 @@ Adding a verb is a schema change: bump `SCHEMA_VERSION`, add a fold case if it n
 | `relationship_tags` | price and leverage tags | capped labels |
 | `clock_advance` | segments | ±2 |
 | `clock_create` | a new clock | 1-12 segments |
+| `clock_status` | failed / abandoned; resolved only by filling | enum |
 | `clock_exposure` | exposure | ±2 |
 | `fact_assert` | a new fact | structured; capped predicate |
 | `knowledge_grant` | widen a scope | IDs only |
@@ -238,7 +242,11 @@ DELIVER  outbox with idempotency keys; briefing_delivered only after the send su
 CLOSE    tick_closed(costs, state_hash)   snapshot written; replay must reproduce state_hash
 ```
 
-`state_hash` is blake2b over the canonical JSON of `State`. The Layer 2 determinism test and the Layer 8 SQLite-to-Postgres migration test both compare it.
+`state_hash` is blake2b-128 over the canonical JSON of `State` (sorted keys, compact separators, set fields serialised sorted). The fold checks it at every `tick_closed` and raises `FoldError` on a mismatch, so a corrupted or edited log fails loudly on replay. The Layer 8 SQLite-to-Postgres migration test compares it too.
+
+The fold (`core/fold.py`) is total over `MUTATING_KINDS` and refuses: sequence gaps, wrong campaign, duplicate creation, unknown IDs, and a hash mismatch. Type bounds (tier 0-5, meter lo-hi, disposition -5..+5, slots 0-cap) are clamped per step in the fold so a replay can never produce an invalid object; the Layer 3 clamp table is a tighter policy applied before a delta is ever logged. A clock that fills becomes `resolved` and releases its slot; `clock_status` handles failed and abandoned.
+
+Stores (`engine/store.py`) enforce append-only: `seq` must be exactly the next integer, batches are atomic, and the SQLite schema carries `BEFORE UPDATE` and `BEFORE DELETE` triggers that abort. `load_state` is the newest snapshot plus the tail of the log; a test proves it equals a full replay.
 
 ---
 
