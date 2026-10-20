@@ -253,23 +253,60 @@ The exit criterion is **not met yet**: the three-day soak of 12-hour ticks and a
 
 ---
 
-## Layer 9: Discord client and the two-human slice
+## Layer 9: Discord client, solo play first, then the two-human slice
 
-**Purpose.** README §17 Discord v1 and §22 step 4.
+**Purpose.** README §17 Discord v1 and §22 step 4. Split in two so Josh can play the solo slice on Discord before a second person joins. 9a moves the solo slice onto Discord. 9b adds the second human, encryption at rest and the human-boundary canary.
+
+**Prerequisite.** Layer 8: the Discord deliverer plugs into the shared tick runner and the scheduler extracted there.
+
+**Who the GM is. [proposed]** The GM is the engine, not a chat agent. The resolver and narrator keep running through the Claude CLI transport (Layer 5) and stay the only model calls that decide anything. The Discord bot is a transport. It turns interactions and DMs into the same calls the CLI makes (`receive_order`, `file_intent`, the shared tick runner) and sends what the engine delivers. It has no tools, no memory, no shell and no model call of its own.
+
+A Hermes profile is not used as the GM:
+- A Hermes gateway agent has tool access and its own memory, so a player's message would reach an agent that can read the database. That breaks the agent boundary (README §10), the prompt-injection defence (§19) and the canary guarantee.
+- One conversational agent serving several seats mixes their context, which is the leak this project exists to prevent.
+- Every Discord message would cost a full agent loop on top of the engine's own calls, on the same subscription.
+
+A Hermes profile can still serve the host as an ops assistant in a channel only Josh can see (scheduler status, restarts), never in a player channel. **[open]**
+
+### 9a: Solo play on Discord
 
 **Produces.**
-- `discord.py` bot, one server per campaign, least-privilege permissions.
-- Orders via ephemeral modal (paragraph, visibility select, spin line) or DM with the agent. Dispatch thread per player. `/briefing`, `/bug`, `/pause`, `/report`, `/key` (stub until Layer 10).
-- Delivery through the Layer 4 outbox, so Discord retries never double-post.
+- `engine/discord/` package. `discord.py` gateway bot as its own process (`discord run` command plus a systemd user unit beside the Layer 8 ones). Its own Discord application and token, separate from any Hermes bot. Token from an environment variable only, never logged.
+- **No privileged intents.** Orders arrive through slash commands, modals and DMs, which Discord delivers without Message Content or Server Members. A test constructs the client and asserts default intents only.
+- Seat binding table `discord_seats` (campaign, seat, Discord user id, guild). Operational data, not game state, so not in the event log (same reasoning as the Layer 8 schedule table). The acting seat is always taken from the interaction's user id, never from text the user typed. Host links Josh's seat with a CLI command.
+- One private server per campaign. Channels from a fixed template: a public channel for public events and press, and one private dispatch channel per player. Names encode nothing about alliances or agent status.
+- Commands: `/order` (modal: paragraph, visibility select, spin line), `/briefing`, `/status`, `/advance` (host only, calls the shared tick runner), `/pause`, `/bug`, `/report`, `/key` (stub until Layer 10). A plain DM to the bot is an order to the player's agent.
+- Interactions are deferred immediately (Discord wants a first response within 3 seconds) and answered ephemerally once the engine has structured the order. Refusals are out of character.
+- **Delivery through the Layer 4 outbox.** `DiscordDeliverer` implements the existing `Deliverer` protocol (`deliver(seat_id, text, idempotency_key) -> message id`); `BriefingDelivered` is still written only after the send succeeds. It uses Discord's REST API with the bot token, so the Layer 8 scheduler (a one-shot process) can deliver without the gateway bot running. Second layer against the crash-between-send-and-log case: a message `nonce` derived from the idempotency key with `enforce_nonce`. **[verify against current Discord docs before relying on it]**
+- Long briefings split on paragraph boundaries under Discord's size limits. No web link until the later client.
+- Test DM at onboarding. If DMs are closed, fall back to the dispatch channel and say so.
+- Setup runbook added to `docs/deploy.md`: create the server, create the application, invite with `bot` and `applications.commands` and the fewest permissions that work, token into the service's environment file, link the seat.
+
+**Tests.** Fake gateway and fake REST, headless, in a container (house rule: no browser on the host); no test touches the network.
+- Intents: default only.
+- Parity: the same order text through `/order` and through the CLI files an identical intent and gives an identical state hash.
+- Outbox: double-DELIVER sends once; a kill between send and log resends with the same nonce.
+- Identity: an unlinked user is refused; no input field can name another seat.
+- Canary: a planted covert string never appears in the public channel or any outbound message that is not the owner's briefing.
+
+**Done when** Josh plays 10 ticks of a solo campaign from Discord (briefings by DM, orders by `/order`), zero canary hits, and replaying his orders through the CLI reproduces the same state hash.
+
+**Size.** One weekend.
+
+### 9b: Two humans
+
+**Produces.**
+- Second human seat. `/join` with a single-use invite code issued by the host.
 - **Encryption at rest, keyed per player** (README §12): the `payload_enc` slot reserved in Layer 1 is now used for `OrderReceived`, `IntentFiled` with Covert visibility, and Covert `FactAsserted`. Keys per player in a separate table; erasure = key deletion. Every admin read of a decrypted payload writes `AdminRead`.
 - **Human-boundary canary** (README §7): the scan now checks the union of everything each Discord user can see across channels, DMs and threads, not just per seat.
 - Metadata-leak checks: role names, channel membership and thread titles are generated from a fixed template that encodes nothing about alliances or agent status.
+- Alliance threads for restricted information, and perceived odds visible in briefings.
 
-**Tests.** Bot tests run against a fake gateway, headless, in a container (house rule: no browser on the host). Human-boundary canary over a two-seat fixture campaign.
+**Tests.** Human-boundary canary over a two-seat fixture campaign, on the fake gateway.
 
 **Done when** Josh and one other person play 10 ticks with perceived odds visible and zero canary hits.
 
-**Size.** Two weekends.
+**Size.** One to two weekends.
 
 ---
 
