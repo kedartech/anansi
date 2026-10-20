@@ -1,25 +1,40 @@
-"""Layer 2: stores are append-only and snapshot+tail equals full replay."""
+"""Layer 2 and Layer 8: stores are append-only and snapshot+tail equals full replay.
+
+The contract tests run over every store. Postgres runs against a scratch
+database as the least-privilege app role (``tests/pg.py``).
+"""
 
 import sqlite3
+import threading
 from collections.abc import Iterator
 from pathlib import Path
 
+import psycopg
 import pytest
+from psycopg import errors
 
 from tests import fixtures as fx
+from tests.pg import PgDb
 from wyrd.core import events as ev
 from wyrd.core.fold import replay, state_hash
+from wyrd.core.ids import EventId
+from wyrd.engine.pg_store import PostgresEventStore, migrate
 from wyrd.engine.store import EventStore, MemoryStore, SqliteStore, StoreError, load_state
 
 
-@pytest.fixture(params=["memory", "sqlite"])
+@pytest.fixture(params=["memory", "sqlite", "postgres"])
 def store(request: pytest.FixtureRequest, tmp_path: Path) -> Iterator[EventStore]:
     if request.param == "memory":
         yield MemoryStore()
-    else:
+    elif request.param == "sqlite":
         s = SqliteStore(tmp_path / "campaign.db")
         yield s
         s.close()
+    else:
+        db: PgDb = request.getfixturevalue("pg_db")
+        p = PostgresEventStore(db.app_dsn)
+        yield p
+        p.close()
 
 
 def test_append_read_round_trip(store: EventStore) -> None:
@@ -91,3 +106,134 @@ def test_sqlite_survives_reopen(tmp_path: Path) -> None:
     narration = fx.envelope(len(events), ev.NarrationWritten(seat_id=fx.NORTH, text="quiet"))
     assert s2.append(narration) == len(events)
     s2.close()
+
+
+def test_mixed_campaign_batch_is_refused(store: EventStore) -> None:
+    events = fx.creation_events()
+    other = events[1].model_copy(
+        update={"campaign_id": fx.CampaignId("01ARZ3NDEKTSV4RRFFQ69G5FA1")}
+    )
+    with pytest.raises(StoreError, match="append-only"):
+        store.append_all([events[0], other])
+    assert store.last_seq(fx.CAMPAIGN) == -1
+    assert store.campaign_ids() == []
+
+
+def test_campaign_ids_oldest_first(store: EventStore) -> None:
+    assert store.campaign_ids() == []
+    first = fx.creation_events()
+    store.append_all(first)
+    later = fx.CampaignId("7ZZZZZZZZZZZZZZZZZZZZZZZZZ")
+    renamed = [
+        e.model_copy(update={"campaign_id": later, "event_id": EventId("Z" + e.event_id[1:])})
+        for e in first[:1]
+    ]
+    store.append_all(renamed)
+    assert store.campaign_ids() == [fx.CAMPAIGN, later]
+
+
+def test_awkward_text_round_trips_exactly(store: EventStore) -> None:
+    events = fx.creation_events()
+    store.append_all(events)
+    text = 'nul\x00 tab\t emoji \U0001f600 quote" backslash\\ é'
+    narration = fx.envelope(len(events), ev.NarrationWritten(seat_id=fx.NORTH, text=text))
+    store.append(narration)
+    assert list(store.read(fx.CAMPAIGN, len(events))) == [narration]
+
+
+def test_snapshot_is_insert_if_absent_and_latest_wins(store: EventStore) -> None:
+    events = fx.creation_events()
+    store.append_all(events)
+    early, late = replay(events[:3]), replay(events)
+    store.save_snapshot(late)
+    store.save_snapshot(early)
+    assert store.latest_snapshot(fx.CAMPAIGN) == late
+    store.save_snapshot(late.model_copy(update={"tick": 99}))
+    assert store.latest_snapshot(fx.CAMPAIGN) == late
+
+
+# --- Postgres only ----------------------------------------------------------
+
+
+def test_postgres_app_role_cannot_update_or_delete(pg_db: PgDb) -> None:
+    s = PostgresEventStore(pg_db.app_dsn)
+    events = fx.creation_events()
+    s.append_all(events)
+    s.save_snapshot(replay(events))
+    s.close()
+    with psycopg.connect(pg_db.app_dsn, autocommit=True) as conn:
+        for statement in (
+            "UPDATE events SET tick = 9",
+            "DELETE FROM events",
+            "TRUNCATE events",
+            "UPDATE snapshots SET seq = 9",
+            "DELETE FROM snapshots",
+        ):
+            with pytest.raises(errors.InsufficientPrivilege):
+                conn.execute(statement.encode())
+
+
+def test_postgres_triggers_refuse_even_the_owner(pg_db: PgDb) -> None:
+    s = PostgresEventStore(pg_db.app_dsn)
+    s.append(fx.creation_events()[0])
+    s.close()
+    with psycopg.connect(pg_db.admin_dsn, autocommit=True) as conn:
+        for statement in ("UPDATE events SET tick = 9", "DELETE FROM events", "TRUNCATE events"):
+            with pytest.raises(errors.RaiseException, match="append-only"):
+                conn.execute(statement.encode())
+        row = conn.execute("SELECT count(*) FROM events").fetchone()
+        assert row is not None and row[0] == 1
+
+
+def test_postgres_repeated_event_id_is_refused(pg_db: PgDb) -> None:
+    s = PostgresEventStore(pg_db.app_dsn)
+    events = fx.creation_events()
+    s.append_all(events[:2])
+    clash = events[2].model_copy(update={"event_id": events[0].event_id})
+    with pytest.raises(StoreError, match="append-only"):
+        s.append_all([clash, events[3].model_copy(update={"seq": 3})])
+    assert s.last_seq(fx.CAMPAIGN) == 1
+    s.close()
+
+
+def test_postgres_concurrent_writers_one_wins(pg_db: PgDb) -> None:
+    events = fx.creation_events()
+    winner = PostgresEventStore(pg_db.app_dsn)
+    winner.append_all(events[:2])
+    loser = PostgresEventStore(pg_db.app_dsn)
+    rival = fx.envelope(2, ev.NarrationWritten(seat_id=fx.NORTH, text="loser"))
+    outcome: list[BaseException | int] = []
+
+    # The winner holds seq 2 in an open transaction; the loser reads seq 1 as the
+    # last one, inserts seq 2 too, and blocks on the winner's row until it commits.
+    with psycopg.connect(pg_db.app_dsn) as tx:
+        tx.execute(
+            "INSERT INTO events (campaign_id, seq, event_id, tick, kind, body)"
+            " VALUES (%s, %s, %s, %s, %s, %s)",
+            (fx.CAMPAIGN, 2, events[2].event_id, 0, events[2].kind, events[2].model_dump_json()),
+        )
+
+        def race() -> None:
+            try:
+                outcome.append(loser.append(rival))
+            except BaseException as exc:
+                outcome.append(exc)
+
+        thread = threading.Thread(target=race)
+        thread.start()
+        thread.join(timeout=0.5)
+        assert thread.is_alive(), "the loser should be blocked on the winner's row"
+        tx.commit()
+    thread.join(timeout=10)
+    assert len(outcome) == 1 and isinstance(outcome[0], StoreError)
+    assert "append-only" in str(outcome[0])
+    assert [e.event_id for e in winner.read(fx.CAMPAIGN)] == [e.event_id for e in events[:3]]
+    winner.close()
+    loser.close()
+
+
+def test_postgres_migrations_are_idempotent(pg_db: PgDb) -> None:
+    assert migrate(pg_db.admin_dsn, pg_db.app_role) == []
+    with psycopg.connect(pg_db.admin_dsn) as conn:
+        versions = [r[0] for r in conn.execute("SELECT version FROM schema_migrations ORDER BY 1")]
+    assert versions[0] == "0001_init"
