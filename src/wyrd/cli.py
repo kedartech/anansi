@@ -4,12 +4,14 @@ The solo slice is played from here: ``wyrd new salt-strait``, then
 ``wyrd briefing``, ``wyrd order "..."``, ``wyrd tick``, repeat. The
 campaign lives in ``$WYRD_DB`` (default ``./wyrd.db``, or a ``postgresql://``
 URL); every command works on the newest campaign there. ``wyrd db`` holds the
-Postgres maintenance commands (Layer 8).
+Postgres maintenance commands and ``wyrd scheduler`` the unattended ticks
+(Layer 8).
 """
 
 import os
 from collections.abc import Callable
-from typing import Annotated
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Annotated
 
 import typer
 
@@ -23,16 +25,23 @@ from wyrd.core.report import cost_report, leak_report, render_cost, render_leaks
 from wyrd.core.state import State
 from wyrd.core.world_compile import WorldError
 from wyrd.engine import campaign as cmp
+from wyrd.engine import scheduler as sch
 from wyrd.engine.agent import Agent, receive_order
 from wyrd.engine.llm import Transport, TransportError
 from wyrd.engine.maintenance import copy_campaign, verify_campaign
 from wyrd.engine.runner import play_tick
 from wyrd.engine.store import EventStore, StoreError, load_state
 
+if TYPE_CHECKING:
+    from wyrd.engine.pg_store import PostgresEventStore
+
 app = typer.Typer(no_args_is_help=True, add_completion=False)
 
 transport_factory: Callable[[], Transport] = cmp.live_transport
 """Swapped for a fake or recorded transport in tests (``wyrd.cli.transport_factory = ...``)."""
+
+clock: Callable[[], datetime] = sch.utc_now
+"""The scheduler's clock. Tests step a fake one; nothing sleeps."""
 
 Offline = Annotated[
     bool, typer.Option("--offline", help="No model calls: fixture resolver and narrator.")
@@ -304,6 +313,111 @@ def db_verify(campaign: CampaignOpt = None) -> None:
             failed = True
     if failed:
         raise typer.Exit(EXIT_ERROR)
+
+
+# --- wyrd scheduler -------------------------------------------------------------
+
+scheduler_app = typer.Typer(
+    no_args_is_help=True, help="Unattended ticks on Postgres, run by a systemd timer."
+)
+app.add_typer(scheduler_app, name="scheduler")
+
+
+def _pg_store() -> "PostgresEventStore":
+    target = cmp.db_target()
+    if not cmp.is_postgres(target):
+        raise _fail(
+            "the scheduler needs WYRD_DB to be a postgresql:// URL; "
+            "SQLite campaigns tick by hand with `wyrd tick`"
+        )
+    from wyrd.engine.pg_store import PostgresEventStore
+
+    return PostgresEventStore(target)
+
+
+def _scheduled(store: "PostgresEventStore", campaign: str | None) -> list[sch.Schedule]:
+    table = sch.register(store, clock())
+    ids = [CampaignId(campaign)] if campaign else store.campaign_ids()
+    try:
+        return [table.get(c) for c in ids]
+    except LookupError as exc:
+        raise _fail(str(exc)) from exc
+
+
+@scheduler_app.command("run")
+def scheduler_run(campaign: CampaignOpt = None, offline: Offline = False) -> None:
+    """Tick every due campaign once. Exit 3 on a leak, 1 when a campaign was paused."""
+    store = _pg_store()
+    try:
+        outcomes = sch.run(
+            store,
+            clock,
+            offline=offline,
+            transport_factory=transport_factory,
+            briefings=cmp.briefings_dir(),
+            warn=lambda message: typer.echo(message, err=True),
+            campaign=CampaignId(campaign) if campaign else None,
+        )
+    finally:
+        store.close()
+    for o in outcomes:
+        if o.action is not sch.Action.WAITING:
+            typer.echo(f"{o.campaign_id} {o.action}: {o.detail}".rstrip(": "))
+    if any(o.action is sch.Action.LEAK for o in outcomes):
+        raise typer.Exit(EXIT_LEAK)
+    if any(o.newly_paused for o in outcomes):
+        raise typer.Exit(EXIT_ERROR)
+
+
+@scheduler_app.command("status")
+def scheduler_status(campaign: CampaignOpt = None) -> None:
+    """When each campaign ticks next, and how its last tick went."""
+    store = _pg_store()
+    try:
+        for row in _scheduled(store, campaign):
+            state = "paused: " + row.paused_reason if row.paused else "active"
+            if row.advance_requested:
+                state += ", advance requested"
+            typer.echo(
+                f"{row.campaign_id}  next {row.next_due_at.astimezone(UTC):%Y-%m-%d %H:%MZ}"
+                f"  {state}  failures {row.consecutive_failures}  last {row.last_status or '-'}"
+            )
+    finally:
+        store.close()
+
+
+def _set(
+    campaign: str | None, verb: str, change: Callable[[sch.ScheduleTable, CampaignId], None]
+) -> None:
+    store = _pg_store()
+    try:
+        table = sch.ScheduleTable(store.conn)
+        for row in _scheduled(store, campaign):
+            change(table, row.campaign_id)
+            typer.echo(f"{row.campaign_id} {verb}")
+    finally:
+        store.close()
+
+
+@scheduler_app.command("advance")
+def scheduler_advance(campaign: CampaignOpt = None) -> None:
+    """Tick on the next scheduler run instead of waiting for the timer."""
+    _set(campaign, "advance requested", sch.ScheduleTable.advance)
+
+
+@scheduler_app.command("pause")
+def scheduler_pause(
+    campaign: CampaignOpt = None,
+    reason: Annotated[str, typer.Option("--reason")] = "paused by host",
+) -> None:
+    """Stop ticking until resumed."""
+    _set(campaign, "paused", lambda table, campaign_id: table.pause(campaign_id, reason))
+
+
+@scheduler_app.command("resume")
+def scheduler_resume(campaign: CampaignOpt = None) -> None:
+    """Tick again; clears the failure count."""
+    _set(campaign, "resumed", sch.ScheduleTable.resume)
 
 
 __all__ = ["EXIT_ERROR", "EXIT_LEAK", "EXIT_REFUSED", "app", "transport_factory"]
