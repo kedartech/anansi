@@ -286,3 +286,5 @@ def test_one_live_tick_from_recording(recorded: RecordedTransport) -> None:
     for _seat, text, _ in deliverer.sent:
         assert 40 < len(text.split()) < 320, text
         assert "intent_id" not in text and "01ARZ" not in text
+    # the resolver and both human narrations came from the recording, not a fallback
+    assert recorded.hits == 3 and recorded.recorded == 0

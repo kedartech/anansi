@@ -258,7 +258,7 @@ class Agent:
         Pure: the same view always yields the same intents, which is what the
         counterfactual leak test relies on. A seat with no standing orders does nothing.
         """
-        seat = self.view.seats[self.seat]
+        seat = self.view.me
         if not seat.standing_orders:
             return []
         reply = self.transport.call(
@@ -303,7 +303,7 @@ def _deputy_may(orders: Sequence[str], intent: Intent) -> bool:
 
 
 def _structure_prompt(view: View, text: str) -> str:
-    seat = view.seats[view.viewer]
+    seat = view.me
     return (
         f"## Seat: {seat.name} ({seat.persona.role if seat.persona else 'no persona'})\n"
         "## What this seat knows\n"
@@ -315,7 +315,7 @@ def _structure_prompt(view: View, text: str) -> str:
 
 
 def _brief_prompt(view: View) -> str:
-    seat = view.seats[view.viewer]
+    seat = view.me
     clocks = [
         {"id": c.clock_id, "name": c.name, "filled": c.segments_filled, "total": c.segments_total}
         for c in view.clocks.values()
@@ -332,7 +332,7 @@ def _brief_prompt(view: View) -> str:
 
 
 def _deputy_prompt(view: View) -> str:
-    seat = view.seats[view.viewer]
+    seat = view.me
     return (
         f"## Seat: {seat.name}, tick {view.tick}\n"
         "## Standing orders\n"

@@ -88,7 +88,7 @@ def get_briefing(
 def status_lines(state: State, seat: SeatId) -> list[str]:
     """Where the campaign stands, as ``seat`` sees it."""
     view = project(state, seat)
-    lines = [f"tick {view.tick}  seat {view.seats[seat].name}  slots {view.seats[seat].slots}"]
+    lines = [f"tick {view.tick}  seat {view.me.name}  slots {view.me.slots}"]
     for intent in view.own_pending:
         targets = ", ".join(object_name(state, t) for t in intent.targets) or "-"
         lines.append(f"  pending {intent.intent_id} {intent.verb.value} -> {targets}")

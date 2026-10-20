@@ -63,6 +63,14 @@ from revisionist.core.visibility import Visibility
 
 World = State | View
 
+
+def own_seat(world: World, seat_id: SeatId) -> Seat | None:
+    """A seat in full. A view holds only its viewer's (``View.me``)."""
+    if isinstance(world, State):
+        return world.seats.get(seat_id)
+    return world.me if seat_id == world.viewer else None
+
+
 MEANS_VERBS: frozenset[Verb] = frozenset(Verb) - FREE_VERBS - {Verb.TRAVEL}
 """Verbs that need committed assets to have any real chance."""
 
@@ -177,7 +185,9 @@ class Slots(Model):
 
 
 def slots(world: World, seat_id: SeatId, pending: Iterable[Intent] = ()) -> Slots:
-    seat = world.seats[seat_id]
+    seat = own_seat(world, seat_id)
+    if seat is None:
+        raise KeyError(f"no seat {seat_id!r} in full in this world")
     cap = BLINDED_SLOTS if seat.status is SeatStatus.BLINDED else seat.slots
     if seat.kind is not SeatKind.PLAYER and seat.kind is not SeatKind.FACTION:
         cap = 0
@@ -294,7 +304,7 @@ def rate(world: World, intent: Intent) -> FeasibilityBand:
     setting (±1 on force and information verbs). Free verbs are Assured:
     talking always happens, whatever comes of it.
     """
-    seat = world.seats.get(intent.actor)
+    seat = own_seat(world, intent.actor)
     if seat is None:
         return FeasibilityBand.IMPOSSIBLE
     for target in intent.targets:

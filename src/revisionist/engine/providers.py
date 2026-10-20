@@ -68,9 +68,9 @@ class TemplateNarrator:
 
     def narrate(self, view: View, deltas: Sequence[d.Delta]) -> Narration:
         if not deltas:
-            text = f"Tick {view.tick}: a quiet week for {view.seats[view.viewer].name}."
+            text = f"Tick {view.tick}: a quiet week for {view.me.name}."
         else:
-            lines = [f"Tick {view.tick}, as seen by {view.seats[view.viewer].name}:"]
+            lines = [f"Tick {view.tick}, as seen by {view.me.name}:"]
             lines += [f"- {x.kind}: {x.reason or 'no reason given'}" for x in deltas]
             text = "\n".join(lines)
         return Narration(text=text, cost=_zero("narrator"))

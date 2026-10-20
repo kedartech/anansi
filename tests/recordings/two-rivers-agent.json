@@ -1,8 +1,10 @@
 {
- "5367c54f2cb4e0de42b498bf": {
+ "1955b08c922bfc9d9a8d9b5b": {
   "call_class": "structure",
   "model": "claude-haiku-5-5",
+  "note": "re-keyed offline: reply recorded against the pre-9b-2 View shape; re-record live",
   "prompt_head": "## Seat: Regent of the North (chief of staff)\n## What this seat knows\n{\"campaign_id\":\"01ARZ3NDEKTSV4RRFFQ69G5FA0\",\"tick\"",
+  "rekeyed_from": "5367c54f2cb4e0de42b498bf",
   "reply": {
    "cached_tokens": 6093,
    "input_tokens": 2,
@@ -23,10 +25,12 @@
    "usd": 0.00106473
   }
  },
- "84f205e00d12a1826c9a668e": {
+ "7bc786c1d9497d5aae139536": {
   "call_class": "brief",
   "model": "claude-haiku-5-5",
+  "note": "re-keyed offline: reply recorded against the pre-9b-2 View shape; re-record live",
   "prompt_head": "## Reader: Regent of the North, tick 1\n## What this seat knows\n{\"campaign_id\":\"01ARZ3NDEKTSV4RRFFQ69G5FA0\",\"tick\":1,\"set",
+  "rekeyed_from": "84f205e00d12a1826c9a668e",
   "reply": {
    "cached_tokens": 5193,
    "input_tokens": 2,
