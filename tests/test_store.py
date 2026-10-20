@@ -236,4 +236,14 @@ def test_postgres_migrations_are_idempotent(pg_db: PgDb) -> None:
     assert migrate(pg_db.admin_dsn, pg_db.app_role) == []
     with psycopg.connect(pg_db.admin_dsn) as conn:
         versions = [r[0] for r in conn.execute("SELECT version FROM schema_migrations ORDER BY 1")]
-    assert versions[0] == "0001_init"
+    assert versions == ["0001_init", "0002_schedule"]
+
+
+def test_postgres_app_role_may_update_only_the_schedule(pg_db: PgDb) -> None:
+    with psycopg.connect(pg_db.app_dsn, autocommit=True) as conn:
+        conn.execute("INSERT INTO schedule (campaign_id, next_due_at) VALUES ('c', now())")
+        conn.execute("UPDATE schedule SET paused = TRUE WHERE campaign_id = 'c'")
+        with pytest.raises(errors.InsufficientPrivilege):
+            conn.execute("DELETE FROM schedule")
+        with pytest.raises(errors.InsufficientPrivilege):
+            conn.execute("SELECT * FROM schema_migrations")
