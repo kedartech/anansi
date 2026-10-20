@@ -553,7 +553,35 @@ Residual risk: with targeting unlimited, a majority bloc can vote events onto on
 
 ---
 
-## Decision status (after H19)
+## H20. Players can bring their own API key [decided: Josh, 2026-10-19]
+
+**Decision.** A player can connect their own API key, and the cost of calls made for their seat goes on that key instead of the host's.
+
+**Design.**
+1. **Scope: seat calls only.** A player's key pays only for calls made for that player's seat:
+   - their agent
+   - their briefings and dashboard
+   - NPC conversations they start
+   The host key keeps paying for shared calls: the tick resolver, AI factions, the press, the director's events, and the chronicle.
+2. **The resolver never runs on a player's key.** The resolver sees the full true state of the game. A player who routed their key through their own proxy could log every secret. Seat calls only ever contain `project(state, seat_id)`, which is what that seat already knows, so a player's key has nothing extra to expose (A3, H3).
+3. **The key changes who pays, never which model runs.** The campaign fixes the model used for each class of call. A player's key cannot pick a stronger model, so a paying player gets no advantage.
+4. **Claude keys only, for now.** The prompts are tuned for Claude, and mixing providers would break rule 3. Support for other providers is a later option.
+5. **Key handling.**
+   - The key is entered through an ephemeral modal or a web form. It is never typed into chat.
+   - It is encrypted at rest.
+   - It never appears in the event log (H1) or in bug reports (H2).
+   - The player can revoke it at any time with `/key remove`.
+   - It is checked with a minimal test call when it is added.
+6. **Player caps and fallback.** Each player sets their own spend cap. If their key fails or reaches its cap, their seat's calls fall back to the host key, inside the host budget (H19.3). The agent never goes silent because a key ran out.
+7. **Metering.** The budget governor records spend per player and per key, so the host can see who paid for what.
+
+**Residual risk.**
+- Each player's key is subject to the provider's usage policies, and in-game content goes through that player's account.
+- A player can see their own seat's prompts in their provider console. That reveals nothing beyond what their seat already knows, but it does expose prompt engineering. This is acceptable for friends and family. Revisit before distribution (section F).
+
+---
+
+## Decision status (after H20)
 
 1. Capacity (B1). **Decided:** 3 slots, cap 5, earned in the fiction (H19.1)
 2. Endings (B2). **Decided:** Goals mode or Open mode (H6)
@@ -562,7 +590,7 @@ Residual risk: with targeting unlimited, a majority bloc can vote events onto on
 5. Betrayal (B5). **Decided:** cutthroat with elimination on by default (H16, H19.6)
 6. First playtest (B5, D1). **Decided:** Josh holds a seat and plays solo first (H11). No content rating unless one is set (H17).
 7. Real people (D3). **Decided:** names allowed, no invented allegations (H10)
-8. Model and account (A5, E). **Decided:** Josh's Claude API, hybrid split, provisional caps (H18, H19.3)
+8. Model and account (A5, E). **Decided:** Josh's Claude API, hybrid split, provisional caps (H18, H19.3); players may bring their own Claude key for seat calls (H20)
 9. Seats, switching and joining (C7). **Decided:** one seat per human; solo players switch at chapter breaks; invite-only joining mid-campaign (H19.4, H19.5)
 10. First format (C12). **Decided for the playtest:** solo first (H11)
 
