@@ -24,11 +24,10 @@ from wyrd.core.state import State
 from wyrd.core.world_compile import WorldError
 from wyrd.engine import campaign as cmp
 from wyrd.engine.agent import Agent, receive_order
-from wyrd.engine.llm import ClaudeNarrator, ClaudeResolver, Transport, TransportError
+from wyrd.engine.llm import Transport, TransportError
 from wyrd.engine.maintenance import copy_campaign, verify_campaign
-from wyrd.engine.providers import KeywordSafety, ScriptedResolver, TemplateNarrator
+from wyrd.engine.runner import play_tick
 from wyrd.engine.store import EventStore, StoreError, load_state
-from wyrd.engine.tick import Providers, file_intent, run_tick
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
 
@@ -173,47 +172,24 @@ def order(text: Annotated[str, typer.Argument(help="What you want done, in your 
 def tick(offline: Offline = False) -> None:
     """AI factions take their turns, then the world resolves one tick."""
     store = cmp.open_store()
-    campaign_id = _campaign(store)
-    state = load_state(store, campaign_id)
-    deliverer = cmp.FileDeliverer(
-        cmp.briefings_dir(),
-        {s.seat_id: s.name for s in state.seats.values()},
-        state.tick,
+    run = play_tick(
+        store,
+        _campaign(store),
+        offline=offline,
+        transport_factory=transport_factory,
+        briefings=cmp.briefings_dir(),
+        warn=lambda message: typer.echo(message, err=True),
     )
-    if offline:
-        providers = Providers(ScriptedResolver(), TemplateNarrator(), deliverer, KeywordSafety())
-    else:
-        transport = transport_factory()
-        if not state.frozen:  # a tick left mid-flight resumes as it was frozen
-            _faction_turns(store, campaign_id, transport)
-        providers = Providers(
-            ClaudeResolver(transport), ClaudeNarrator(transport), deliverer, KeywordSafety()
-        )
-    result = run_tick(store, campaign_id, providers, versions=cmp.versions())
+    result = run.result
     word = "quiet" if result.quiet else "resolved"
     typer.echo(
         f"tick {result.tick} {word}: {result.applied} applied, {len(result.rejected)} rejected, "
-        f"{len(result.delivered)} briefings in {deliverer.directory}"
+        f"{len(result.delivered)} briefings in {run.briefings}"
     )
     if result.quiet:
         typer.echo(f"  reason: {result.quiet_reason}")
-    found = leak_report(load_state(store, campaign_id), store.read(campaign_id))
-    if found:
-        raise _fail(render_leaks(found), EXIT_LEAK)
-
-
-def _faction_turns(store: EventStore, campaign_id: CampaignId, transport: Transport) -> None:
-    """Each AI faction's deputy files up to three intents from its own view."""
-    for seat in cmp.faction_seats(load_state(store, campaign_id)):
-        agent = Agent.for_seat(load_state(store, campaign_id), seat, transport)
-        try:
-            intents = agent.deputy_turn()
-        except TransportError as exc:
-            typer.echo(f"  {seat}: deputy call failed, standing still ({exc})", err=True)
-            intents = []
-        for intent in intents:
-            file_intent(store, campaign_id, intent, safety=KeywordSafety(), versions=cmp.versions())
-        cmp.log_cost(store, campaign_id, "deputy", agent.spent, seat)
+    if run.leaks:
+        raise _fail(render_leaks(run.leaks), EXIT_LEAK)
 
 
 @app.command(name="why")
