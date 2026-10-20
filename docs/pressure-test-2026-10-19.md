@@ -260,3 +260,214 @@ Each one has a recommendation. Accepting a recommendation updates README §3 and
 8. **Model and account (A5, E):** hybrid split; a separate API organisation used only by Anansi; a per-campaign budget cap. *Recommended: yes. The cap amount is Josh's call.*
 9. **Seats (C7):** one human, one seat; switching at season boundaries; mid-campaign joiners take over AI seats. *Recommended: yes.*
 10. **First format to ship (C12):** *Recommended: campaign, with solo as the tutorial.*
+
+
+---
+
+# Addendum: Josh's review notes (2026-10-19)
+
+Josh's responses to the pressure test. Where an item conflicts with the resolution plan above, **this addendum supersedes it**. Each item states the decision, the design that follows from it, and any residual risk.
+
+## H1. Full event log [decided]
+
+**Decision.** Log every event across the whole campaign, for debugging and for backtracking the game.
+
+**Design.**
+- One append-only event log is the canonical record. It holds:
+  - raw player text
+  - structured intents
+  - feasibility ratings
+  - RNG seeds and rolls
+  - proposed and applied deltas
+  - narration
+  - deliveries
+  - votes
+  - agent and deputy actions
+  - AI-generated events
+  - admin access
+- World state is a projection of the log. It can be rebuilt at any tick.
+- What the log enables:
+  - replay
+  - rewind to tick N
+  - fork a campaign from any tick
+  - the `/why <action>` trace
+  - the end-of-season reveal and history page, which are generated from the log
+- Log entries are versioned with the engine version, prompt versions and model IDs, so a replay reproduces what actually ran.
+
+**Residual risk.** The log holds every secret. It is encrypted at rest and keyed per player (see D4), and every admin read is itself a logged event. This matters because Josh plays as well as hosts (H11).
+
+## H2. Bug reporting [decided]
+
+**Decision.** An easy in-game bug report that snapshots the current game state together with the log, plus a notes field.
+
+**Design.**
+- A `/bug` command (and later a button in the client) opens a modal with a free-text notes field. Optional fields: "what I expected" and "what happened".
+- When the report is submitted, the engine attaches:
+  - the campaign ID and the tick
+  - a state snapshot
+  - a log slice (the last N ticks, plus the reporter's last orders and briefings)
+  - engine, prompt and model versions
+  - RNG seeds
+  - the Discord message IDs involved
+- The bundle is enough to replay the tick locally and reproduce the bug.
+- **Opacity.** What the reporter sees is limited to their own seat's view. The full true-state snapshot is attached to the report but encrypted, and only the admin can read it. Players are told this when they file.
+- Reports are stored in the engine database. Josh triages them. Exporting a report to a GitHub issue is a manual step that strips anything covert.
+- One-tap acknowledgement in the dispatch thread. The player who filed the report is told when it is fixed.
+
+## H3. Player game agent: an interface layer between player and GM [decided]
+
+**Decision.** Players never talk to the GM directly. Each player has a personal in-game agent that sits between them and the game.
+
+**Design.**
+- The agent:
+  - turns free text into structured intents
+  - asks clarifying questions when an order is ambiguous
+  - shows perceived odds after an order is filed
+  - writes the player's briefings and dashboard
+  - suggests moves (this answers C1, the blank-page problem)
+  - runs the seat as deputy while the player is away (this replaces the separate deputy in B3)
+- **Information boundary.** The agent only ever holds `project(state, seat_id)`. If a player jailbreaks it, they only recover what that seat already knows. The GM resolver receives only structured intents and never raw player text, which closes off most prompt-injection paths. Together with the code gate in A3, this gives two layers of defence.
+- **Constraints.**
+  - The engine still validates every intent against the seat's inventory. A player can talk their agent into claiming an army; the claim fails at validation.
+  - The agent advocates for its player, so it never sets odds or outcomes. The engine does that.
+  - The agent is loyal by default. Disinformation reaches the player through the intelligence feeding the agent, never by the agent lying. A compromised aide is an opt-in twist set at Session Zero.
+- **Cost.** One small-model instance per seat. This replaces most of the NPC-chat budget and the deputy budget in section E rather than adding to them.
+
+## H4. Designable game agent [decided; restraints proposed]
+
+**Decision.** Each player designs their agent's character, within restraints. Examples: a President's secretary, a spy's partner, a Congressman's wife.
+
+**Design.** The player designs the **persona**. The **function** stays fixed.
+
+The player sets:
+- name
+- role in the world (aide, spouse, handler, partner, chief of staff)
+- personality and voice
+- backstory
+- relationship to the seat
+- optionally, a portrait (in the later client)
+
+**Proposed restraints.**
+1. **No mechanical advantage.** The persona is narrative only. A "spy's partner who used to be a hacker" does not create a cyber asset. The persona is mapped to an in-world Entity with no new Assets, and the Session Zero balance check (C2) reviews it.
+2. **Fixed knowledge boundary.** Whatever the backstory, the agent knows only what the seat knows.
+3. **Loyalty is fixed** unless the table opts into the compromised-aide twist (H3).
+4. **Safety lines apply.** The persona must fit the campaign's rating (H12) and the platform hard lines (A5).
+5. **Real people.** An agent cannot be a real living private individual, such as a family member or friend by name. A persona based on a real public figure follows H10.
+6. **Locked at Session Zero.** Cosmetic changes (voice, name) are allowed later. Role changes happen only through events in the fiction.
+
+**Open question for Josh.** The agent is an in-world character. Can the world act on it (kidnap, turn, kill), given that harm can be permanent (H5)? Proposed: yes, as a Session Zero setting. Losing the agent degrades the seat's interface until a replacement is recruited in the fiction. The function never goes away entirely.
+
+## H5. AI-generated events, including permanent harm [decided]
+
+**Decision.** The GM's director layer generates events and weaves them into the narrative: tragedies, disasters, communication exposures, assassinations, scandals. Josh's pushback: **some events can cause permanent harm to a player.** This supersedes the "no permanent harm to an absent player" line in the previous reply. It also relaxes B3 for AI events.
+
+**Design.**
+- A director layer schedules pressure and pacing (tension curve, spotlight balance) and proposes events that pass through the engine like any other change.
+- **Exposures must be earned.** A communication exposure can only reveal something that exists in the log and carried exposure risk. The director never invents scandals and never leaks covert facts with no causal path.
+- **Permanent harm is allowed**, with three conditions:
+  - It is set by a **Lethality** setting at Session Zero: Soft (setbacks only) / Hard (permanent losses) / Brutal (elimination possible from events).
+  - It is drawn from risk that is already on the board, such as exposed operations, hostile actors or standing threats, so it can be traced in `/why`.
+  - It is foreshadowed at least one tick ahead in the seat's briefing, where the seat could plausibly know.
+- At Hard or Brutal, an absent player's agent defends the seat (H3), but the world does not wait for them.
+- Events stay within the campaign's rating and the platform hard lines (A5).
+
+## H6. Goals: modes [decided]
+
+**Decision.** Goals are a Session Zero mode, as proposed. This closes B2.
+- **Goals mode.** Players set goals at the start and can add or revise them as the game progresses. The agent helps turn each goal into an engine Clock so progress is scored. Scoring is per seat, with no single winner.
+- **Open mode.** A sandbox with no set ending.
+- **Recommendation for both modes.** Chapter breaks with a partial covert reveal and a history snapshot, so an open campaign still gets payoffs.
+
+## H7. Deputy is the player's agent [decided]
+
+B3 stands, with the player's agent (H3) acting as deputy. It already holds the player's priorities and voice, plays competent defence, and stalls irreversible commitments while the player is away.
+
+## H8. Betrayal and elimination [decided]
+
+**Decision.** Betrayal intensity is set at Session Zero, and **cutthroat elimination rules remain available**. This replaces "no elimination" in B5.
+
+**Design.**
+- Session Zero options: cooperative / intrigue with caps / cutthroat / cutthroat with elimination.
+- **When a player is eliminated,** they continue as a completely new character that they design to fit the world as it now stands. Their agent helps build the character from current public facts. The new character:
+  - passes the same balance check as everyone else (C2)
+  - starts with public knowledge only
+  - has a fresh inventory seeded by the engine
+  - can appear in the world however the fiction allows: an exile, a rival, a journalist, an insurgent
+- The player keeps their memory of what their old seat knew. That is allowed and treated as drama, not policed.
+- The mandatory end-of-season reveal and the table norms from B5 still apply.
+
+## H9. Group-vote proposals are not limited [decided]
+
+**Decision.** Group-vote (co-GM) proposals are not limited. This removes the per-seat proposal cap and the "exogenous only" restriction in B4.
+
+**What still holds.**
+- Every passed event goes through the rules engine and the safety floor.
+- A vote affects covert plans but never nullifies them.
+- Proposals are anonymous.
+- A passed event lands with a lead time.
+
+**Open questions for Josh.**
+- Quorum and pass threshold (proposed: half the seats, two-thirds of votes cast).
+- Whether co-GM is available at 1-2 players.
+- Whether proposals may name a specific player's seat.
+
+Residual risk: with targeting unlimited, a majority bloc can vote events onto one player. If that is intended, the vote itself is the safeguard.
+
+## H10. Real people and real names [decided]
+
+**Decision.** Real people and their names may appear in the game, but the game never invents allegations about them. This replaces "role, not name" in D3.
+
+**Design.**
+- Real people can appear by name and can act within the fiction. In the game they can sign treaties, give speeches, lose elections or be outmanoeuvred.
+- **No invented allegations.** The engine and director never generate claims of crime, corruption, sexual misconduct, health conditions or private scandal about real people. The documented public record is fine. If a player's covert play "exposes" a real figure, the exposure is a fictional in-game event that stays inside the game, and narration frames it as the player's operation, not as a fact about the person.
+- Every shareable carries the uncroppable fiction watermark (D3). This matters right now: the US general election is on **Nov 3, 2026**.
+- Real living private individuals (anyone who is not a public figure) are never included by name.
+
+## H11. Josh holds a seat in the first playtest, solo first [decided]
+
+**Decision.** Josh holds a seat in the first playtest, starting in single-player (solo) mode. This replaces "Josh hosts" in B5.
+
+**Implications.**
+- Solo goes first, so the first playable target is solo career. This answers decision 10 for the first playtest: solo first, then campaign.
+- In solo, the conflict of interest between builder and player doesn't arise.
+- When Josh plays multiplayer, the B5 safeguards apply:
+  - covert payloads encrypted at rest
+  - break-glass debug access that is announced to the table
+  - every admin read logged (H1)
+
+## H12. Not adults-only; ratings decided in Session Zero [decided]
+
+**Decision.** The playtest is not adults-only. A content rating is set in Session Zero. This replaces "adults only" in D1.
+
+**Design.**
+- Session Zero sets a campaign **rating** (for example Teen / Mature / Unrestricted within the platform floor), along with lines and veils.
+- The platform hard lines (A5) apply at every rating.
+- **Recommendation:** if anyone under 18 is at the table, the rating options are capped at Teen.
+- Discord's terms require all users to be 13 or older.
+- The other D1 protections stay when minors play:
+  - age band recorded at onboarding
+  - DMs between players routed through the bot
+  - a guardian told
+
+## H13. Scope: up to 10 players plus a solo tutorial [decided]
+
+**Decision.** v1 supports 1 to 10 players, with the solo tutorial. This replaces "tune for 3-8" in B6. Arenas (regional resolution) are removed from v1, because one resolver handles 10 seats. Long-range scale (decision 12) stays in the parameters as a future format.
+
+**Cost.** Roughly $15 a week at 10 players on the hybrid split, before measuring.
+
+---
+
+## Updated decision status
+
+1. Capacity / operation slots (B1): **open**
+2. Endings (B2): **decided**, goal modes (H6)
+3. Co-GM (B4): **partly decided**, proposals unlimited (H9); quorum, threshold and minimum player count open
+4. v1 scope (B6): **decided**, 1-10 plus solo (H13)
+5. Betrayal (B5): **decided**, Session Zero intensity including cutthroat elimination (H8)
+6. First playtest (B5, D1): **decided**, Josh holds a seat and plays solo first; ratings set at Session Zero (H11, H12)
+7. Real people (D3): **decided**, names allowed and no invented allegations (H10)
+8. Model and account (A5, E): **open**
+9. Seats, switching and joining (C7): **partly decided**, eliminated players redesign (H8); multi-seat and mid-campaign joining open
+10. First format (C12): **decided for the playtest**, solo first (H11)
+
+New open items: whether the agent can be harmed (H4); the default Lethality setting (H5); whether the rating cap applies when minors are present (H12).
