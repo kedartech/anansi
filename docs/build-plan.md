@@ -244,6 +244,13 @@ Event(
 
 **Size.** One weekend.
 
+**Built (2026-10-20).** `PostgresEventStore`, migrations, `wyrd db migrate | copy | verify`, the shared tick runner, `wyrd scheduler run | advance | pause | resume | status`, systemd user units, the nightly backup and the restore drill. Design in [design.md §14](design.md#14-postgres-and-the-scheduler-layer-8-proposed), runbook in [deploy.md](deploy.md). Two open items resolved, both **[proposed]** for Josh to confirm:
+
+- **[proposed]** Migrations are hand-rolled numbered SQL files with a `schema_migrations` table, not Alembic.
+- **[proposed]** The systemd timer is a user timer that polls `wyrd scheduler run` every 10 minutes (not `wyrd tick` directly); cadence comes from `Settings.tick_hours` per campaign, bookkeeping from a `schedule` table outside the event log, and a campaign pauses after 3 consecutive failures or any canary leak.
+
+The exit criterion is **not met yet**: the three-day soak of 12-hour ticks and a real restore from the off-box copy are still Josh's steps on the home server (deploy.md §8). The test suite's stand-in is an accelerated 72-hour run on a fake clock.
+
 ---
 
 ## Layer 9: Discord client and the two-human slice

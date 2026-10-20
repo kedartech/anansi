@@ -9,10 +9,29 @@ jobs:
   gates:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # A throwaway service container; the password is not a secret.
+      WYRD_TEST_PG_ADMIN_DSN: postgresql://postgres:postgres@localhost:5432/postgres
+      # Postgres tests fail rather than skip when the database is missing.
+      WYRD_REQUIRE_PG: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - run: uv python install 3.12
+      # pg_dump, pg_restore and psql for the backup and restore-drill test
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client rsync
       - run: uv lock --check
       - run: uv sync --frozen
       - run: uv run --frozen ruff check .

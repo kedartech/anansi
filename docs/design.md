@@ -27,6 +27,10 @@ Module map:
 | `engine/prompts/*.md` | versioned prompt files; content hash in `Versions.prompt` (Layers 5-6) |
 | `core/canary.py` | canary scan over narrations and deliveries (Layer 5) |
 | `engine/store.py` | `EventStore` protocol, `MemoryStore`, `SqliteStore`, `load_state` (Layer 2) |
+| `engine/pg_store.py`, `engine/migrations/*.sql` | `PostgresEventStore`, `migrate` (Layer 8) |
+| `engine/maintenance.py` | `copy_campaign`, `verify_campaign` (Layer 8) |
+| `engine/runner.py` | `play_tick`: deputy turns, `run_tick`, leak scan; shared by `wyrd tick` and the scheduler (Layer 8) |
+| `engine/scheduler.py` | the tick scheduler: pure `due` / `next_due_after` / `all_submitted`, the `schedule` table, `run` (Layer 8) |
 | `schema/wyrd.schema.json` | exported JSON Schema; CI fails on drift |
 
 ---
@@ -338,3 +342,57 @@ Two call sites, both in the referee, both pure protocols with a fixture implemen
 - **[proposed]** The `rate` scoring weights (means−opposition ±2, disposition ±1, plausibility ±1) are first numbers. The shape (one function over `State` or `View`) is decided; the weights are not.
 - **[open]** `Label` cap (60 chars) and `reason` cap (200) are guesses; retune when the first recorded fixtures show what the resolver actually writes. Layer 5.
 - **[open]** Co-GM event lead time and season length default remain from README §21.
+
+---
+
+## 14. Postgres and the scheduler (Layer 8) **[proposed]**
+
+Build plan Layer 8. Everything in this section is Vera's design for Josh to confirm; the code and tests follow it. No new event kinds, no schema bump: the log, the fold, the referee and the tick state machine are unchanged.
+
+### 14.1 Storage
+
+- **`PostgresEventStore`** (`engine/pg_store.py`) implements `EventStore` with the same rules as `SqliteStore`: `seq` must be exactly the next integer, `append_all` is one transaction, and a gap, a repeat, a mixed-campaign batch or a unique violation raises `StoreError("append-only: ...")` and leaves nothing written. Two writers racing on one campaign both compute the same next `seq`; the second blocks on the first's row and then fails on the primary key, so one wins and the other gets `StoreError` (tested with two connections). Snapshots are insert-if-absent; the latest by `seq` wins.
+- **Tables** (migration `0001_init`): `events(campaign_id, seq, event_id UNIQUE, tick, kind, body)` with `PRIMARY KEY (campaign_id, seq)`, and `snapshots(campaign_id, seq, body)` keyed on both.
+- **`body` is `TEXT`, not `JSONB`.** JSONB refuses the escape `\u0000`, and a player can type a NUL into an order, so a JSONB log could refuse a legal event. TEXT stores the exact bytes SQLite stores; the contract suite checks a NUL, an emoji and escapes round-trip to an equal `Event`. Nothing queries inside bodies today; `kind` and `tick` are columns for the queries that matter.
+- **`campaign_ids()`** is now on the protocol (all three stores), oldest first by first event ID.
+- **Backend selection.** `$WYRD_DB` is a `postgresql://` (or `postgres://`) URL for Postgres, anything else a SQLite path as before. `open_store()` returns an `EventStore`; the CLI and campaign helpers are typed to the protocol. `psycopg` is the optional `postgres` extra and is imported only when the URL says Postgres, so SQLite play needs nothing new (tested by importing the CLI with `psycopg` blocked). Briefings go to `$WYRD_BRIEFINGS_DIR` when set, else beside a SQLite file as before, else `./wyrd-briefings`.
+
+### 14.2 Roles, grants and migrations
+
+- **Two roles.** An admin role owns the database and tables and runs migrations (`$WYRD_ADMIN_DSN`). The runtime connects as an app role holding `SELECT, INSERT` on `events` and `snapshots`, and `SELECT, INSERT, UPDATE` on `schedule`. It cannot `UPDATE`, `DELETE` or `TRUNCATE` the log and cannot read `schema_migrations` (tested as the app role). The app role does not own the tables, because an owner bypasses grants.
+- **Triggers as a second layer**, mirroring SQLite: `BEFORE UPDATE OR DELETE` and `BEFORE TRUNCATE` on `events` and `snapshots` raise `append-only` for every role, the owner included (tested as admin).
+- **Migrations** are hand-rolled numbered SQL files in `engine/migrations/` (shipped in the wheel), applied by `migrate(admin_dsn, app_role)` / `wyrd db migrate`. A `schema_migrations(version, applied_at)` table records what ran; each file runs in its own transaction with its version row, under an advisory lock, so a rerun is a no-op and a failure stops at the last good version. The app role's name is passed in and quoted as an identifier; creating the roles is a documented manual step (`docs/deploy.md`), never hidden in a migration. Alembic was not used: it brings SQLAlchemy for two tables. This resolves the build plan's `[open]` migration-tool item.
+
+### 14.3 Copy and verify
+
+- **`wyrd db copy --from <sqlite> --to <postgres url> [--campaign ID]`** appends the events the target lacks, in order, then the latest snapshot, then checks the target event for event and by `state_hash`. Rerunnable: a target holding a prefix gets the rest; a target that diverges is refused.
+- **`wyrd db verify [--campaign ID]`** replays each campaign from event 0 through the fold, which already checks `state_hash` at every `tick_closed` and raises `FoldError` on a mismatch, then checks the latest snapshot equals the replay at its `seq`. Non-zero exit on any failure. The restore drill runs it against a restored dump.
+
+### 14.4 The scheduler
+
+- **Trigger.** A systemd user timer starts `wyrd scheduler run` every 10 minutes. It is a poll, not a daemon. The tick cadence is each campaign's `Settings.tick_hours`; the timer only sets how promptly a due tick is noticed. This refines build plan decision 6 (the timer calls `wyrd scheduler run`, which runs the same tick path as `wyrd tick`). User units because the Claude CLI login lives in the user's home.
+- **Shared tick path.** `engine/runner.py` `play_tick` is the deputy turns, `run_tick` and the leak scan that `wyrd tick` always did. Both the CLI and the scheduler call it.
+- **Operational state is not game state.** The `schedule` table (migration `0002_schedule`) holds `campaign_id, next_due_at, advance_requested, paused, paused_reason, consecutive_failures, last_started_at, last_finished_at, last_status`. It is never in the event log. A campaign gets a row the first time the scheduler sees it, first due one tick later.
+- **When a campaign is due** (`due(row, now, in_flight=, submitted=)`, pure): never while paused; always when a tick is open (resume it); else when the host asked to advance; else when `now >= next_due_at`; else when every human seat has filed an intent since the last `tick_closed` that is still pending (a Wait counts; intents carried by a quiet tick or held by a running operation do not, so they cannot make a campaign tick every poll). At most one tick per campaign per run.
+- **No drift, no backfill.** After a tick closes, `next_due_at` becomes the previous `next_due_at` plus `tick_hours`, repeated until it is in the future (`next_due_after`, pure). A late tick does not shift the schedule; missed ticks are skipped. An early tick (advance or all-submitted) spends the current slot.
+- **Overlap.** Each campaign is ticked under a session advisory lock taken with `pg_try_advisory_lock`; a run that cannot take it skips the campaign silently. The store's primary key is the backstop.
+- **Failures.** A `TransportError` or any crash inside the tick is recorded (`last_status`, `consecutive_failures + 1`) and the tick stays resumable for the next poll. At 3 consecutive failures the campaign is paused with a reason and the run exits 1, so systemd shows the unit failed. A canary leak (the `wyrd tick` exit-3 path) pauses the campaign at once and the run exits 3. A process killed mid-tick leaves `last_status` at `running (...)`; the next run resumes the tick.
+- **Host controls.** `wyrd scheduler advance | pause [--reason] | resume | status`, each with `--campaign ID` (default all). The host's writes touch only their own columns and the scheduler only ever sets `paused`, never clears it, so a pause issued mid-tick survives the tick (tested).
+- **Clock.** Only `run` reads the clock, through an injected callable (`wyrd.cli.clock`). Tests step a fake one; no test sleeps.
+- **Postgres only.** The scheduler needs the advisory lock and the `schedule` table. SQLite campaigns tick by hand with `wyrd tick`.
+
+### 14.5 Deployment and backups
+
+`deploy/systemd/` holds the scheduler and backup user units and timers; `deploy/backup/` holds `wyrd-backup.sh` (nightly `pg_dump -Fc` to a local directory with N-day retention, then `rsync` or `rclone` to `$WYRD_BACKUP_DEST`, failing loudly when it is unset) and `wyrd-restore-drill.sh` (newest dump into a scratch database, `wyrd db verify`, drop, non-zero on any failure). The runbook is `docs/deploy.md`.
+
+### 14.6 What the tests cover, and what they do not
+
+Covered, against a real Postgres when `$WYRD_TEST_PG_ADMIN_DSN` is set (CI sets it and `WYRD_REQUIRE_PG=1`, so a missing database fails instead of skipping):
+
+- The store contract suite over memory, SQLite and Postgres; app-role grants and owner triggers; concurrent writers; idempotent migrations.
+- The migration test: an offline SQLite campaign with three closed ticks and a fourth left open after APPLY is copied to Postgres, matches event for event and by `state_hash`, then resumes that tick and plays another on Postgres.
+- The accelerated stand-in for the three-day run: 72 simulated hours of 12-hour ticks, the scheduler invoked every 10 simulated minutes, one tick crashed after NARRATE and resumed by the next poll, one poll contended by a held lock. Exactly 6 ticks open and close, the late tick does not drift the schedule, and `wyrd db verify` passes.
+- Advance, all-submitted, pause and resume, three-failure pause, leak pause, a pause landing mid-tick.
+- The unit files parse and their `ExecStart` is a real `wyrd scheduler run`; the backup script and restore drill run end to end against a scratch database with a local directory as the off-box target, and the drill fails on a corrupt dump.
+
+Not covered: a real systemd run of the units, real linger and reboot behaviour, an actual off-box host or rclone remote, the real three-day soak on the home server, and GitHub Actions itself. Those are Josh's steps (`docs/deploy.md` §8).
