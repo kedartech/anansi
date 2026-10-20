@@ -63,12 +63,23 @@ class RoutingDeliverer:
         return self.discord.deliver(seat_id, text, idempotency_key)
 
     def publish(self) -> list[str]:
-        """Post every statement not yet posted. Returns the idempotency keys it used."""
+        """Post every statement and admin read not yet posted. Returns the keys it used."""
         if self.public_channel is None:
             return []
         state = load_state(self.store, self.campaign_id)
         keys = []
         for e in self.store.read(self.campaign_id):
+            if isinstance(e.payload, ev.AdminRead):
+                key = derived_id(self.campaign_id, e.tick, "admin_read", e.event_id)
+                n = len(e.payload.events)
+                self.discord.post(
+                    self.public_channel,
+                    f"Admin read: the host opened {n} private record{'s' if n != 1 else ''}."
+                    " It is in the campaign log.",
+                    key,
+                )
+                keys.append(key)
+                continue
             if not isinstance(e.payload, ev.StatementIssued):
                 continue
             p = e.payload

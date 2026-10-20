@@ -17,12 +17,18 @@ from psycopg import errors
 from typer.testing import CliRunner
 
 from revisionist import cli
+from revisionist.core import events as ev
 from revisionist.core.ids import CampaignId, SeatId
+from revisionist.core.visibility import PUBLIC
 from revisionist.engine import campaign as cmp
-from revisionist.engine.discord.tables import SeatLinks
+from revisionist.engine.discord.delivery import routing_factory
+from revisionist.engine.discord.rest import DiscordRest
+from revisionist.engine.discord.tables import Channels, SeatLinks
 from revisionist.engine.pg_store import PostgresEventStore
+from revisionist.engine.runner import Publishes
 from revisionist.engine.seal import KeyringSealer, PgKeyring, load_master_key, new_master_key
 from revisionist.engine.store import StoreError, load_state
+from tests.discord_fakes import FakeDiscord
 from tests.pg import PgDb
 from tests.test_cli import FakeClaude
 from tests.test_deploy import _script, _tools
@@ -186,3 +192,108 @@ def test_the_dump_is_ciphertext_and_the_drill_needs_the_key(
     assert drill.returncode == 0, drill.stderr
     assert "sealed, 0 erased" in drill.stdout and "restore drill passed" in drill.stdout
     assert os.stat(key).st_mode & 0o077 == 0
+
+
+# --- break glass, announce, erase --------------------------------------------------
+
+
+def _events_of(kind: type) -> list[ev.Event]:
+    store = cmp.open_store()
+    try:
+        return [e for e in store.read(store.campaign_ids()[0]) if isinstance(e.payload, kind)]
+    finally:
+        store.close()  # type: ignore[attr-defined]
+
+
+def test_why_hides_private_records_until_glass_is_broken(sealed_game: PgDb) -> None:
+    [filed] = _events_of(ev.IntentFiled)
+    intent_id = filed.payload.intent.intent_id  # type: ignore[union-attr]
+    hidden = runner.invoke(cli.app, ["why", intent_id])
+    assert hidden.exit_code == 0 and "private records hidden" in hidden.output
+    assert ORDER_MARK not in hidden.output and _events_of(ev.AdminRead) == []
+    no_reason = runner.invoke(cli.app, ["why", intent_id, "--break-glass"])
+    assert no_reason.exit_code == cli.EXIT_ERROR and ORDER_MARK not in no_reason.output
+    opened = runner.invoke(cli.app, ["why", intent_id, "--break-glass", "--reason", "bug 7"])
+    assert opened.exit_code == 0 and ORDER_MARK in opened.output
+    [read] = _events_of(ev.AdminRead)
+    [order] = _events_of(ev.OrderReceived)
+    assert read.scope == PUBLIC and order.event_id in read.payload.events  # type: ignore[union-attr]
+    assert read.payload.purpose == "bug 7"  # type: ignore[union-attr]
+
+
+def test_admin_show_logs_before_it_shows(sealed_game: PgDb) -> None:
+    [order] = _events_of(ev.OrderReceived)
+    refused = runner.invoke(cli.app, ["admin", "show", order.event_id])
+    assert refused.exit_code == cli.EXIT_ERROR and ORDER_MARK not in refused.output
+    shown = runner.invoke(cli.app, ["admin", "show", order.event_id, "--reason", "dispute"])
+    assert shown.exit_code == 0 and ORDER_MARK in shown.output
+    assert len(_events_of(ev.AdminRead)) == 1
+    first = _events_of(ev.CampaignCreated)[0]
+    assert runner.invoke(cli.app, ["admin", "show", first.event_id]).exit_code == 0
+    assert len(_events_of(ev.AdminRead)) == 1  # a public record needs no admin read
+
+
+def test_admin_reads_are_announced_once(sealed_game: PgDb, tmp_path: Path) -> None:
+    [order] = _events_of(ev.OrderReceived)
+    runner.invoke(cli.app, ["admin", "show", order.event_id, "--reason", "dispute"])
+    fake = FakeDiscord()
+    store = cmp.open_store()
+    assert isinstance(store, PostgresEventStore)
+    campaign_id = store.campaign_ids()[0]
+    Channels(store.conn).set_public(campaign_id, "777", GUILD)
+    deliverer = routing_factory(DiscordRest("t", http=fake, sleep=lambda s: None))(
+        store, campaign_id, tmp_path
+    )
+    assert isinstance(deliverer, Publishes)
+    deliverer.publish()
+    deliverer.publish()
+    store.close()
+    assert [m.content for m in fake.messages] == [
+        "Admin read: the host opened 1 private record. It is in the campaign log."
+    ]
+
+
+def test_erasing_a_seat_keeps_the_game_and_loses_its_words(
+    sealed_game: PgDb, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    before = runner.invoke(cli.app, ["db", "verify"]).output
+    monkeypatch.setenv("REVISIONIST_ADMIN_DSN", sealed_game.admin_dsn)
+    erased = runner.invoke(
+        cli.app, ["admin", "erase", "--seat", "First Minister of Varda", "--reason", "asked to"]
+    )
+    assert erased.exit_code == 0, erased.output
+    after = runner.invoke(cli.app, ["db", "verify"])
+    assert after.exit_code == 0
+    assert after.output.split("hash ")[1].split(",")[0] == before.split("hash ")[1].split(",")[0]
+    assert "sealed, 0 erased" not in after.output and " erased" in after.output
+    [order] = [e for e in _events_of(ev.Sealed) if e.seq == _order_seq(sealed_game)]
+    assert order.payload.holder == "seat"  # type: ignore[union-attr]
+    shown = runner.invoke(cli.app, ["admin", "show", order.event_id, "--reason", "check"])
+    assert ORDER_MARK not in shown.output
+    # the game goes on: the seat speaks again under a new key
+    assert runner.invoke(cli.app, ["order", "Declare it again."]).exit_code == 0
+    with psycopg.connect(sealed_game.admin_dsn) as conn:
+        rows = conn.execute(
+            "SELECT destroyed_at IS NULL FROM seal_keys WHERE holder <> 'campaign'"
+            " ORDER BY created_at"
+        ).fetchall()
+    assert [live for (live,) in rows] == [False, True]
+    nothing = runner.invoke(cli.app, ["admin", "erase", "--seat", "Synod of Kesh", "--reason", "x"])
+    assert nothing.exit_code == cli.EXIT_ERROR and "no live key" in nothing.output
+
+
+def test_the_app_role_cannot_erase(sealed_game: PgDb, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("REVISIONIST_ADMIN_DSN", sealed_game.app_dsn)
+    result = runner.invoke(
+        cli.app, ["admin", "erase", "--seat", "First Minister of Varda", "--reason", "x"]
+    )
+    assert result.exit_code != 0 and isinstance(result.exception, errors.InsufficientPrivilege)
+
+
+def _order_seq(db: PgDb) -> int:
+    with psycopg.connect(db.admin_dsn) as conn:
+        row = conn.execute(
+            "SELECT min(seq) FROM events WHERE seq > 0 AND body LIKE %s", ('%"holder":"seat"%',)
+        ).fetchone()
+    assert row is not None
+    return int(row[0])

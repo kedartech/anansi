@@ -4,6 +4,7 @@ Everything the CLI needs that touches the file system or a model lives here, so
 ``revisionist.cli`` stays a thin layer of argument parsing and printing.
 """
 
+import getpass
 import os
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -174,6 +175,30 @@ def log_cost(
     store.append(event)
 
 
+def log_admin_read(
+    store: EventStore, campaign_id: CampaignId, events: Sequence[EventId], purpose: str
+) -> None:
+    """Land an ``admin_read`` before a host is shown private records (Layer 9b).
+
+    It is Public: everyone in the campaign learns that the host looked, and how
+    much, though not at what. If it cannot be logged, the caller shows nothing.
+    """
+    state = load_state(store, campaign_id)
+    store.append(
+        Event(
+            event_id=EventId(new_id()),
+            campaign_id=campaign_id,
+            seq=state.last_seq + 1,
+            tick=state.tick,
+            scope=PUBLIC,
+            payload=ev.AdminRead(
+                actor=f"host:{getpass.getuser()}", events=tuple(events), purpose=purpose[:200]
+            ),
+            versions=versions(),
+        )
+    )
+
+
 def live_transport() -> Transport:
     """The Claude Code CLI on the host's subscription. Tests replace this."""
     return ClaudeCli()
@@ -223,6 +248,7 @@ __all__ = [
     "is_postgres",
     "live_transport",
     "load_world",
+    "log_admin_read",
     "log_cost",
     "new_campaign",
     "open_store",
