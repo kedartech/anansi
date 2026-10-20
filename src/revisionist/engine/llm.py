@@ -88,6 +88,11 @@ class ClaudeCli:
 
     ``--bare`` would be the obvious flag but it also drops the subscription
     login, so the stripping is done piecewise.
+
+    The child gets no ``REVISIONIST_*`` variable (DSNs, the bot token, key
+    paths), and errors carry no model output or prompt text: they end up in
+    logs and in ``schedule.last_status``, which the host reads, and the host
+    may be a player (Layer 9b).
     """
 
     def __init__(self, binary: str = "claude", timeout_s: float = 300) -> None:
@@ -117,21 +122,24 @@ class ClaudeCli:
             "--max-budget-usd",
             f"{request.max_usd:.2f}",
         ]
+        env = {k: v for k, v in os.environ.items() if not k.startswith("REVISIONIST_")}
         try:
             proc = subprocess.run(
-                argv, capture_output=True, text=True, timeout=self.timeout_s, check=False
+                argv, capture_output=True, text=True, timeout=self.timeout_s, check=False, env=env
             )
-        except (OSError, subprocess.TimeoutExpired) as exc:
-            raise TransportError(f"claude cli: {exc}") from exc
+        except subprocess.TimeoutExpired:
+            # Not chained: TimeoutExpired's own message quotes the argv, prompt included.
+            raise TransportError(f"claude cli timed out after {self.timeout_s:.0f}s") from None
+        except OSError as exc:
+            raise TransportError(f"claude cli: {type(exc).__name__}: {exc.strerror}") from None
         try:
             result = json.loads(proc.stdout) if proc.stdout.lstrip().startswith("{") else {}
         except json.JSONDecodeError:
             result = {}
         if proc.returncode != 0:
-            detail = result.get("result") or proc.stderr or proc.stdout
-            raise TransportError(f"claude cli exit {proc.returncode}: {str(detail)[-400:]}")
+            raise TransportError(f"claude cli exit {proc.returncode} ({_subtype(result)})")
         if result.get("is_error") or result.get("structured_output") is None:
-            raise TransportError(f"claude cli error: {str(result.get('result'))[:200]}")
+            raise TransportError(f"claude cli error ({_subtype(result)})")
         usage = result.get("usage", {})
         models = list(result.get("modelUsage", {}))
         return Reply(
@@ -143,6 +151,12 @@ class ClaudeCli:
             + int(usage.get("cache_creation_input_tokens", 0)),
             usd=float(result.get("total_cost_usd", 0.0)),
         )
+
+
+def _subtype(result: dict[str, Any]) -> str:
+    """The CLI's error class (``error_max_turns`` and the like), never its text."""
+    subtype = str(result.get("subtype") or "unknown")
+    return subtype if subtype.replace("_", "").isalnum() and len(subtype) <= 40 else "unknown"
 
 
 class MissingRecordingError(TransportError):

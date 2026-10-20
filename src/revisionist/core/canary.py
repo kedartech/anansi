@@ -3,15 +3,20 @@
 Covert facts in fixtures carry a unique ``canary`` string. After a tick, every
 narration and briefing is checked for canaries its recipient should not know.
 Pure: takes the state and the events, returns the hits. Zero tolerance in tests.
+
+Layer 9b adds the human boundary (README §7): the opacity boundary is the
+person, not the seat, so a person's check is against the union of what all
+their seats may know, over everything that person can read.
 """
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 
 from revisionist.core import events as ev
 from revisionist.core._base import Model
 from revisionist.core.events import Event
 from revisionist.core.ids import EventId, FactId, SeatId
 from revisionist.core.state import State
+from revisionist.core.visibility import Visibility
 
 
 class Leak(Model):
@@ -71,4 +76,77 @@ def scan_deliveries(
     ]
 
 
-__all__ = ["Leak", "canaries_hidden_from", "scan", "scan_deliveries", "scan_text"]
+# --- the human boundary (Layer 9b) ------------------------------------------------
+
+
+class HumanLeak(Model):
+    human: str
+    """Who read it: a Discord user ID, or ``host``."""
+    surface: str
+    """Where they read it, e.g. ``narration <event id>`` or ``dm``."""
+    canary: str
+    fact_id: FactId
+
+
+def canaries_hidden_from_human(state: State, seats: Iterable[SeatId]) -> dict[str, FactId]:
+    """Canaries on facts that none of one person's seats may see."""
+    held = frozenset(seats)
+    return {
+        f.canary: f.fact_id
+        for f in state.facts.values()
+        if f.canary and not any(f.scope.visible_to(s) for s in held)
+    }
+
+
+def surfaces_from_log(
+    events: Iterable[Event], holdings: Mapping[str, frozenset[SeatId]]
+) -> dict[str, list[tuple[str, str]]]:
+    """What each person can read in the log: their seats' narrations and questions,
+    every public narration (the press) and every statement."""
+    seen: dict[str, list[tuple[str, str]]] = {human: [] for human in holdings}
+    for e in events:
+        p = e.payload
+        own: SeatId | None = None
+        if isinstance(p, ev.NarrationWritten | ev.ClarificationAsked):
+            own = p.seat_id
+        text = p.text if isinstance(p, ev.NarrationWritten | ev.StatementIssued) else ""
+        if isinstance(p, ev.ClarificationAsked):
+            text = p.question
+        if not text:
+            continue
+        public = isinstance(p, ev.StatementIssued) or e.scope.visibility is Visibility.PUBLIC
+        for human, seats in holdings.items():
+            if public or own in seats:
+                seen[human].append((f"{e.kind} {e.event_id}", text))
+    return seen
+
+
+def scan_humans(
+    state: State,
+    holdings: Mapping[str, frozenset[SeatId]],
+    seen: Mapping[str, Sequence[tuple[str, str]]],
+) -> list[HumanLeak]:
+    """Every text each person read, checked against the union of their seats' knowledge."""
+    leaks: list[HumanLeak] = []
+    for human, texts in seen.items():
+        hidden = canaries_hidden_from_human(state, holdings.get(human, frozenset()))
+        for surface, text in texts:
+            leaks += [
+                HumanLeak(human=human, surface=surface, canary=c, fact_id=fid)
+                for c, fid in hidden.items()
+                if c in text
+            ]
+    return leaks
+
+
+__all__ = [
+    "HumanLeak",
+    "Leak",
+    "canaries_hidden_from",
+    "canaries_hidden_from_human",
+    "scan",
+    "scan_deliveries",
+    "scan_humans",
+    "scan_text",
+    "surfaces_from_log",
+]

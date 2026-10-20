@@ -2,6 +2,7 @@
 
 import inspect
 import json
+import subprocess
 from collections.abc import Iterator, Sequence
 from pathlib import Path
 from typing import Any, get_type_hints
@@ -26,6 +27,7 @@ from revisionist.engine.llm import (
     RecordedTransport,
     Reply,
     Request,
+    TransportError,
 )
 from revisionist.engine.providers import KeywordSafety, RecordingDeliverer, TemplateNarrator
 from revisionist.engine.store import MemoryStore, load_state
@@ -288,3 +290,60 @@ def test_one_live_tick_from_recording(recorded: RecordedTransport) -> None:
         assert "intent_id" not in text and "01ARZ" not in text
     # the resolver and both human narrations came from the recording, not a fallback
     assert recorded.hits == 3 and recorded.recorded == 0
+
+
+# --- what the CLI transport passes on and gives back (Layer 9b) ---------------------
+
+
+def _cli_request() -> Request:
+    return Request("narrator", "m", "SYSTEM", "PROMPT with a secret view", {"type": "object"})
+
+
+def test_the_claude_child_gets_no_revisionist_variables(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("REVISIONIST_DISCORD_TOKEN", "tok")
+    monkeypatch.setenv("REVISIONIST_DB", "postgresql://app:pw@h/db")
+    monkeypatch.setenv("HOME", "/home/someone")
+    seen: dict[str, Any] = {}
+
+    def fake_run(argv: list[str], **kw: Any) -> subprocess.CompletedProcess[str]:
+        seen.update(kw)
+        out = json.dumps({"structured_output": {"text": "ok"}, "usage": {}, "modelUsage": {}})
+        return subprocess.CompletedProcess(argv, 0, out, "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    llm.ClaudeCli().call(_cli_request())
+    assert not any(k.startswith("REVISIONIST_") for k in seen["env"])
+    assert seen["env"]["HOME"] == "/home/someone"
+
+
+@pytest.mark.parametrize(
+    "outcome",
+    [
+        subprocess.TimeoutExpired(["claude", "-p", "PROMPT with a secret view"], 300),
+        subprocess.CompletedProcess(
+            [], 1, json.dumps({"result": "MODEL SAID secret"}), "ERR secret"
+        ),
+        subprocess.CompletedProcess(
+            [],
+            0,
+            json.dumps({"is_error": True, "subtype": "error_max_turns", "result": "secret"}),
+            "",
+        ),
+    ],
+)
+def test_transport_errors_carry_no_prompt_or_output(
+    monkeypatch: pytest.MonkeyPatch, outcome: object
+) -> None:
+    def fake_run(argv: list[str], **kw: Any) -> object:
+        if isinstance(outcome, BaseException):
+            raise outcome
+        return outcome
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    with pytest.raises(TransportError) as caught:
+        llm.ClaudeCli().call(_cli_request())
+    message = str(caught.value)
+    assert "secret" not in message and "PROMPT" not in message and "claude cli" in message
+    # nothing chained that a traceback would print
+    assert caught.value.__cause__ is None
+    assert caught.value.__context__ is None or caught.value.__suppress_context__
