@@ -49,6 +49,26 @@ def test_scheduler_service_runs_wyrd_scheduler_run() -> None:
     assert service["NoNewPrivileges"] == "yes"
 
 
+def test_discord_service_runs_the_bot_with_the_scheduler_hardening() -> None:
+    service = _unit("wyrd-discord.service")["Service"]
+    scheduler = _unit("wyrd-scheduler.service")["Service"]
+    argv = _argv(service["ExecStart"])
+    assert Path(argv[0]).name == "wyrd" and argv[1:] == ["discord", "run"]
+    assert runner.invoke(cli.app, [*argv[1:], "--help"]).exit_code == 0
+    assert service["Type"] == "simple" and service["Restart"] == "on-failure"
+    assert service["EnvironmentFile"] == scheduler["EnvironmentFile"]
+    hardening = (
+        "UMask",
+        "NoNewPrivileges",
+        "LockPersonality",
+        "RestrictRealtime",
+        "RestrictSUIDSGID",
+        "SystemCallArchitectures",
+    )
+    assert {k: service[k] for k in hardening} == {k: scheduler[k] for k in hardening}
+    assert _unit("wyrd-discord.service")["Install"]["WantedBy"] == "default.target"
+
+
 def test_scheduler_timer_polls_every_ten_minutes() -> None:
     timer = _unit("wyrd-scheduler.timer")["Timer"]
     assert timer["OnCalendar"] == "*:0/10"

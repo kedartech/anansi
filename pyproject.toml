@@ -14,6 +14,7 @@ dependencies = [
 
 [project.optional-dependencies]
 postgres = ["psycopg[binary]>=3.2"]
+discord = ["discord.py>=2.7"]
 
 [project.scripts]
 wyrd = "wyrd.cli:app"
@@ -27,6 +28,7 @@ dev = [
     "pytest-cov>=6.0",
     "types-pyyaml>=6.0",
     "psycopg[binary]>=3.2",
+    "discord.py>=2.7",
 ]
 
 [build-system]
