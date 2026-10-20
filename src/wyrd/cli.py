@@ -296,13 +296,12 @@ scheduler_app = typer.Typer(
 app.add_typer(scheduler_app, name="scheduler")
 
 
-def _pg_store() -> "PostgresEventStore":
+def _pg_store(
+    what: str = "the scheduler", hint: str = "; SQLite campaigns tick by hand with `wyrd tick`"
+) -> "PostgresEventStore":
     target = cmp.db_target()
     if not cmp.is_postgres(target):
-        raise _fail(
-            "the scheduler needs WYRD_DB to be a postgresql:// URL; "
-            "SQLite campaigns tick by hand with `wyrd tick`"
-        )
+        raise _fail(f"{what} needs WYRD_DB to be a postgresql:// URL{hint}")
     from wyrd.engine.pg_store import PostgresEventStore
 
     return PostgresEventStore(target)
@@ -407,6 +406,9 @@ OneCampaignOpt = Annotated[
 ]
 
 
+_DISCORD = ("Discord play", "")
+
+
 def _env(name: str) -> str:
     value = os.environ.get(name)
     if not value:
@@ -446,7 +448,7 @@ def discord_link(
     if not user.isdigit():
         raise _fail("--user is a Discord user ID (digits)")
     guild = _env("WYRD_DISCORD_GUILD_ID")
-    store = _pg_store()
+    store = _pg_store(*_DISCORD)
     try:
         campaign_id, seat_id = _bound_seat(store, campaign, seat)
         SeatLinks(store.conn).link(campaign_id, seat_id, user, guild)
@@ -462,7 +464,7 @@ def discord_unlink(campaign: OneCampaignOpt = None, seat: SeatOpt = None) -> Non
     """Remove a seat's Discord binding."""
     from wyrd.engine.discord.tables import SeatLinks
 
-    store = _pg_store()
+    store = _pg_store(*_DISCORD)
     try:
         campaign_id, seat_id = _bound_seat(store, campaign, seat)
         removed = SeatLinks(store.conn).unlink(campaign_id, seat_id)
@@ -478,7 +480,7 @@ def discord_seats() -> None:
     """Every Discord binding."""
     from wyrd.engine.discord.tables import SeatLinks
 
-    store = _pg_store()
+    store = _pg_store(*_DISCORD)
     try:
         links = SeatLinks(store.conn).all()
     finally:
@@ -490,6 +492,38 @@ def discord_seats() -> None:
             f"{link.campaign_id}  {link.seat_id}  user {link.discord_user_id}"
             f"  guild {link.guild_id}  since {link.linked_at.astimezone(UTC):%Y-%m-%d %H:%MZ}"
         )
+
+
+@discord_app.command("run")
+def discord_run() -> None:
+    """The gateway bot, in the foreground. Needs ``$WYRD_DISCORD_TOKEN`` and the guild ID."""
+    token = _env("WYRD_DISCORD_TOKEN")
+    guild = _env("WYRD_DISCORD_GUILD_ID")
+    if not guild.isdigit():
+        raise _fail("WYRD_DISCORD_GUILD_ID is a Discord server ID (digits)")
+    _pg_store(*_DISCORD).close()
+    try:
+        from wyrd.engine.discord import bot
+    except ImportError as exc:
+        raise _fail(
+            "the Discord bot needs the discord extra: install '.[postgres,discord]'"
+        ) from exc
+    from wyrd.engine.discord.delivery import factory_from_env
+    from wyrd.engine.discord.handlers import BotConfig, Handlers
+
+    host = os.environ.get("WYRD_DISCORD_HOST_ID") or None
+    if host is None:
+        typer.echo(
+            "WYRD_DISCORD_HOST_ID is not set: /advance, /pause and /resume are refused", err=True
+        )
+    handlers = Handlers(
+        BotConfig(cmp.db_target(), guild, host),
+        transport_factory=lambda: transport_factory(),
+        clock=lambda: clock(),
+        briefings=cmp.briefings_dir(),
+        deliverer_factory=factory_from_env(),
+    )
+    bot.run(handlers, token, int(guild))
 
 
 __all__ = ["EXIT_ERROR", "EXIT_LEAK", "EXIT_REFUSED", "app", "transport_factory"]
