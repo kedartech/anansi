@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from wyrd.core.canary import Leak
-from wyrd.core.ids import CampaignId
+from wyrd.core.ids import CampaignId, SeatId
 from wyrd.core.report import leak_report
 from wyrd.core.resolution import TickStage
 from wyrd.engine import campaign as cmp
@@ -17,7 +17,17 @@ from wyrd.engine.agent import Agent
 from wyrd.engine.llm import ClaudeNarrator, ClaudeResolver, Transport, TransportError
 from wyrd.engine.providers import KeywordSafety, ScriptedResolver, TemplateNarrator
 from wyrd.engine.store import EventStore, load_state
-from wyrd.engine.tick import Providers, TickResult, file_intent, run_tick
+from wyrd.engine.tick import Deliverer, Providers, TickResult, file_intent, run_tick
+
+DelivererFactory = Callable[[EventStore, CampaignId, Path], Deliverer]
+"""Builds the tick's deliverer from the store, the campaign and the briefings directory."""
+
+
+def file_deliverer(store: EventStore, campaign_id: CampaignId, briefings: Path) -> Deliverer:
+    """The default: every briefing to a file under ``briefings``."""
+    state = load_state(store, campaign_id)
+    names: dict[SeatId, str] = {s.seat_id: s.name for s in state.seats.values()}
+    return cmp.FileDeliverer(briefings, names, state.tick)
 
 
 @dataclass(frozen=True)
@@ -36,12 +46,11 @@ def play_tick(
     briefings: Path,
     warn: Callable[[str], None],
     stop_after: TickStage | None = None,
+    deliverer_factory: DelivererFactory | None = None,
 ) -> TickRun:
     """Run (or resume) one tick. Transport errors from the tick itself propagate."""
     state = load_state(store, campaign_id)
-    deliverer = cmp.FileDeliverer(
-        briefings, {s.seat_id: s.name for s in state.seats.values()}, state.tick
-    )
+    deliverer = (deliverer_factory or file_deliverer)(store, campaign_id, briefings)
     if offline:
         providers = Providers(ScriptedResolver(), TemplateNarrator(), deliverer, KeywordSafety())
     else:
@@ -53,7 +62,7 @@ def play_tick(
         )
     result = run_tick(store, campaign_id, providers, versions=cmp.versions(), stop_after=stop_after)
     found = leak_report(load_state(store, campaign_id), store.read(campaign_id))
-    return TickRun(result, deliverer.directory, found)
+    return TickRun(result, briefings, found)
 
 
 def faction_turns(
@@ -75,4 +84,4 @@ def faction_turns(
         cmp.log_cost(store, campaign_id, "deputy", agent.spent, seat)
 
 
-__all__ = ["TickRun", "faction_turns", "play_tick"]
+__all__ = ["DelivererFactory", "TickRun", "faction_turns", "file_deliverer", "play_tick"]
