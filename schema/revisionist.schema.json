@@ -5463,6 +5463,35 @@
         "title": "Seat",
         "type": "object"
       },
+      "SeatFace": {
+        "additionalProperties": false,
+        "description": "What any seat may know about another: who it is, never how it is run.\n\nREADME \u00a717: whether a seat is human or AI, its agent, its persona, its\nstatus (blinded, fallen) and its deputy are never shown to other seats.",
+        "properties": {
+          "embodies": {
+            "title": "Embodies",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/$defs/SeatKind"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "seat_id": {
+            "title": "Seat Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "seat_id",
+          "kind",
+          "name",
+          "embodies"
+        ],
+        "title": "SeatFace",
+        "type": "object"
+      },
       "SeatKind": {
         "enum": [
           "player",
@@ -5677,6 +5706,9 @@
         "title": "Facts",
         "type": "object"
       },
+      "me": {
+        "$ref": "#/$defs/Seat"
+      },
       "meters": {
         "additionalProperties": {
           "$ref": "#/$defs/Meter"
@@ -5708,7 +5740,7 @@
       },
       "seats": {
         "additionalProperties": {
-          "$ref": "#/$defs/Seat"
+          "$ref": "#/$defs/SeatFace"
         },
         "title": "Seats",
         "type": "object"
@@ -5751,7 +5783,8 @@
     },
     "required": [
       "campaign_id",
-      "viewer"
+      "viewer",
+      "me"
     ],
     "title": "View",
     "type": "object"

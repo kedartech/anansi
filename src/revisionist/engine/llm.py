@@ -380,7 +380,7 @@ class ClaudeNarrator:
 
 
 def _narrator_prompt(view: View, deltas: Sequence[d.Delta]) -> str:
-    seat = view.seats[view.viewer]
+    seat = view.me
     return (
         f"## Reader: {seat.name} (seat {view.viewer}), tick {view.tick}\n\n"
         "## What this seat knows\n"

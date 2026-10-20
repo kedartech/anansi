@@ -1,8 +1,10 @@
 {
- "29dc83dea6dc5174be9f6a85": {
+ "416d6a1b84a2f0317edc471e": {
   "call_class": "narrator",
   "model": "claude-haiku-5-5",
+  "note": "re-keyed offline: reply recorded against the pre-9b-2 View shape; re-record live",
   "prompt_head": "## Reader: Regent of the North (seat 01ARZ3NDEKTSV4RRFFQ69G5SN0), tick 0\n\n## What this seat knows\n{\"campaign_id\":\"01ARZ3",
+  "rekeyed_from": "29dc83dea6dc5174be9f6a85",
   "reply": {
    "cached_tokens": 5540,
    "input_tokens": 2,
@@ -14,10 +16,12 @@
    "usd": 0.0018297
   }
  },
- "3e1b417f28369a2e72fd6a04": {
+ "726c1ed817df8cc235ad98c8": {
   "call_class": "narrator",
   "model": "claude-haiku-5-5",
+  "note": "re-keyed offline: reply recorded against the pre-9b-2 View shape; re-record live",
   "prompt_head": "## Reader: Chancellor of the South (seat 01ARZ3NDEKTSV4RRFFQ69G5SS0), tick 0\n\n## What this seat knows\n{\"campaign_id\":\"01",
+  "rekeyed_from": "3e1b417f28369a2e72fd6a04",
   "reply": {
    "cached_tokens": 4866,
    "input_tokens": 2,

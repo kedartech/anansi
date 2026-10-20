@@ -36,6 +36,7 @@ from revisionist.core.ontology import (
     Relationship,
     ScheduledEvent,
     Seat,
+    SeatKind,
 )
 from revisionist.core.settings import Settings
 
@@ -54,12 +55,25 @@ class _World(Model):
     facts: dict[FactId, Fact] = Field(default_factory=dict)
     scheduled: dict[ScheduledEventId, ScheduledEvent] = Field(default_factory=dict)
     commitments: dict[CommitmentId, Commitment] = Field(default_factory=dict)
-    seats: dict[SeatId, Seat] = Field(default_factory=dict)
+
+
+class SeatFace(Model):
+    """What any seat may know about another: who it is, never how it is run.
+
+    README §17: whether a seat is human or AI, its agent, its persona, its
+    status (blinded, fallen) and its deputy are never shown to other seats.
+    """
+
+    seat_id: SeatId
+    kind: SeatKind
+    name: str
+    embodies: EntityId
 
 
 class State(_World):
     """The full truth. Only the referee and the resolver ever hold one."""
 
+    seats: dict[SeatId, Seat] = Field(default_factory=dict)
     last_seq: int = -1
     pending: dict[IntentId, Intent] = Field(default_factory=dict)
     """Filed, not yet frozen into a tick."""
@@ -71,5 +85,9 @@ class View(_World):
     """One seat's knowledge. The only input to anything that writes prose."""
 
     viewer: SeatId
+    me: Seat
+    """The viewer's own seat, in full."""
+    seats: dict[SeatId, SeatFace] = Field(default_factory=dict)
+    """Every seat, the viewer's included, as others see it."""
     own_pending: tuple[Intent, ...] = ()
     """The viewer's own filed intents; others' intents are never in a view."""

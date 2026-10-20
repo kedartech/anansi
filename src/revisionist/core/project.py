@@ -1,9 +1,10 @@
 """``project(state, seat) -> View``: the only read path for anything that writes prose.
 
 README §7. An item is in a seat's view when its scope is visible to that
-seat. Entities and seats have no scope and are always visible, but another
-seat's private fields (objectives, standing orders) are stripped. Other
-seats' pending intents are never in a view.
+seat. Entities have no scope and are always visible. Every seat appears only
+as a ``SeatFace`` (README §17: how a seat is run is never shown); the viewer
+also gets its own seat in full as ``View.me``. Other seats' pending intents
+are never in a view.
 """
 
 from collections.abc import Mapping
@@ -11,7 +12,7 @@ from typing import Protocol
 
 from revisionist.core.ids import SeatId
 from revisionist.core.ontology import Seat
-from revisionist.core.state import State, View
+from revisionist.core.state import SeatFace, State, View
 from revisionist.core.visibility import Scope
 
 
@@ -24,9 +25,8 @@ def _visible[K, S: HasScope](items: Mapping[K, S], seat: SeatId) -> dict[K, S]:
     return {k: v for k, v in items.items() if v.scope.visible_to(seat)}
 
 
-def _redact(seat: Seat) -> Seat:
-    """What other seats may know about a seat: everything but its private aims."""
-    return seat.model_copy(update={"objectives": frozenset(), "standing_orders": ()})
+def face(seat: Seat) -> SeatFace:
+    return SeatFace(seat_id=seat.seat_id, kind=seat.kind, name=seat.name, embodies=seat.embodies)
 
 
 def project(state: State, seat: SeatId) -> View:
@@ -45,6 +45,7 @@ def project(state: State, seat: SeatId) -> View:
         facts=_visible(state.facts, seat),
         scheduled=_visible(state.scheduled, seat),
         commitments=_visible(state.commitments, seat),
-        seats={k: (v if k == seat else _redact(v)) for k, v in state.seats.items()},
+        me=state.seats[seat],
+        seats={k: face(v) for k, v in state.seats.items()},
         own_pending=tuple(i for i in state.pending.values() if i.actor == seat),
     )

@@ -7,8 +7,9 @@ from hypothesis import strategies as st
 
 from revisionist.core.fold import replay
 from revisionist.core.ids import SeatId
+from revisionist.core.ontology import Controller, SeatStatus
 from revisionist.core.project import HasScope, project
-from revisionist.core.state import State
+from revisionist.core.state import SeatFace, State
 from revisionist.core.visibility import Visibility
 from tests import fixtures as fx
 from tests import strategies as s
@@ -37,13 +38,44 @@ def test_north_sees_its_own_secrets_and_guild_does_not_see_the_meter() -> None:
     assert fx.A_GUILD_NETWORK not in project(state, fx.HERALD).assets
 
 
-def test_other_seats_private_aims_are_redacted() -> None:
+def test_other_seats_show_only_their_face() -> None:
     state = replay(fx.creation_events())
     south = project(state, fx.SOUTH)
-    assert south.seats[fx.NORTH].objectives == frozenset()
-    assert south.seats[fx.NORTH].standing_orders == ()
+    assert set(SeatFace.model_fields) == {"seat_id", "kind", "name", "embodies"}
+    assert isinstance(south.seats[fx.NORTH], SeatFace)
+    assert south.seats[fx.NORTH].name == state.seats[fx.NORTH].name
+    assert south.me == state.seats[fx.SOUTH]
     north = project(state, fx.NORTH)
-    assert north.seats[fx.NORTH].objectives == {fx.C_NORTH_PLOT}
+    assert north.me.objectives == {fx.C_NORTH_PLOT}
+    for word in ("controller", "persona", "objectives", "standing_orders", '"agent"'):
+        assert word not in north.seats[fx.SOUTH].model_dump_json()
+
+
+@h_settings(max_examples=200, deadline=None)
+@given(
+    controller=st.sampled_from(Controller),
+    status=st.sampled_from(SeatStatus),
+    blinded=st.booleans(),
+    slots=st.integers(0, 5),
+)
+def test_how_another_seat_is_run_never_changes_a_view(
+    controller: Controller, status: SeatStatus, blinded: bool, slots: int
+) -> None:
+    """README §17: human or AI, agent, persona, status and deputy stay hidden."""
+    state = replay(fx.creation_events())
+    before = project(state, fx.SOUTH).model_dump_json()
+    north = state.seats[fx.NORTH].model_copy(
+        update={
+            "controller": controller,
+            "status": status,
+            "agent": None if blinded else state.seats[fx.NORTH].agent,
+            "persona": None,
+            "slots": slots,
+            "standing_orders": ("march at dawn",),
+        }
+    )
+    changed = state.model_copy(update={"seats": {**state.seats, fx.NORTH: north}})
+    assert project(changed, fx.SOUTH).model_dump_json() == before
 
 
 def test_unknown_seat_is_refused() -> None:
