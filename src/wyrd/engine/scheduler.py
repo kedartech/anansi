@@ -35,7 +35,7 @@ from wyrd.core.report import render_leaks
 from wyrd.core.resolution import TickStage
 from wyrd.core.state import State
 from wyrd.engine.llm import Transport
-from wyrd.engine.runner import play_tick
+from wyrd.engine.runner import DelivererFactory, play_tick
 from wyrd.engine.store import EventStore, load_state
 
 if TYPE_CHECKING:  # psycopg is the optional ``postgres`` extra; the CLI imports this module
@@ -254,6 +254,7 @@ def run(
     warn: Callable[[str], None],
     campaign: CampaignId | None = None,
     stop_after: TickStage | None = None,
+    deliverer_factory: DelivererFactory | None = None,
 ) -> list[Outcome]:
     """Tick every due campaign once. ``stop_after`` simulates a crash (tests only)."""
     table = register(store, clock())
@@ -274,6 +275,7 @@ def run(
                     briefings=briefings,
                     warn=warn,
                     stop_after=stop_after,
+                    deliverer_factory=deliverer_factory,
                 )
             )
         finally:
@@ -297,6 +299,7 @@ def _one(
     briefings: Path,
     warn: Callable[[str], None],
     stop_after: TickStage | None,
+    deliverer_factory: DelivererFactory | None,
 ) -> Outcome:
     now = clock()
     row = table.get(campaign_id)  # re-read under the lock
@@ -316,6 +319,7 @@ def _one(
             briefings=briefings,
             warn=warn,
             stop_after=stop_after,
+            deliverer_factory=deliverer_factory,
         )
     except Exception as exc:  # the tick stays resumable; count it and maybe stop trying
         failures = row.consecutive_failures + 1
