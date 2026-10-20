@@ -287,7 +287,7 @@ The project was called Wyrd Protocol through Layer 9a. Everything it installed c
    mv ~/.config/wyrd ~/.config/revisionist
    mv ~/.config/revisionist/wyrd.env ~/.config/revisionist/revisionist.env
    mv ~/.config/revisionist/wyrd-admin.env ~/.config/revisionist/revisionist-admin.env
-   sed -i 's/^WYRD_/REVISIONIST_/; s#/wyrd\b#/revisionist#g' ~/.config/revisionist/*.env
+   sed -i 's/^WYRD_/REVISIONIST_/; s#/wyrd\b#/revisionist#g; s/wyrd_app/revisionist_app/g; s/wyrd_admin/revisionist_admin/g' ~/.config/revisionist/*.env
    mv ~/.local/share/wyrd ~/.local/share/revisionist
    ```
    Check by eye that the DSNs now name the `revisionist` database and roles, and that the briefings and backup paths point at `~/.local/share/revisionist`.
