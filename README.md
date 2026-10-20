@@ -57,7 +57,7 @@ Not the reference: Studio 14b's scripted "President Simulator" on Steam (Early A
 | 15 | Votes vs. covert plans | A vote can affect a covert plan but never cancel it outright. |
 | 16 | Opacity | Players see only what is public in the world and what other players choose to disclose. Covert play is a deliberate option. |
 | 17 | Builders | Josh and Vera, not the KT team. |
-| 18 | Home | The kedartech GitHub organisation. Renaming the repository to match is Josh's step. |
+| 18 | Home | kedartech/revisionist. |
 | 19 | Event log | Every event in a campaign is logged, append-only. The log is the canonical record; world state is a projection of it. |
 | 20 | Player agent | Players never talk to the GM directly. Each player has a personal in-world agent that structures orders, briefs, advises, and runs the seat as deputy when the player is away. Players design the agent's persona; its function is fixed. |
 | 21 | Agent harm | The world can act on a player's agent: kidnap, turn or kill it. Losing it blinds the seat until a replacement is found in the fiction. |

@@ -82,7 +82,7 @@ class DiscordRest:
         headers = {
             "Authorization": f"Bot {self.token}",
             "Content-Type": "application/json",
-            "User-Agent": f"DiscordBot (https://github.com/kedartech/anansi, {__version__})",
+            "User-Agent": f"DiscordBot (https://github.com/kedartech/revisionist, {__version__})",
         }
         body = json.dumps(payload).encode()
         status, reply = 0, b""
