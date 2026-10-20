@@ -13,6 +13,7 @@ Rules:
 - Draw from the record and say nothing you cannot ground in it. Where the record is thin, keep the world small rather than invent.
 - Real people appear only as the record shows them at that date. Never invent crimes, corruption, sexual misconduct, health conditions or private scandal about a real person. Never include a living private individual by name.
 - No mastheads that imitate real newspapers. Name the outlet in period style.
+- Scope: use `public` unless a thing is truly hidden. Any non-public scope (restricted, private or covert) must list `known_by`, one or more seat keys from your own `seats`; an empty list is refused. If no seat knows it, make it public or leave it out. Nothing is hidden from its own holder, so do not scope an asset just to say its owner holds it.
 - Keys are lowercase with digits and underscores, unique across the whole file, and every reference names an existing key of the right type.
 - The settings are fixed by the table and given to you for tone only; whatever you write there is replaced.
 - Plain names, no markdown, no commentary outside the file.

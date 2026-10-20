@@ -109,7 +109,7 @@ class ClaudeCli:
             "--system-prompt",
             request.system,
             "--json-schema",
-            json.dumps(request.schema),
+            json.dumps(_strip(request.schema)),
             "--output-format",
             "json",
             "--setting-sources",

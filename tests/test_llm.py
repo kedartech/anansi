@@ -348,3 +348,22 @@ def test_transport_errors_carry_no_prompt_or_output(
     # nothing chained that a traceback would print
     assert caught.value.__cause__ is None
     assert caught.value.__context__ is None or caught.value.__suppress_context__
+
+
+def test_the_cli_never_gets_a_discriminator_keyword(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The CLI's strict validator rejects ``discriminator``; Session Zero's world and
+    goal schemas carry it, so the transport must strip it from whatever it is handed."""
+    from revisionist.engine import session_zero
+
+    sent: list[str] = []
+
+    def fake_run(argv: list[str], **kw: Any) -> subprocess.CompletedProcess[str]:
+        sent.append(argv[argv.index("--json-schema") + 1])
+        out = json.dumps({"structured_output": {}, "usage": {}, "modelUsage": {}})
+        return subprocess.CompletedProcess(argv, 0, out, "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    for schema in (session_zero.DRAFT_SCHEMA, session_zero.GOAL_SCHEMA):
+        assert "discriminator" in json.dumps(schema)
+        llm.ClaudeCli().call(Request("narrator", "m", "SYSTEM", "PROMPT", schema))
+    assert sent and not any("discriminator" in s for s in sent)
