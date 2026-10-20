@@ -77,6 +77,8 @@ def apply(state: State, event: Event) -> State:
         raise FoldError(f"event {event.event_id} belongs to campaign {event.campaign_id}")
     if event.seq != state.last_seq + 1:
         raise FoldError(f"sequence gap: expected {state.last_seq + 1}, got {event.seq}")
+    if isinstance(event.payload, ev.Sealed) and event.payload.holder == "campaign":
+        raise FoldError(f"event {event.event_id} is still sealed: its campaign key is missing")
     if event.kind in MUTATING_KINDS:
         state = _mutate(state, event)
     return state.model_copy(update={"last_seq": event.seq})

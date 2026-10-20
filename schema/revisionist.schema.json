@@ -2564,6 +2564,37 @@
         "title": "Scope",
         "type": "object"
       },
+      "Sealed": {
+        "additionalProperties": false,
+        "description": "What a sealed event looks like at rest (Layer 9b): the real event, whole,\nis encrypted into the envelope's ``payload_enc``.\n\nThe store unseals on read, so the tick, the fold and every reader see the\nplaintext event. A ``seat``-held event whose key was destroyed (erasure)\nstays sealed: it is prose the fold never needed. A ``campaign``-held one\nthat reaches the fold is an error: its key is missing.",
+        "properties": {
+          "holder": {
+            "enum": [
+              "campaign",
+              "seat"
+            ],
+            "title": "Holder",
+            "type": "string"
+          },
+          "key_id": {
+            "maxLength": 64,
+            "title": "Key Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "sealed",
+            "default": "sealed",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key_id",
+          "holder"
+        ],
+        "title": "Sealed",
+        "type": "object"
+      },
       "Seat": {
         "additionalProperties": false,
         "description": "Anything that holds a view of the world (README \u00a76, \u00a77, \u00a710).\n\nHumans, AI factions, press outlets and NPCs are all Seats, because they\nall need ``project(state, seat_id)``. Only ``PLAYER`` seats hold slots\nand an agent persona.",
@@ -3143,6 +3174,7 @@
             "relationship_set": "#/$defs/RelationshipSet",
             "rolled": "#/$defs/Rolled",
             "scheduled_event_fired": "#/$defs/ScheduledEventFired",
+            "sealed": "#/$defs/Sealed",
             "seat_created": "#/$defs/SeatCreated",
             "seat_status_set": "#/$defs/SeatStatusSet",
             "settings_set": "#/$defs/SettingsSet",
@@ -3249,6 +3281,9 @@
           },
           {
             "$ref": "#/$defs/AdminRead"
+          },
+          {
+            "$ref": "#/$defs/Sealed"
           }
         ],
         "title": "Payload"

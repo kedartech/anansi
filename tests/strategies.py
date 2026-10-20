@@ -382,6 +382,7 @@ payloads = st.one_of(
         purpose=short_text,
         costs=st.lists(call_costs, max_size=3).map(tuple),
     ),
+    st.builds(ev.Sealed, key_id=short_text),
     st.builds(
         ev.AdminRead,
         actor=short_text,

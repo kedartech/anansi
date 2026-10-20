@@ -7,6 +7,11 @@ One protocol, three implementations: ``MemoryStore`` for tests,
 Append-only is enforced by the store, not by convention: a sequence number
 must be exactly the next one, and the SQLite schema carries triggers that
 abort any UPDATE or DELETE on the events table.
+
+A store may carry a ``Sealer`` (Layer 9b, ``engine/seal.py``): events and
+snapshots are sealed on the way in and unsealed on the way out, so nothing
+above the store ever sees ciphertext. Without one, a sealed record is refused
+with a ``StoreError`` rather than handed on.
 """
 
 import sqlite3
@@ -14,6 +19,7 @@ from collections.abc import Iterator, Sequence
 from pathlib import Path
 from typing import Protocol
 
+from revisionist.core import events as ev
 from revisionist.core.events import Event
 from revisionist.core.fold import replay
 from revisionist.core.ids import CampaignId
@@ -48,6 +54,40 @@ class EventStore(Protocol):
         ...
 
 
+class Sealer(Protocol):
+    def seal(self, events: Sequence[Event]) -> list[Event]: ...
+
+    def unseal(self, event: Event) -> Event: ...
+
+    def seal_state(self, state: State) -> str: ...
+
+    def unseal_state(self, campaign_id: CampaignId, seq: int, body: str) -> State: ...
+
+
+NO_KEY = "this campaign is sealed: set REVISIONIST_MASTER_KEY_FILE to read it"
+
+
+def opened(sealer: Sealer | None, event: Event) -> Event:
+    """What a reader gets: the event unsealed, or a ``StoreError`` without the key."""
+    if sealer is not None:
+        return sealer.unseal(event)
+    if isinstance(event.payload, ev.Sealed):
+        raise StoreError(NO_KEY)
+    return event
+
+
+def state_body(sealer: Sealer | None, state: State) -> str:
+    return sealer.seal_state(state) if sealer is not None else state.model_dump_json()
+
+
+def state_from(sealer: Sealer | None, campaign_id: CampaignId, seq: int, body: str) -> State:
+    if sealer is not None:
+        return sealer.unseal_state(campaign_id, seq, body)
+    if body.startswith('{"sealed":'):
+        raise StoreError(NO_KEY)
+    return State.model_validate_json(body)
+
+
 def load_state(store: EventStore, campaign_id: CampaignId) -> State:
     """Nearest snapshot plus the tail of the log."""
     snapshot = store.latest_snapshot(campaign_id)
@@ -69,9 +109,10 @@ def check_next(expected: int, event: Event) -> None:
 
 
 class MemoryStore:
-    def __init__(self) -> None:
+    def __init__(self, sealer: Sealer | None = None) -> None:
+        self.sealer = sealer
         self._events: dict[CampaignId, list[Event]] = {}
-        self._snapshots: dict[CampaignId, State] = {}
+        self._snapshots: dict[CampaignId, tuple[int, str]] = {}
 
     def append(self, event: Event) -> int:
         return self.append_all([event])
@@ -87,22 +128,24 @@ class MemoryStore:
                 raise StoreError("append-only: a batch belongs to one campaign")
             check_next(expected, event)
             expected += 1
-        log.extend(events)
+        log.extend(self.sealer.seal(events) if self.sealer else events)
         return expected - 1
 
     def read(self, campaign_id: CampaignId, from_seq: int = 0) -> Iterator[Event]:
-        yield from self._events.get(campaign_id, [])[from_seq:]
+        for event in self._events.get(campaign_id, [])[from_seq:]:
+            yield opened(self.sealer, event)
 
     def last_seq(self, campaign_id: CampaignId) -> int:
         return len(self._events.get(campaign_id, [])) - 1
 
     def save_snapshot(self, state: State) -> None:
         current = self._snapshots.get(state.campaign_id)
-        if current is None or state.last_seq > current.last_seq:
-            self._snapshots[state.campaign_id] = state
+        if current is None or state.last_seq > current[0]:
+            self._snapshots[state.campaign_id] = (state.last_seq, state_body(self.sealer, state))
 
     def latest_snapshot(self, campaign_id: CampaignId) -> State | None:
-        return self._snapshots.get(campaign_id)
+        found = self._snapshots.get(campaign_id)
+        return state_from(self.sealer, campaign_id, *found) if found else None
 
     def campaign_ids(self) -> list[CampaignId]:
         return sorted(
@@ -136,7 +179,8 @@ CREATE TABLE IF NOT EXISTS snapshots (
 class SqliteStore:
     """Single-file store for the solo slice."""
 
-    def __init__(self, path: Path | str) -> None:
+    def __init__(self, path: Path | str, sealer: Sealer | None = None) -> None:
+        self.sealer = sealer
         self._conn = sqlite3.connect(str(path), isolation_level=None)
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.execute("PRAGMA foreign_keys=ON")
@@ -155,7 +199,7 @@ class SqliteStore:
         self._conn.execute("BEGIN IMMEDIATE")
         try:
             expected = self.last_seq(campaign_id) + 1
-            for event in events:
+            for event in self.sealer.seal(events) if self.sealer else events:
                 if event.campaign_id != campaign_id:
                     raise StoreError("append-only: a batch belongs to one campaign")
                 check_next(expected, event)
@@ -184,7 +228,7 @@ class SqliteStore:
             (campaign_id, from_seq),
         )
         for (body,) in rows:
-            yield Event.model_validate_json(body)
+            yield opened(self.sealer, Event.model_validate_json(body))
 
     def last_seq(self, campaign_id: CampaignId) -> int:
         row = self._conn.execute(
@@ -195,7 +239,7 @@ class SqliteStore:
     def save_snapshot(self, state: State) -> None:
         self._conn.execute(
             "INSERT OR IGNORE INTO snapshots (campaign_id, seq, body) VALUES (?, ?, ?)",
-            (state.campaign_id, state.last_seq, state.model_dump_json()),
+            (state.campaign_id, state.last_seq, state_body(self.sealer, state)),
         )
 
     def campaign_ids(self) -> list[CampaignId]:
@@ -206,7 +250,7 @@ class SqliteStore:
 
     def latest_snapshot(self, campaign_id: CampaignId) -> State | None:
         row = self._conn.execute(
-            "SELECT body FROM snapshots WHERE campaign_id = ? ORDER BY seq DESC LIMIT 1",
+            "SELECT seq, body FROM snapshots WHERE campaign_id = ? ORDER BY seq DESC LIMIT 1",
             (campaign_id,),
         ).fetchone()
-        return State.model_validate_json(row[0]) if row else None
+        return state_from(self.sealer, campaign_id, int(row[0]), row[1]) if row else None
