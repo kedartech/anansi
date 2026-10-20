@@ -236,7 +236,7 @@ def test_postgres_migrations_are_idempotent(pg_db: PgDb) -> None:
     assert migrate(pg_db.admin_dsn, pg_db.app_role) == []
     with psycopg.connect(pg_db.admin_dsn) as conn:
         versions = [r[0] for r in conn.execute("SELECT version FROM schema_migrations ORDER BY 1")]
-    assert versions == ["0001_init", "0002_schedule"]
+    assert versions == ["0001_init", "0002_schedule", "0003_discord"]
 
 
 def test_postgres_app_role_may_update_only_the_schedule(pg_db: PgDb) -> None:

@@ -18,6 +18,7 @@ import typer
 from wyrd import __version__
 from wyrd.core.fold import replay_to, state_hash
 from wyrd.core.ids import CampaignId, SeatId
+from wyrd.core.ontology import Controller
 from wyrd.core.report import cost_report, leak_report, render_cost, render_leaks, render_why, why
 from wyrd.core.state import State
 from wyrd.core.world_compile import WorldError
@@ -26,7 +27,7 @@ from wyrd.engine import play
 from wyrd.engine import scheduler as sch
 from wyrd.engine.llm import Transport, TransportError
 from wyrd.engine.maintenance import copy_campaign, verify_campaign
-from wyrd.engine.runner import play_tick
+from wyrd.engine.runner import DelivererFactory, play_tick
 from wyrd.engine.store import EventStore, StoreError, load_state
 
 if TYPE_CHECKING:
@@ -139,6 +140,15 @@ def order(text: Annotated[str, typer.Argument(help="What you want done, in your 
     typer.echo(result.line)
 
 
+def _deliverers() -> DelivererFactory | None:
+    """Discord DMs for bound seats when a bot token is set on Postgres; else files."""
+    if not cmp.is_postgres(cmp.db_target()):
+        return None
+    from wyrd.engine.discord.delivery import factory_from_env
+
+    return factory_from_env()
+
+
 @app.command()
 def tick(offline: Offline = False) -> None:
     """AI factions take their turns, then the world resolves one tick."""
@@ -150,6 +160,7 @@ def tick(offline: Offline = False) -> None:
         transport_factory=transport_factory,
         briefings=cmp.briefings_dir(),
         warn=lambda message: typer.echo(message, err=True),
+        deliverer_factory=_deliverers(),
     )
     result = run.result
     word = "quiet" if result.quiet else "resolved"
@@ -319,6 +330,7 @@ def scheduler_run(campaign: CampaignOpt = None, offline: Offline = False) -> Non
             briefings=cmp.briefings_dir(),
             warn=lambda message: typer.echo(message, err=True),
             campaign=CampaignId(campaign) if campaign else None,
+            deliverer_factory=_deliverers(),
         )
     finally:
         store.close()
@@ -380,6 +392,104 @@ def scheduler_pause(
 def scheduler_resume(campaign: CampaignOpt = None) -> None:
     """Tick again; clears the failure count."""
     _set(campaign, "resumed", sch.ScheduleTable.resume)
+
+
+# --- wyrd discord ---------------------------------------------------------------
+
+discord_app = typer.Typer(no_args_is_help=True, help="Play from Discord (Postgres only).")
+app.add_typer(discord_app, name="discord")
+
+SeatOpt = Annotated[
+    str | None, typer.Option("--seat", help="Seat ID (default: the campaign's human seat)")
+]
+OneCampaignOpt = Annotated[
+    str | None, typer.Option("--campaign", help="Campaign ID (default: the newest)")
+]
+
+
+def _env(name: str) -> str:
+    value = os.environ.get(name)
+    if not value:
+        raise _fail(f"{name} is not set")
+    return value
+
+
+def _bound_seat(
+    store: "PostgresEventStore", campaign: str | None, seat: str | None
+) -> tuple[CampaignId, SeatId]:
+    campaign_id = CampaignId(campaign) if campaign else _campaign(store)
+    try:
+        state = load_state(store, campaign_id)
+    except LookupError as exc:
+        raise _fail(str(exc)) from exc
+    if seat is None:
+        return campaign_id, _me(state)
+    found = state.seats.get(SeatId(seat))
+    if found is None:
+        raise _fail(f"no seat {seat} in {campaign_id}")
+    if found.controller is not Controller.HUMAN:
+        raise _fail(
+            f"{found.name} is not a human seat; only human seats play from Discord", EXIT_REFUSED
+        )
+    return campaign_id, found.seat_id
+
+
+@discord_app.command("link")
+def discord_link(
+    user: Annotated[str, typer.Option("--user", help="The player's Discord user ID")],
+    campaign: OneCampaignOpt = None,
+    seat: SeatOpt = None,
+) -> None:
+    """Bind a human seat to a Discord user in the guild ``$WYRD_DISCORD_GUILD_ID``."""
+    from wyrd.engine.discord.tables import LinkError, SeatLinks
+
+    if not user.isdigit():
+        raise _fail("--user is a Discord user ID (digits)")
+    guild = _env("WYRD_DISCORD_GUILD_ID")
+    store = _pg_store()
+    try:
+        campaign_id, seat_id = _bound_seat(store, campaign, seat)
+        SeatLinks(store.conn).link(campaign_id, seat_id, user, guild)
+    except LinkError as exc:
+        raise _fail(f"refused: {exc}", EXIT_REFUSED) from exc
+    finally:
+        store.close()
+    typer.echo(f"linked {seat_id} in {campaign_id} to Discord user {user}")
+
+
+@discord_app.command("unlink")
+def discord_unlink(campaign: OneCampaignOpt = None, seat: SeatOpt = None) -> None:
+    """Remove a seat's Discord binding."""
+    from wyrd.engine.discord.tables import SeatLinks
+
+    store = _pg_store()
+    try:
+        campaign_id, seat_id = _bound_seat(store, campaign, seat)
+        removed = SeatLinks(store.conn).unlink(campaign_id, seat_id)
+    finally:
+        store.close()
+    if not removed:
+        raise _fail(f"{seat_id} in {campaign_id} was not linked")
+    typer.echo(f"unlinked {seat_id} in {campaign_id}")
+
+
+@discord_app.command("seats")
+def discord_seats() -> None:
+    """Every Discord binding."""
+    from wyrd.engine.discord.tables import SeatLinks
+
+    store = _pg_store()
+    try:
+        links = SeatLinks(store.conn).all()
+    finally:
+        store.close()
+    if not links:
+        typer.echo("no seats linked")
+    for link in links:
+        typer.echo(
+            f"{link.campaign_id}  {link.seat_id}  user {link.discord_user_id}"
+            f"  guild {link.guild_id}  since {link.linked_at.astimezone(UTC):%Y-%m-%d %H:%MZ}"
+        )
 
 
 __all__ = ["EXIT_ERROR", "EXIT_LEAK", "EXIT_REFUSED", "app", "transport_factory"]
