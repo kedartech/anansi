@@ -2487,6 +2487,20 @@
             "default": null,
             "title": "Counterparty"
           },
+          "destination": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "pattern": "^[A-Za-z][A-Za-z .,'-]{0,59}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Destination"
+          },
           "duration_ticks": {
             "default": 1,
             "maximum": 12,
@@ -5154,6 +5168,20 @@
             "default": null,
             "title": "Counterparty"
           },
+          "destination": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "pattern": "^[A-Za-z][A-Za-z .,'-]{0,59}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Destination"
+          },
           "duration_ticks": {
             "default": 1,
             "maximum": 12,
@@ -6895,6 +6923,20 @@
             ],
             "default": null,
             "title": "Counterparty"
+          },
+          "destination": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "pattern": "^[A-Za-z][A-Za-z .,'-]{0,59}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Destination"
           },
           "duration_ticks": {
             "default": 1,

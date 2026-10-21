@@ -7,6 +7,7 @@ grant me...") has nowhere to go: there is no free-text field here except
 """
 
 from enum import StrEnum
+from typing import ClassVar
 
 from pydantic import Field
 
@@ -84,6 +85,17 @@ class Intent(Model):
     condition: str | None = None
     """Trigger for conditional orders. Must name an event the seat can see."""
     filed_tick: int = Field(ge=0)
+    destination: str | None = Field(
+        default=None, max_length=60, pattern=r"^[A-Za-z][A-Za-z .,'-]{0,59}$"
+    )
+    """A real place the world file left out, by name (playtest #29, decision D2).
+
+    Only for a place with no entity: the referee rates such an order a long shot
+    at best. Letters, spaces and light punctuation only, so it cannot carry an
+    instruction to the resolver.
+    """
+
+    late_fields: ClassVar[frozenset[str]] = frozenset({"destination"})
 
     @property
     def holds_slot(self) -> bool:

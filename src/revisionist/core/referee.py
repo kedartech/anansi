@@ -121,6 +121,11 @@ def _controls(world: World, entity: EntityId, asset_id: AssetId) -> bool:
     return holder is not None and holder.parent == entity
 
 
+def holds(world: World, entity: EntityId, asset_id: AssetId) -> bool:
+    """Whether ``entity`` may commit ``asset_id`` as means: the same test ``validate`` uses."""
+    return _controls(world, entity, asset_id)
+
+
 def _held_by(world: World, entity: EntityId) -> Iterable[AssetId]:
     for asset_id in world.assets:
         if _controls(world, entity, asset_id):
