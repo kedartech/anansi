@@ -86,13 +86,12 @@ class Intent(Model):
     """Trigger for conditional orders. Must name an event the seat can see."""
     filed_tick: int = Field(ge=0)
     destination: str | None = Field(
-        default=None, max_length=60, pattern=r"^[A-Za-z][A-Za-z .,'-]{0,59}$"
+        default=None, max_length=40, pattern=r"^[A-Za-z][A-Za-z.'-]*( [A-Za-z][A-Za-z.'-]*){0,3}$"
     )
     """A real place the world file left out, by name (playtest #29, decision D2).
 
     Only for a place with no entity: the referee rates such an order a long shot
-    at best. Letters, spaces and light punctuation only, so it cannot carry an
-    instruction to the resolver.
+    at best. At most four words of letters, so it reads as a name, not an instruction.
     """
 
     late_fields: ClassVar[frozenset[str]] = frozenset({"destination"})

@@ -2490,8 +2490,8 @@
           "destination": {
             "anyOf": [
               {
-                "maxLength": 60,
-                "pattern": "^[A-Za-z][A-Za-z .,'-]{0,59}$",
+                "maxLength": 40,
+                "pattern": "^[A-Za-z][A-Za-z.'-]*( [A-Za-z][A-Za-z.'-]*){0,3}$",
                 "type": "string"
               },
               {
@@ -5171,8 +5171,8 @@
           "destination": {
             "anyOf": [
               {
-                "maxLength": 60,
-                "pattern": "^[A-Za-z][A-Za-z .,'-]{0,59}$",
+                "maxLength": 40,
+                "pattern": "^[A-Za-z][A-Za-z.'-]*( [A-Za-z][A-Za-z.'-]*){0,3}$",
                 "type": "string"
               },
               {
@@ -6927,8 +6927,8 @@
           "destination": {
             "anyOf": [
               {
-                "maxLength": 60,
-                "pattern": "^[A-Za-z][A-Za-z .,'-]{0,59}$",
+                "maxLength": 40,
+                "pattern": "^[A-Za-z][A-Za-z.'-]*( [A-Za-z][A-Za-z.'-]*){0,3}$",
                 "type": "string"
               },
               {

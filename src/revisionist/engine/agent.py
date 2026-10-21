@@ -139,8 +139,8 @@ def _intent_schema(ids: dict[str, list[str]]) -> dict[str, Any]:
             "condition": {"type": "string", "maxLength": 200},
             "destination": {
                 "type": "string",
-                "maxLength": 60,
-                "pattern": "^[A-Za-z][A-Za-z .,'-]{0,59}$",
+                "maxLength": 40,
+                "pattern": "^[A-Za-z][A-Za-z.'-]*( [A-Za-z][A-Za-z.'-]*){0,3}$",
             },
         },
         "required": ["verb"],
