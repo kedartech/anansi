@@ -2,6 +2,7 @@
 
 import inspect
 import json
+import re
 import subprocess
 from collections.abc import Iterator, Sequence
 from pathlib import Path
@@ -367,3 +368,49 @@ def test_the_cli_never_gets_a_discriminator_keyword(monkeypatch: pytest.MonkeyPa
         assert "discriminator" in json.dumps(schema)
         llm.ClaudeCli().call(Request("narrator", "m", "SYSTEM", "PROMPT", schema))
     assert sent and not any("discriminator" in s for s in sent)
+
+
+def _engine_schemas() -> dict[str, dict[str, Any]]:
+    from revisionist.engine import agent, session_zero
+
+    return {
+        "draft": session_zero.DRAFT_SCHEMA,
+        "search": session_zero.SEARCH_SCHEMA,
+        "pick": session_zero.PICK_SCHEMA,
+        "goal": session_zero.GOAL_SCHEMA,
+        "brief": session_zero.BRIEF_SCHEMA,
+        "agent_brief": agent.BRIEF_SCHEMA,
+        "resolver": llm.resolver_schema(),
+        "narrator": llm.NARRATOR_SCHEMA,
+    }
+
+
+@pytest.mark.parametrize("name", sorted(_engine_schemas()))
+def test_every_schema_the_cli_gets_resolves_its_refs(name: str) -> None:
+    """Playtest issue 11: the goal schema nested its ``$defs``, so every ``#/$defs``
+    ref dangled and the CLI refused the call before the model ran."""
+    sent = llm.cli_schema(_engine_schemas()[name])
+    text = json.dumps(sent)
+    refs = set(re.findall(r'"\$ref": "#/\$defs/([^"]+)"', text))
+    assert refs <= set(sent.get("$defs", {})), sorted(refs - set(sent.get("$defs", {})))
+    assert text.count('"$defs"') <= 1  # only at the root
+    assert "discriminator" not in text
+
+
+def test_a_refused_flag_is_named_without_its_text(monkeypatch: pytest.MonkeyPatch) -> None:
+    stderr = "Error: --json-schema is not a valid JSON Schema: PROMPT secret #/$defs/X\n"
+
+    def fake_run(argv: list[str], **kw: Any) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(argv, 1, "", stderr)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    with pytest.raises(TransportError) as caught:
+        llm.ClaudeCli().call(_cli_request())
+    assert str(caught.value) == "claude cli exit 1 (bad_flag_json_schema)"
+
+
+def test_hoisting_refuses_two_different_defs_with_one_name() -> None:
+    a = {"type": "object", "$defs": {"X": {"type": "string"}}}
+    b = {"type": "object", "properties": {"y": {"$defs": {"X": {"type": "integer"}}}}}
+    with pytest.raises(ValueError, match="'X'"):
+        llm.cli_schema({"type": "object", "properties": {"a": a, "b": b}})

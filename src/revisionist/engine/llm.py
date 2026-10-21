@@ -13,6 +13,7 @@ Only the resolver sees ``State`` (truth). The narrator's input type is ``View``.
 import hashlib
 import json
 import os
+import re
 import subprocess
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
@@ -109,7 +110,7 @@ class ClaudeCli:
             "--system-prompt",
             request.system,
             "--json-schema",
-            json.dumps(_strip(request.schema)),
+            json.dumps(cli_schema(request.schema)),
             "--output-format",
             "json",
             "--setting-sources",
@@ -137,7 +138,8 @@ class ClaudeCli:
         except json.JSONDecodeError:
             result = {}
         if proc.returncode != 0:
-            raise TransportError(f"claude cli exit {proc.returncode} ({_subtype(result)})")
+            why = _flag_error(proc.stderr) or _subtype(result)
+            raise TransportError(f"claude cli exit {proc.returncode} ({why})")
         if result.get("is_error") or result.get("structured_output") is None:
             raise TransportError(f"claude cli error ({_subtype(result)})")
         usage = result.get("usage", {})
@@ -157,6 +159,18 @@ def _subtype(result: dict[str, Any]) -> str:
     """The CLI's error class (``error_max_turns`` and the like), never its text."""
     subtype = str(result.get("subtype") or "unknown")
     return subtype if subtype.replace("_", "").isalnum() and len(subtype) <= 40 else "unknown"
+
+
+_FLAG_ERROR = re.compile(r"^Error: --([a-z][a-z-]{0,30}) ")
+
+
+def _flag_error(stderr: str) -> str:
+    """``bad_flag_json_schema`` when the CLI refused one of our flags, else ``""``.
+
+    Only the flag's name is kept: the rest of the line can quote what we sent.
+    """
+    m = _FLAG_ERROR.match((stderr or "").lstrip())
+    return "bad_flag_" + m.group(1).replace("-", "_") if m else ""
 
 
 class MissingRecordingError(TransportError):
@@ -230,6 +244,42 @@ def _strip(node: Any, keywords: frozenset[str] = frozenset({"discriminator"})) -
     if isinstance(node, list):
         return [_strip(x, keywords) for x in node]
     return node
+
+
+def _hoist_defs(schema: dict[str, Any]) -> dict[str, Any]:
+    """Move every nested ``$defs`` to the root, where ``#/$defs/...`` refs point.
+
+    A Pydantic schema embedded under another object keeps its own ``$defs``; the
+    CLI resolves refs from the root and rejects the whole schema when they dangle.
+    """
+    found: dict[str, Any] = {}
+
+    def walk(node: Any) -> Any:
+        if isinstance(node, list):
+            return [walk(x) for x in node]
+        if not isinstance(node, dict):
+            return node
+        out = {}
+        for k, v in node.items():
+            if k == "$defs" and isinstance(v, dict):
+                for name, body in v.items():
+                    body = walk(body)
+                    if name in found and found[name] != body:
+                        raise ValueError(f"two different schemas share the name {name!r}")
+                    found[name] = body
+            else:
+                out[k] = walk(v)
+        return out
+
+    root: dict[str, Any] = walk(schema)
+    if found:
+        root["$defs"] = found
+    return root
+
+
+def cli_schema(schema: dict[str, Any]) -> dict[str, Any]:
+    """The schema as the CLI's strict validator accepts it."""
+    return _hoist_defs(_strip(schema))
 
 
 def _delta_schema_without_ids() -> dict[str, Any]:
