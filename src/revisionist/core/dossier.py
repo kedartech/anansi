@@ -73,9 +73,7 @@ def dossier(view: View) -> list[str]:
         lines.append(f"{g.text} ({g.parts_met} of {g.parts} parts met)")
 
     played = {s.embodies: s.name for s in view.seats.values()}
-    powers = sorted(
-        (e for e in view.entities.values() if e.kind in _POWERS), key=lambda e: e.name
-    )
+    powers = sorted((e for e in view.entities.values() if e.kind in _POWERS), key=lambda e: e.name)
     if powers:
         lines.append("Powers:")
         for e in powers:
@@ -91,11 +89,7 @@ def dossier(view: View) -> list[str]:
             where = f" (in {_name(view, e.parent)})" if e.parent else ""
             lines.append(f"{e.name}{where}")
 
-    rels = [
-        r
-        for r in view.relationships.values()
-        if view.me.embodies in (r.a, r.b)
-    ]
+    rels = [r for r in view.relationships.values() if view.me.embodies in (r.a, r.b)]
     if rels:
         lines.append("Relationships:")
         for r in sorted(rels, key=lambda r: _name(view, r.b if r.a == view.me.embodies else r.a)):
@@ -106,9 +100,7 @@ def dossier(view: View) -> list[str]:
         (g.clock_id for g in view.goals.values() if g.seat_id == view.viewer), None
     )
     clocks = [
-        c
-        for c in view.clocks.values()
-        if c.status == "open" and c.clock_id != own_goal_clock
+        c for c in view.clocks.values() if c.status == "open" and c.clock_id != own_goal_clock
     ]
     if clocks:
         lines.append("Open clocks:")

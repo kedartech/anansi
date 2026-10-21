@@ -14,9 +14,11 @@ import pytest
 
 from revisionist import cli
 from revisionist.core.canary import canaries_hidden_from_human
+from revisionist.core.ids import SeatId
 from revisionist.engine import scheduler as sch
 from revisionist.engine.discord import bot
 from revisionist.engine.discord.handlers import BAD_CODE, DRAFTING, HOST_ONLY, Said, public_safe
+from revisionist.engine.discord.tables import SeatLinks
 from revisionist.engine.store import load_state
 from tests import test_discord_bot
 from tests.pg import PgDb
@@ -217,3 +219,35 @@ def test_a_reply_without_a_public_part_sends_nothing_public() -> None:
     asyncio.run(bot._reply(interaction, Said("private")))
     asyncio.run(bot._reply(interaction, "plain"))
     assert interaction.followup.sent == [("private", True), ("plain", True)]
+
+
+def test_begin_dms_each_player_their_own_opening_dossier(zero: Game) -> None:
+    _seated(zero)
+    zero.command("character", HOST, action="claim", text="Lorenzo de' Medici")
+    zero.command("character", FRIEND, action="claim", text="Giuliano de' Medici")
+    for user in (HOST, FRIEND):
+        zero.command("goal", user, action="history")
+        zero.command("goal", user, action="confirm", text="1")
+        zero.handlers.agent(user, PERSONA)
+    zero.command("begin", HOST)
+    by_user = {
+        user: "\n".join(m.content for m in zero.discord.messages if m.channel_id == f"dm-{user}")
+        for user in (HOST, FRIEND)
+    }
+    for user, text in by_user.items():
+        assert "Your holdings:" in text, (user, text)
+        assert "Places:" in text
+    store = zero.store()
+    try:
+        cid = zero.campaign()
+        state = load_state(store, cid)
+        seats_of: dict[str, list[SeatId]] = {}
+        for seat, user in SeatLinks(store.conn).users(cid).items():
+            seats_of.setdefault(user, []).append(seat)
+    finally:
+        store.close()
+    assert by_user[HOST] != by_user[FRIEND]  # each reads their own seat, not a shared page
+    for user, text in by_user.items():
+        assert seats_of.get(user), user
+        hidden = canaries_hidden_from_human(state, seats_of[user])
+        assert not [c for c in hidden if c in text], (user, text)
