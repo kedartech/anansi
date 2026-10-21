@@ -17,8 +17,8 @@ import discord
 from discord import app_commands
 
 from revisionist.core.ontology import Persona
-from revisionist.engine.discord.handlers import BROKEN, DRAFTING, NOT_YET, Handlers, Said
-from revisionist.engine.discord.rest import split_message
+from revisionist.engine.discord.handlers import BROKEN, DRAFTING, NOT_YET, Fenced, Handlers, Said
+from revisionist.engine.discord.rest import PART_LIMIT, split_message
 
 log = logging.getLogger("revisionist.discord")
 
@@ -63,7 +63,11 @@ async def answer(interaction: discord.Interaction, work: Callable[[], str]) -> N
 
 
 async def _reply(interaction: discord.Interaction, text: str) -> None:
-    for part in split_message(text) or ["(nothing to show)"]:
+    if isinstance(text, Fenced):
+        parts = [f"```\n{p}\n```" for p in split_message(text, PART_LIMIT - 8)]
+    else:
+        parts = split_message(text)
+    for part in parts or ["(nothing to show)"]:
         await interaction.followup.send(part, ephemeral=True)
     if isinstance(text, Said) and text.public:
         for part in split_message(text.public):

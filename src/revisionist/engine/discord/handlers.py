@@ -57,6 +57,11 @@ class Said(str):
         return said
 
 
+class Fenced(str):
+    """A reply shown as a code block. The bot fences each Discord message part on its
+    own, so a long table split in two still renders as two whole blocks."""
+
+
 def public_safe(state: State, text: str) -> bool:
     """No canary of any fact or goal appears in a line the whole channel reads.
 
@@ -90,6 +95,7 @@ DRAFT_REFUSED = (
 NO_DISPATCH = "No briefing yet. One arrives after each tick."
 ZERO_LINK = "In Session Zero, use /invite."
 NO_LIVE = "No live game to schedule."
+NO_GAME = "No game yet. Start one with /establish."
 DRAFTING = (
     "Drafting {place} from the record. This takes about five minutes; "
     "I'll post here when Session Zero is open."
@@ -322,10 +328,7 @@ class Handlers:
                 lines = season.end_season(store, campaign_id)
             except season.SeasonError as exc:
                 return str(exc)
-            if self.deliverer_factory is not None:
-                deliverer = self.deliverer_factory(store, campaign_id, self.briefings)
-                if isinstance(deliverer, Publishes):
-                    deliverer.publish()
+            self._publish(store, campaign_id)
             return "\n".join(lines)
 
         return self._as_host(user_id, "season-end", work)
@@ -516,12 +519,18 @@ class Handlers:
             if o.action is sch.Action.FAILED:
                 return "The tick failed and resumes on the next run. See /host schedule."
             private = f"{o.action}: {o.detail}".rstrip(": ")
-            if o.action is not sch.Action.TICKED:
+            ran = host_ops.last_tick(store, campaign_id)
+            if o.action is not sch.Action.TICKED or ran is None:
                 return private
-            # The run closed the tick before the one the state now waits on.
-            state = load_state(store, campaign_id)
-            ran = f"Tick {state.tick - 1} has run. Read your briefing with /dispatch."
-            return _said(state, private, ran)
+            tick, quiet = ran
+            if quiet:
+                text = (
+                    f"Tick {tick} ran quiet: the referee could not be reached, so no "
+                    "orders were resolved. They carry to the next tick."
+                )
+                return _said(load_state(store, campaign_id), text, text)
+            public = f"Tick {tick} has run. Read your briefing with /dispatch."
+            return _said(load_state(store, campaign_id), private, public)
 
         return self._as_host(user_id, "advance", work)
 
@@ -555,41 +564,28 @@ class Handlers:
         )
 
     def host_link(self, user_id: str, target: str, seat: str) -> str:
-        """Host: bind a Discord user to a free human seat, as ``revisionist discord link`` does."""
+        """Host: bind a Discord user to a free human seat of the live game."""
 
         def work(store: PostgresEventStore, campaign_id: CampaignId) -> str:
-            state = load_state(store, campaign_id)
-            if state.phase is Phase.SESSION_ZERO:
-                return ZERO_LINK
-            try:
-                seat_id = cmp.resolve_seat(state, seat.strip())
-            except LookupError:
-                return f"No seat called {seat.strip()!r} here."
-            name = state.seats[seat_id].name
-            if state.seats[seat_id].controller is not Controller.HUMAN:
-                return f"{name} is not a human seat."
-            try:
-                SeatLinks(store.conn).link(campaign_id, seat_id, target, self.config.guild_id)
-            except LinkError as exc:
-                return str(exc)
-            log.info("/host link: %s bound to user %s in %s", seat_id, target, campaign_id)
-            return f"Linked {name} to Discord user {target}."
+            line = host_ops.link_seat(
+                store.conn,
+                load_state(store, campaign_id),
+                sch.live_campaigns(store, self.clock()),
+                seat,
+                target,
+                self.config.guild_id,
+            )
+            log.info("/host link: user %s bound in %s", target, campaign_id)
+            return line
 
         return self._as_host(user_id, "host link", work)
 
     def host_unlink(self, user_id: str, seat: str) -> str:
-        def work(store: PostgresEventStore, campaign_id: CampaignId) -> str:
-            state = load_state(store, campaign_id)
-            try:
-                seat_id = cmp.resolve_seat(state, seat.strip())
-            except LookupError:
-                return f"No seat called {seat.strip()!r} here."
-            name = state.seats[seat_id].name
-            if SeatLinks(store.conn).unlink(campaign_id, seat_id):
-                return f"Unlinked {name}."
-            return f"{name} was not linked."
-
-        return self._as_host(user_id, "host unlink", work)
+        return self._as_host(
+            user_id,
+            "host unlink",
+            lambda store, c: host_ops.unlink_seat(store.conn, load_state(store, c), seat),
+        )
 
     def host_flags(self, user_id: str) -> str:
         return self._as_host(
@@ -600,7 +596,7 @@ class Handlers:
         def work(store: PostgresEventStore, campaign_id: CampaignId) -> str:
             try:
                 return host_ops.approve_goal(store, campaign_id, seat)
-            except (host_ops.HostOpError, session_zero.StepRefusedError) as exc:
+            except session_zero.StepRefusedError as exc:
                 return str(exc)
 
         return self._as_host(user_id, "host approve", work)
@@ -618,7 +614,8 @@ class Handlers:
         return self._as_host(
             user_id,
             "host cost",
-            lambda store, c: f"```\n{host_ops.cost_text(store, c)}\n```",
+            lambda store, c: host_ops.cost_text(store, c),
+            code=True,
         )
 
     def host_leaks(self, user_id: str) -> str:
@@ -632,10 +629,21 @@ class Handlers:
         return self._as_host(user_id, "host leaks", work)
 
     def host_why(self, user_id: str, target: str, reason: str = "") -> str:
+        """Trace an event. On a sealed game a reason breaks glass: the read is
+        logged and announced in the public channel before the records are shown."""
+
         def work(store: PostgresEventStore, campaign_id: CampaignId) -> str:
+            before = load_state(store, campaign_id).last_seq
             lines = host_ops.why_lines(
-                store, campaign_id, target, reason=reason, actor=f"discord:{user_id}"
+                store,
+                campaign_id,
+                target,
+                reason=reason,
+                actor=f"discord:{user_id}",
+                break_glass=bool(reason.strip()),
             )
+            if load_state(store, campaign_id).last_seq != before:
+                self._publish(store, campaign_id)
             return "\n".join(lines)
 
         return self._as_host(user_id, "host why", work)
@@ -664,6 +672,14 @@ class Handlers:
         return self._as_seat(user_id, "report", work)
 
     # --- plumbing -----------------------------------------------------------
+
+    def _publish(self, store: PostgresEventStore, campaign_id: CampaignId) -> None:
+        """Post what the public channel has not seen yet: statements, admin reads, reports."""
+        if self.deliverer_factory is None:
+            return
+        deliverer = self.deliverer_factory(store, campaign_id, self.briefings)
+        if isinstance(deliverer, Publishes):
+            deliverer.publish()
 
     def _open(self) -> PostgresEventStore:
         store = cmp.open_store(self.config.dsn)
@@ -706,7 +722,12 @@ class Handlers:
             store.close()
 
     def _as_host(
-        self, user_id: str, name: str, work: Callable[[PostgresEventStore, CampaignId], str]
+        self,
+        user_id: str,
+        name: str,
+        work: Callable[[PostgresEventStore, CampaignId], str],
+        *,
+        code: bool = False,
     ) -> str:
         def current(store: PostgresEventStore) -> str:
             # The host's own game if they hold a seat in it, else the live game.
@@ -714,12 +735,23 @@ class Handlers:
             if link is not None:
                 return work(store, link.campaign_id)
             live = sch.live_campaigns(store, self.clock())
-            return work(store, live[-1] if live else cmp.current_campaign(store))
+            if live:
+                return work(store, live[-1])
+            try:
+                newest = cmp.current_campaign(store)
+            except LookupError:
+                return NO_GAME
+            return work(store, newest)
 
-        return self._host_store(user_id, name, current)
+        return self._host_store(user_id, name, current, code=code)
 
     def _host_store(
-        self, user_id: str, name: str, work: Callable[[PostgresEventStore], str]
+        self,
+        user_id: str,
+        name: str,
+        work: Callable[[PostgresEventStore], str],
+        *,
+        code: bool = False,
     ) -> str:
         if not self.config.host_id or user_id != self.config.host_id:
             return HOST_ONLY
@@ -729,7 +761,10 @@ class Handlers:
             log.exception("/%s: cannot open the store", name)
             return BROKEN
         try:
-            return work(store)
+            reply = work(store)
+            return Fenced(reply) if code else reply
+        except host_ops.HostOpError as exc:
+            return str(exc)
         except Exception:
             log.exception("/%s failed", name)
             return BROKEN

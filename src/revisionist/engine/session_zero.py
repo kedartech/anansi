@@ -9,6 +9,7 @@ model's.
 import json
 import logging
 import re
+import unicodedata
 from collections.abc import Sequence
 from typing import Any, Literal
 
@@ -16,6 +17,7 @@ from pydantic import TypeAdapter, ValidationError
 
 from revisionist.core import events as ev
 from revisionist.core import goals
+from revisionist.core.canary import canaries_hidden_from_human
 from revisionist.core.events import CallCost, Event
 from revisionist.core.ids import (
     AssetId,
@@ -292,7 +294,11 @@ def search(
     )
     hits: list[EntityId] = []
     for _ in range(2):  # a cheap call; one empty answer is often the model being too strict
-        reply = transport.call(request)
+        try:
+            reply = transport.call(request)
+        except TransportError as exc:
+            log.warning("character search model call failed; matching words: %s", exc)
+            break
         cmp.log_cost(store, campaign_id, "character_search", [reply.cost("character_search")], seat)
         found = reply.output.get("matches", []) if isinstance(reply.output, dict) else []
         hits = [EntityId(x) for x in found if isinstance(x, str) and x in free]
@@ -307,7 +313,8 @@ def search(
     people = _record_people(store, campaign_id, seat, state, wanted, transport)
     if people:
         lines += [RECORD_HEADER, *(f"{name}: {note}" for name, note in people)]
-    return lines
+    hidden = canaries_hidden_from_human(state, (seat,) if seat else ())
+    return [line for line in lines if not any(c in line for c in hidden)]
 
 
 RECORD_HEADER = "From the record, not on the roster (play one with /character pick <name>):"
@@ -346,8 +353,10 @@ def _record_people(
         call_class="character_record",
         model=SESSION_ZERO_MODEL,
         system=prompt_text("character_record"),
-        prompt=f"## Start\n{_start(store, campaign_id)}\n\n## Already in the world\n"
-        + json.dumps(sorted(e.name for e in state.entities.values()))
+        # Only the public roster goes in: the player's own words share this prompt, so
+        # anything listed here could be talked back out. The rest is filtered after.
+        prompt=f"## Start\n{_start(store, campaign_id)}\n\n## Already on the roster\n"
+        + json.dumps(sorted(state.entities[e].name for e in state.roster))
         + "\n\n## What the player wants to play\n"
         + wanted,
         schema=RECORD_SCHEMA,
@@ -362,17 +371,43 @@ def _record_people(
     raw = reply.output.get("people") if isinstance(reply.output, dict) else None
     if not isinstance(raw, list):
         return []
-    seen = {e.name.casefold() for e in state.entities.values()}
+    seen = {_name_key(e.name) for e in state.entities.values()}
     people: list[tuple[str, str]] = []
     for item in raw:
         if not isinstance(item, dict):
             continue
-        name = str(item.get("name", "")).strip()[:60]
-        if not name or name.casefold() in seen:
+        name, note = item.get("name"), item.get("note")
+        if not isinstance(name, str) or not isinstance(note, str):
             continue
-        seen.add(name.casefold())
-        people.append((name, str(item.get("note", "")).strip()[:160]))
+        name, note = _one_line(name)[:60], _one_line(note)[:160]
+        key = _name_key(name)
+        if not key or any(_same_person(key, k) for k in seen):
+            continue
+        seen.add(key)
+        people.append((name, note))
     return people[:5]
+
+
+def _one_line(text: str) -> str:
+    """Model text as one clean line: no newlines or runs of spaces to forge output with."""
+    return " ".join(unicodedata.normalize("NFKC", text).split())
+
+
+def _name_key(name: str) -> str:
+    """A name compared loosely: case, accents, spacing and punctuation do not count."""
+    flat = unicodedata.normalize("NFKD", _one_line(name).casefold())
+    return " ".join(
+        re.sub(r"[^\w\s]", " ", "".join(c for c in flat if not unicodedata.combining(c))).split()
+    )
+
+
+def _same_person(a: str, b: str) -> bool:
+    """Loose keys that name the same person: equal, or one holds all the other's words
+    ("Federico" against "Federico da Montefeltro")."""
+    if a == b:
+        return True
+    wa, wb = set(a.split()), set(b.split())
+    return bool(wa and wb) and (wa <= wb or wb <= wa)
 
 
 _SKIP = frozenset(

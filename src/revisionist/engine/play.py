@@ -14,6 +14,7 @@ from revisionist.core.canary import scan_deliveries
 from revisionist.core.events import Event
 from revisionist.core.ids import CampaignId, IntentId, SeatId
 from revisionist.core.intent import Intent
+from revisionist.core.ontology import Phase
 from revisionist.core.project import project
 from revisionist.core.resolution import FeasibilityBand
 from revisionist.core.state import State
@@ -21,6 +22,7 @@ from revisionist.core.visibility import PUBLIC, Scope, Visibility, private_to
 from revisionist.engine import campaign as cmp
 from revisionist.engine.agent import Agent, Briefing, StructureResult, receive_order
 from revisionist.engine.llm import Transport
+from revisionist.engine.session_zero import StepRefusedError
 from revisionist.engine.store import EventStore, load_state
 
 
@@ -59,6 +61,9 @@ ORDER_VISIBILITIES = (Visibility.PRIVATE, Visibility.PUBLIC, Visibility.COVERT)
 SPIN_LIMIT = 280
 
 
+SEASON_OVER = "The season is over. See /report."
+
+
 def order_scope(seat: SeatId, visibility: Visibility) -> Scope:
     if visibility is Visibility.PUBLIC:
         return PUBLIC
@@ -89,6 +94,9 @@ def give_order(
         raise ValueError(f"spin is at most {SPIN_LIMIT} characters")
     scope = order_scope(seat, visibility)
     state = load_state(store, campaign_id)
+    if state.phase is Phase.SEASON_OVER:
+        # Nothing will ever run it, so do not let the player think it counts.
+        raise StepRefusedError(SEASON_OVER)
     result = receive_order(
         store, state, seat, text, transport, versions=cmp.versions(), scope=scope, spin=spin
     )

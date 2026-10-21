@@ -94,23 +94,25 @@ def test_a_record_call_that_fails_keeps_the_roster_lines(caplog: pytest.LogCaptu
     assert any("character record" in r.getMessage() for r in caplog.records)
 
 
-def test_a_roster_call_that_fails_still_raises() -> None:
+def test_a_roster_call_that_fails_falls_back_to_matching_words() -> None:
     store, table = MemoryStore(), RosterDown()
     c = _florence(store, table)
-    with pytest.raises(TransportError):
-        sz.search(store, c, None, "someone who moves money", table)
+    lines = sz.search(store, c, None, "a banker", table)
+    assert lines and all("Traceback" not in line for line in lines)
 
 
-def test_the_record_prompt_carries_the_start_and_the_world() -> None:
+def test_the_record_prompt_carries_the_start_and_only_the_roster() -> None:
     store, table = MemoryStore(), Record([RUCELLAI])
     c = _florence(store, table)
     sz.search(store, c, None, "a poet at court", table)
     [prompt] = table.record_prompts
     assert "## Start\n" + FLORENCE + "\n\n" in prompt
     assert "## What the player wants to play\na poet at court" in prompt
-    world = _section(prompt, "Already in the world")
-    assert {"Lorenzo de' Medici", "The Pazzi"} <= set(world)
-    assert world == sorted(e.name for e in load_state(store, c).entities.values())
+    roster = _section(prompt, "Already on the roster")
+    state = load_state(store, c)
+    assert roster == sorted(state.entities[e].name for e in state.roster)
+    hidden = {e.name for e in state.entities.values()} - set(roster)
+    assert hidden and not any(name in prompt for name in hidden)
 
 
 def test_the_record_schema_has_no_refs() -> None:

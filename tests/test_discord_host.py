@@ -142,11 +142,11 @@ def test_each_host_command_opens_with_its_first_line(salt: Game) -> None:
 def test_linking_and_unlinking_the_one_human_seat(salt: Game) -> None:
     _, seat = _human(salt)
     taken = _host(salt, "link", user=_user(STRANGER), seat=seat)
-    assert taken == f"seat {_human(salt)[0]} is already linked in {salt.campaign()}"
+    assert taken == (f"Not linked: {seat} is already taken, or that user already holds a seat.")
     assert _host(salt, "unlink", seat=seat) == f"Unlinked {seat}."
     assert _host(salt, "unlink", seat=seat) == f"{seat} was not linked."
     assert _host(salt, "link", user=_user(STRANGER), seat=seat) == (
-        f"Linked {seat} to Discord user {STRANGER}."
+        f"Linked {seat} to <@{STRANGER}>."
     )
     assert _host(salt, "invites") == "no invites"
 

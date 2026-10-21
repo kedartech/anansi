@@ -8,10 +8,11 @@ from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
+from revisionist.core import events as ev
 from revisionist.core.canary import HumanLeak, scan_humans, surfaces_from_log
 from revisionist.core.fold import replay_to, state_hash
 from revisionist.core.ids import CampaignId, SeatId
-from revisionist.core.ontology import Controller
+from revisionist.core.ontology import Controller, Phase, Seat
 from revisionist.core.report import (
     cost_report,
     leak_report,
@@ -25,7 +26,7 @@ from revisionist.core.state import State
 from revisionist.engine import campaign as cmp
 from revisionist.engine import scheduler as sch
 from revisionist.engine import season, session_zero
-from revisionist.engine.discord.tables import Invites, SeatLinks
+from revisionist.engine.discord.tables import Invites, LinkError, SeatLinks
 from revisionist.engine.maintenance import verify_campaign
 from revisionist.engine.store import EventStore, Sealer, load_state
 
@@ -107,11 +108,14 @@ def why_lines(
     target: str,
     reason: str | None = None,
     actor: str | None = None,
+    *,
+    break_glass: bool = False,
 ) -> list[str]:
     """Trace an intent. On a sealed campaign the private records stay hidden unless
-    a non-blank ``reason`` is given, and reading them logs an admin read first.
+    the host breaks glass with a reason, and reading them logs an admin read first.
 
-    ``actor`` is not recorded: ``log_admin_read`` names the host from the OS user.
+    ``actor`` (who asked, e.g. ``discord:<id>``) is kept in the admin read's purpose.
+    Raises ``HostOpError`` when glass is broken without a reason.
     """
     events = list(store.read(campaign_id))
     lines = why(events, target)
@@ -122,24 +126,80 @@ def why_lines(
     private = [w for w in lines if needs_admin_read(by_seq[w.seq])]
     if not private:
         return render_why(lines).splitlines()
-    if reason is None or not reason.strip():
+    if not break_glass:
         public = [w for w in lines if w not in private]
         shown = render_why(public).splitlines() if public else ["nothing public found"]
         return [
             *shown,
-            f"{len(private)} private records hidden; give a reason to read them "
+            f"{len(private)} private records hidden; break glass with a reason to read them "
             "(logged and announced)",
         ]
-    cmp.log_admin_read(
-        store, campaign_id, [by_seq[w.seq].event_id for w in private], reason.strip()
-    )
+    why_read = (reason or "").strip()
+    if not why_read:
+        raise HostOpError("Breaking glass needs a reason; it is kept in the log.")
+    purpose = f"{why_read} (by {actor})" if actor else why_read
+    cmp.log_admin_read(store, campaign_id, [by_seq[w.seq].event_id for w in private], purpose)
     return render_why(lines).splitlines()
 
 
+def last_tick(store: EventStore, campaign_id: CampaignId) -> tuple[int, bool] | None:
+    """The newest closed tick and whether it was quiet (the resolver failed and the
+    orders carry forward), or None before the first tick."""
+    found: tuple[int, bool] | None = None
+    for e in store.read(campaign_id):
+        if isinstance(e.payload, ev.TickClosed):
+            found = (e.tick, e.payload.quiet)
+    return found
+
+
+def link_seat(
+    conn: "Connection[Any]",
+    state: State,
+    live: Sequence[CampaignId],
+    seat_ref: str,
+    user_id: str,
+    guild_id: str,
+) -> str:
+    """Bind a Discord user to a free human seat of a live game in play."""
+    if state.campaign_id not in live:
+        raise HostOpError("No live game to link into. Start one with /establish.")
+    if state.phase is Phase.SESSION_ZERO:
+        raise HostOpError("In Session Zero, use /invite.")
+    seat = _seat(state, seat_ref)
+    if seat.controller is not Controller.HUMAN:
+        raise HostOpError(f"{seat.name} is not a human seat.")
+    try:
+        SeatLinks(conn).link(state.campaign_id, seat.seat_id, user_id, guild_id)
+    except LinkError as exc:
+        raise HostOpError(
+            f"Not linked: {seat.name} is already taken, or that user already holds a seat."
+        ) from exc
+    return f"Linked {seat.name} to <@{user_id}>."
+
+
+def unlink_seat(conn: "Connection[Any]", state: State, seat_ref: str) -> str:
+    seat = _seat(state, seat_ref)
+    if SeatLinks(conn).unlink(state.campaign_id, seat.seat_id):
+        return f"Unlinked {seat.name}."
+    return f"{seat.name} was not linked."
+
+
+def _seat(state: State, seat_ref: str) -> Seat:
+    try:
+        return state.seats[cmp.resolve_seat(state, seat_ref.strip())]
+    except LookupError as exc:
+        raise HostOpError(f"No seat called {seat_ref.strip()!r} here.") from exc
+
+
 def replay_line(store: EventStore, campaign_id: CampaignId, tick: int) -> str:
-    state = replay_to(list(store.read(campaign_id)), tick)
+    """The state hash once ``tick`` has been folded in, labelled with the tick asked for."""
+    events = list(store.read(campaign_id))
+    newest = max((e.tick for e in events), default=0)
+    if tick < 0 or tick > newest:
+        raise HostOpError(f"No tick {tick} yet; the newest is {newest}.")
+    state = replay_to(events, tick)
     return (
-        f"tick {state.tick}  seq {state.last_seq}  hash {state_hash(state)}  "
+        f"tick {tick}  seq {state.last_seq}  hash {state_hash(state)}  "
         f"assets {len(state.assets)}  facts {len(state.facts)}  pending {len(state.pending)}"
     )
 

@@ -346,10 +346,12 @@ def why_cmd(
     On a sealed campaign, private records stay hidden unless you break glass,
     which first logs an admin read the players are told about.
     """
-    if break_glass and not (reason and reason.strip()):
-        raise _fail("--break-glass needs --reason")
     store = cmp.open_store()
-    for line in host_ops.why_lines(store, _campaign(store), target, reason):
+    try:
+        lines = host_ops.why_lines(store, _campaign(store), target, reason, break_glass=break_glass)
+    except host_ops.HostOpError as exc:
+        raise _fail("--break-glass needs --reason") from exc
+    for line in lines:
         typer.echo(line)
 
 
