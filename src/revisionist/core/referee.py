@@ -44,6 +44,7 @@ from revisionist.core.ontology import (
     ClockKind,
     ClockStatus,
     CommitmentStatus,
+    EntityKind,
     EntityStatus,
     Seat,
     SeatKind,
@@ -305,9 +306,12 @@ def rate(world: World, intent: Intent) -> FeasibilityBand:
     """Feasibility from what ``world`` shows. Impossible only for structural reasons.
 
     Score starts at 0 (Contested) and moves by: means minus opposition
-    (clamped to ±2), counterparty disposition (±1), and the plausibility
-    setting (±1 on force and information verbs). Free verbs are Assured:
-    talking always happens, whatever comes of it.
+    (clamped to ±2), counterparty disposition (±1), the plausibility
+    setting (±1 on force and information verbs), distance (-1 when no
+    committed force is at the target's place), and scouting (+1 for a
+    non-public fact about a target). A person target counts as guarded
+    (+1 opposition). An order naming a place the world left out is a long
+    shot at best. Free verbs are Assured.
     """
     seat = own_seat(world, intent.actor)
     if seat is None:
@@ -342,8 +346,10 @@ def rate(world: World, intent: Intent) -> FeasibilityBand:
         elif plaus is Plausibility.PULP:
             score += 1
 
+    score += _distance(world, intent, seat.embodies)
+    score += _scouting(world, intent)
     band = _band(score)
-    if intent.verb in MEANS_VERBS and not intent.means:
+    if (intent.verb in MEANS_VERBS and not intent.means) or intent.destination:
         band = min(band, FeasibilityBand.LONG_SHOT, key=_BAND_ORDER.index)
     return band
 
@@ -364,10 +370,71 @@ def _opposition(world: World, intent: Intent) -> int:
         if target in world.entities:
             kinds = FORCE_KINDS if intent.verb in FORCE_VERBS else ALL_KINDS
             best = max(best, _sum_tier(world, _held_by(world, EntityId(target)), kinds))
+            if (
+                intent.verb in FORCE_VERBS
+                and world.entities[EntityId(target)].kind is EntityKind.PERSON
+            ):
+                best += 1
     if intent.verb in DEAL_VERBS and intent.counterparty is not None:
         # A deal costs more the richer the other side already is.
         best = max(best, _sum_tier(world, _held_by(world, intent.counterparty), ALL_KINDS) // 2)
     return best
+
+
+def _place_of(world: World, target: str) -> EntityId | None:
+    asset = world.assets.get(AssetId(target))
+    if asset is not None:
+        return asset.location
+    entity = world.entities.get(EntityId(target))
+    return entity.location if entity is not None else None
+
+
+def _at_place(world: World, asset_place: EntityId | None, target_place: EntityId) -> bool:
+    if asset_place is None:
+        return False
+    if asset_place == target_place:
+        return True
+    parent = world.entities[asset_place].parent if asset_place in world.entities else None
+    target_parent = world.entities[target_place].parent if target_place in world.entities else None
+    return parent == target_place or target_parent == asset_place
+
+
+def _distance(world: World, intent: Intent, actor: EntityId) -> int:
+    """-1 when a force order's committed forces are all away from the target's place."""
+    if intent.verb not in FORCE_VERBS:
+        return 0
+    places = [p for p in (_place_of(world, t) for t in intent.targets) if p is not None]
+    if not places:
+        return 0
+    forces = [
+        world.assets[a]
+        for a in intent.means
+        if a in world.assets
+        and world.assets[a].kind is AssetKind.FORCE
+        and world.assets[a].location is not None
+    ]
+    if not forces:
+        return 0
+    if any(_at_place(world, f.location, p) for f in forces for p in places):
+        return 0
+    return -1
+
+
+def _scouting(world: World, intent: Intent) -> int:
+    """+1 when the actor's seat holds a non-public fact about a target or its controller."""
+    if intent.verb not in FORCE_VERBS and intent.verb not in INFO_VERBS:
+        return 0
+    subjects: set[str] = set(intent.targets)
+    for target in intent.targets:
+        asset = world.assets.get(AssetId(target))
+        if asset is not None:
+            subjects.add(asset.controller)
+    for fact in world.facts.values():
+        if fact.scope.visibility is Visibility.PUBLIC or not fact.scope.visible_to(intent.actor):
+            continue
+        if fact.subject in subjects:
+            return 1
+    return 0
 
 
 # --- roll --------------------------------------------------------------------

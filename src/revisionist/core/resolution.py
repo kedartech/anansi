@@ -20,12 +20,15 @@ class OutcomeTier(StrEnum):
 
 SUCCESS_CHANCE: dict[FeasibilityBand, float] = {
     FeasibilityBand.IMPOSSIBLE: 0.0,
-    FeasibilityBand.LONG_SHOT: 0.20,
-    FeasibilityBand.CONTESTED: 0.50,
-    FeasibilityBand.LIKELY: 0.75,
-    FeasibilityBand.ASSURED: 0.95,
+    FeasibilityBand.LONG_SHOT: 0.15,
+    FeasibilityBand.CONTESTED: 0.40,
+    FeasibilityBand.LIKELY: 0.60,
+    FeasibilityBand.ASSURED: 0.85,
 }
-"""Build plan Layer 3, accepted as starting numbers (Josh, 2026-10-19)."""
+"""Revised for playtest #25 (Josh, 2026-10-21).
+
+Long shot 15%, Contested 40%, Likely 60%, Assured 85%.
+"""
 
 SUCCESS_SPLIT: tuple[tuple[OutcomeTier, float], ...] = (
     (OutcomeTier.PARTIAL, 0.40),
