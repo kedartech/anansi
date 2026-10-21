@@ -74,7 +74,7 @@ def _canary(game: Game) -> str:
 
 def test_establish_is_announced_and_a_refusal_is_not(zero: Game) -> None:
     opened = zero.command("establish", HOST, place=FLORENCE)
-    line = opened.removeprefix(DRAFTING.format(place=FLORENCE))
+    line = opened.removeprefix(DRAFTING.format(place=FLORENCE)).splitlines()[0]
     assert zero.public == [line]
     assert line.startswith(f"Session Zero is open at {FLORENCE}. ")
     assert zero.last_sent[-1] == (line, False)

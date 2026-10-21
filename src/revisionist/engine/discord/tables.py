@@ -188,6 +188,15 @@ class Channels:
         ).fetchone()
         return str(row[0]) if row else None
 
+    def latest_public(self, guild_id: str) -> str | None:
+        """The public channel most recently set in this guild, whichever campaign set it."""
+        row = self.conn.execute(
+            "SELECT channel_id FROM discord_channels"
+            " WHERE guild_id = %s AND purpose = 'public' ORDER BY set_at DESC LIMIT 1",
+            (guild_id,),
+        ).fetchone()
+        return str(row[0]) if row else None
+
 
 class PgOutbox:
     """``discord_deliveries``: one row per part Discord accepted."""

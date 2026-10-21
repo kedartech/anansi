@@ -190,7 +190,11 @@ def register(
     async def channel(interaction: discord.Interaction) -> None:
         user = str(interaction.user.id)
         where, in_guild = str(interaction.channel_id), interaction.guild_id is not None
-        await answer(interaction, lambda: h.channel(user, where, in_guild), notify=dm(user))
+        perms = getattr(interaction, "app_permissions", None)
+        can_post = perms is None or (perms.view_channel and perms.send_messages)
+        await answer(
+            interaction, lambda: h.channel(user, where, in_guild, can_post), notify=dm(user)
+        )
 
     @tree.command(name="character", description="Session Zero: choose who you play", guild=guild)
     @app_commands.describe(

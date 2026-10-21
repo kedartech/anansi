@@ -355,7 +355,21 @@ class Handlers:
             names = sorted(state.entities[c].name for c in state.roster)
             text = ESTABLISHED.format(place=place.strip(), n=len(names), names=", ".join(names))
             self.last_establish = EstablishOutcome(place.strip(), True, text, self.clock())
-            return _said(state, text, text)
+            carried = Channels(store.conn).latest_public(self.config.guild_id)
+            if not carried:
+                hint = "\nRun /channel in the channel where news should post."
+                return _said(state, text + hint, text)
+            Channels(store.conn).set_public(campaign_id, carried, self.config.guild_id)
+            news = f"\nNews will post in <#{carried}>."
+            if self.rest is None:
+                return _said(state, text + news, text)
+            # A follow-up's token may have expired by now; a REST post does not depend on it.
+            try:
+                for i, part in enumerate(split_message(text)):
+                    self.rest.send(carried, part, nonce_for(f"open:{campaign_id}", i))
+            except DiscordError as exc:
+                log.warning("/establish: the opening line did not reach %s: %s", carried, exc)
+            return Said(text + news)
 
         return self._host_store(user_id, "establish", work)
 
@@ -460,7 +474,7 @@ class Handlers:
 
         return self._as_host(user_id, "invite", work)
 
-    def channel(self, user_id: str, channel_id: str, in_guild: bool) -> str:
+    def channel(self, user_id: str, channel_id: str, in_guild: bool, can_post: bool = True) -> str:
         """Host: make the channel this is run in the live game's public channel."""
         if not in_guild or not channel_id.isdigit():
             return "Run /channel in the server channel you want the public news posted in."
@@ -468,7 +482,13 @@ class Handlers:
         def work(store: PostgresEventStore, campaign_id: CampaignId) -> str:
             Channels(store.conn).set_public(campaign_id, channel_id, self.config.guild_id)
             name = sch.campaign_name(store, campaign_id)
-            return f"Public statements and the press for {name} now post in this channel."
+            text = f"Public statements and the press for {name} now post in this channel."
+            if not can_post:
+                text += (
+                    "\nI can't post there yet: give me View Channel and Send Messages"
+                    " in this channel."
+                )
+            return text
 
         return self._as_host(user_id, "channel", work)
 
