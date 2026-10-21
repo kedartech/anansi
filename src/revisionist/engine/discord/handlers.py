@@ -229,7 +229,9 @@ class Handlers:
             log.exception("/join: cannot open the store")
             return BROKEN
         try:
-            if SeatLinks(store.conn).for_user(user_id, self.config.guild_id) is not None:
+            # A seat in an ended or retired game does not block joining the new one.
+            held = SeatLinks(store.conn).for_user(user_id, self.config.guild_id)
+            if held is not None and held.campaign_id in sch.live_campaigns(store, self.clock()):
                 return ALREADY_SEATED
             try:
                 got = Invites(store.conn).redeem(code, user_id, self.config.guild_id, self.clock())
@@ -730,11 +732,12 @@ class Handlers:
         code: bool = False,
     ) -> str:
         def current(store: PostgresEventStore) -> str:
-            # The host's own game if they hold a seat in it, else the live game.
-            link = SeatLinks(store.conn).for_user(user_id, self.config.guild_id)
-            if link is not None:
-                return work(store, link.campaign_id)
+            # The host's own game if they hold a seat in a live one, else the live game.
+            # A seat in an ended game must not pull host tools back into it.
             live = sch.live_campaigns(store, self.clock())
+            link = SeatLinks(store.conn).for_user(user_id, self.config.guild_id)
+            if link is not None and link.campaign_id in live:
+                return work(store, link.campaign_id)
             if live:
                 return work(store, live[-1])
             try:

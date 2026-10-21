@@ -179,6 +179,23 @@ def test_link_in_session_zero_points_to_invite(zero: Game) -> None:
     assert _host(zero, "flags") == "no goals wait for approval"
 
 
+def test_a_seat_in_an_ended_game_does_not_block_the_next_one(salt: Game) -> None:
+    """The host played the last game to its end; the new one must still take invites."""
+    ended = salt.campaign()
+    salt.command("season-end", HOST)
+    salt.transport = Table()  # a model that can draft a world
+    assert "Session Zero is open" in salt.command("establish", HOST, place=FLORENCE)
+    reply = salt.command("invite", HOST)
+    assert reply.startswith("Invite for a new player"), reply
+    assert salt.command("join", HOST, code=reply.splitlines()[1]) != handlers.ALREADY_SEATED
+    store = salt.store()
+    try:
+        held = SeatLinks(store.conn).for_user(HOST, GUILD)
+        assert held is not None and held.campaign_id != ended
+    finally:
+        store.close()
+
+
 def test_report_waits_for_the_season_end(salt: Game) -> None:
     assert salt.command("report") == "The season has not ended."
     assert salt.command("report", STRANGER) == handlers.NOT_LINKED
