@@ -173,7 +173,7 @@ def test_full_season(pg_db: PgDb, monkeypatch: pytest.MonkeyPatch, tmp_path: Pat
     r = cmd("advance")
     print("ADVANCE:", repr(r), pub())
     check("ticked" in r.lower() or "tick" in r.lower(), f"advance: {r}")
-    check(any("has run" in p for p in pub()), f"advance public: {pub()}")
+    check(any(p.startswith("The world after tick") for p in pub()), f"advance public: {pub()}")
     for user in (HOST, FRIEND):
         for c in ("dispatch", "briefing", "status", "dashboard"):
             r = cmd(c, user)
@@ -210,8 +210,11 @@ def test_full_season(pg_db: PgDb, monkeypatch: pytest.MonkeyPatch, tmp_path: Pat
     check("Paused" in r, f"pause: {r}")
     r = cmd("advance")
     print("ADVANCE PAUSED:", repr(r))
-    check("paus" in r.lower() and "has run" not in r, f"advance while paused: {r}")
-    check(not any("has run" in p for p in pub()), f"advance paused public: {pub()}")
+    check("paus" in r.lower() and "The world after" not in r, f"advance while paused: {r}")
+    check(
+        not any(p.startswith("The world after tick") for p in pub()),
+        f"advance paused public: {pub()}",
+    )
     r = cmd("resume")
     check("Resumed" in r, f"resume: {r}")
 
