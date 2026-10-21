@@ -27,7 +27,7 @@ from typing import Protocol
 from pydantic import Field
 
 from revisionist import __version__
-from revisionist.core import SCHEMA_VERSION, dashboard, goals, intel, referee
+from revisionist.core import SCHEMA_VERSION, dashboard, goals, intel, orders, referee
 from revisionist.core import delta as d
 from revisionist.core import events as ev
 from revisionist.core._base import Model
@@ -411,6 +411,7 @@ def run_tick(
         batch = []
         costs: list[CallCost] = []
         applied_deltas = [delta for _, delta in kept] + list(tail.intel)
+        log = list(em.store.read(em.state.campaign_id))
         for seat_id in _narration_seats(em.state):
             view = project(em.state, seat_id)
             visible = [x for x in applied_deltas if _in_view(view, x)]
@@ -419,11 +420,16 @@ def run_tick(
                 costs.append(narration.cost)
             seat = em.state.seats[seat_id]
             scope = PUBLIC if seat.kind is SeatKind.OUTLET else private_to(seat_id)
+            text = narration.text
+            if seat.kind is SeatKind.PLAYER:
+                lines = orders.render(orders.order_results(log, seat_id, em.state.tick))
+                if lines:
+                    text = "\n".join(lines) + "\n\n" + text
             batch.append(
                 em.event(
                     ev.NarrationWritten(
                         seat_id=seat_id,
-                        text=narration.text,
+                        text=text,
                         from_deltas=tuple(x.delta_id for x in visible),
                     ),
                     actor=seat_id,
