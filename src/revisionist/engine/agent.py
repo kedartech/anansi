@@ -137,6 +137,11 @@ def _intent_schema(ids: dict[str, list[str]]) -> dict[str, Any]:
             "duration_ticks": {"type": "integer", "minimum": 1, "maximum": 12},
             "spin": {"type": "string", "maxLength": 280},
             "condition": {"type": "string", "maxLength": 200},
+            "destination": {
+                "type": "string",
+                "maxLength": 60,
+                "pattern": "^[A-Za-z][A-Za-z .,'-]{0,59}$",
+            },
         },
         "required": ["verb"],
         "additionalProperties": False,
