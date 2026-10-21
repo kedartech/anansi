@@ -27,6 +27,7 @@ from revisionist.core.visibility import Visibility
 from revisionist.engine import campaign as cmp
 from revisionist.engine import host_ops, play, season, session_zero
 from revisionist.engine import scheduler as sch
+from revisionist.engine.discord import format as fmt
 from revisionist.engine.discord.rest import (
     CANNOT_DM,
     DiscordError,
@@ -377,7 +378,7 @@ class Handlers:
         return self._as_seat(
             user_id,
             "dashboard",
-            lambda store, link: "\n".join(
+            lambda store, link: fmt.dashboard(
                 play.dashboard_lines(load_state(store, link.campaign_id), link.seat_id)
             ),
         )
@@ -505,11 +506,16 @@ class Handlers:
 
             match action:
                 case "roster":
-                    return "\n".join(session_zero.roster_lines(load_state(store, c)))
+                    roster = session_zero.roster_lines(load_state(store, c))
+                    return fmt.bullets([fmt.named(line) for line in roster])
                 case "search":
                     found = session_zero.search(store, c, seat, text, self.transport_factory())
                     log.info("/character search: %d chars asked, %d found", len(text), len(found))
-                    return "\n".join(found) or (
+                    lines = [
+                        line if line == session_zero.RECORD_HEADER else fmt.named(line)
+                        for line in found
+                    ]
+                    return fmt.bullets(lines) or (
                         "No one on the roster fits. Try other words, see everyone with "
                         "/character roster, or play anyone from the record with /character pick."
                     )
@@ -531,7 +537,8 @@ class Handlers:
                     lines = session_zero.propose_goals(
                         store, c, seat, action, self.transport_factory(), text
                     )
-                    return "\n".join(lines) + "\nChoose one with /goal confirm <label>, e.g. H1."
+                    offers = "\n".join(fmt.goal_offer(line) for line in lines)
+                    return offers + "\n\nChoose one with /goal confirm <label>, e.g. H1."
                 case "confirm":
                     return session_zero.confirm_goal(store, c, seat, text.strip())
             return "Choose history, could_have, own or confirm."
@@ -540,8 +547,10 @@ class Handlers:
 
     def history(self, user_id: str) -> str:
         def work(store: PostgresEventStore, link: Link) -> str:
-            return session_zero.history_brief(
-                store, link.campaign_id, link.seat_id, self.transport_factory()
+            return fmt.history(
+                session_zero.history_brief(
+                    store, link.campaign_id, link.seat_id, self.transport_factory()
+                )
             )
 
         return self._as_seat(user_id, "history", work)

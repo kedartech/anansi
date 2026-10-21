@@ -420,7 +420,7 @@ def test_discord_session_zero_for_two(
     game.command("character", FRIEND, action="claim", text="Giuliano de' Medici")
     for user in (HOST, FRIEND):
         offered = game.command("goal", user, action="history")
-        assert offered.startswith("H1. Hold the Gonfalonier")
+        assert offered.startswith("- **H1** Hold the Gonfalonier")
         assert "Your goal is fixed" in game.command("goal", user, action="confirm", text="1")
         assert sz.SUGGESTED in game.command("history", user)
         # Game.command's own first parameter is called name, so the agent step goes

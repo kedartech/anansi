@@ -95,6 +95,7 @@ def test_join_is_announced_and_a_bad_code_is_not(zero: Game) -> None:
 def test_claim_is_announced_and_the_roster_and_search_are_not(zero: Game) -> None:
     _seated(zero)
     assert "Lorenzo de' Medici" in zero.command("character", HOST, action="roster")
+    assert "- **Lorenzo de' Medici**" in zero.command("character", HOST, action="roster")
     assert "Lorenzo de' Medici" in zero.command("character", HOST, action="search", text="money")
     assert zero.public == []
     reply = zero.command("character", HOST, action="claim", text="Lorenzo de' Medici")

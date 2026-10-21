@@ -143,11 +143,11 @@ def test_full_season(pg_db: PgDb, monkeypatch: pytest.MonkeyPatch, tmp_path: Pat
     check(pub() == [f"<@{HOST}> plays Lorenzo de' Medici."], f"claim public: {pub()}")
     for user in (HOST, FRIEND):
         r = cmd("goal", user, action="history")
-        check(r.startswith("H1. "), f"goal history: {r[:200]}")
+        check(r.startswith("- **H1** "), f"goal history: {r[:200]}")
         r = cmd("goal", user, action="confirm", text="1")
         check("fixed" in r or "approve" in r, f"goal confirm: {r}")
         r = cmd("history", user)
-        check(r.startswith("As recorded"), f"history: {r[:100]}")
+        check(r.startswith("**As recorded:**"), f"history: {r[:100]}")
         r = step("/agent", lambda u=user: g.handlers.agent(u, PERSONA))
         check("now serves" in r, f"agent: {r}")
     r = _host(g, "flags")
