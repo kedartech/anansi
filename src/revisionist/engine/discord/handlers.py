@@ -17,14 +17,15 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from revisionist.core import events as ev
-from revisionist.core.canary import scan_text
+from revisionist.core.canary import canaries_hidden_from_human, scan_text
 from revisionist.core.fold import state_hash
 from revisionist.core.ids import CampaignId, SeatId
 from revisionist.core.ontology import Controller, Persona, Phase
 from revisionist.core.settings import Settings
+from revisionist.core.state import State
 from revisionist.core.visibility import Visibility
 from revisionist.engine import campaign as cmp
-from revisionist.engine import play, season, session_zero
+from revisionist.engine import host_ops, play, season, session_zero
 from revisionist.engine import scheduler as sch
 from revisionist.engine.discord.rest import CANNOT_DM, DiscordError, DiscordRest, nonce_for
 from revisionist.engine.discord.tables import (
@@ -44,6 +45,33 @@ from revisionist.engine.store import load_state
 
 log = logging.getLogger("revisionist.discord")
 
+
+class Said(str):
+    """A reply for the person who asked, plus an optional line for the whole channel."""
+
+    public: str
+
+    def __new__(cls, private: str, public: str = "") -> "Said":
+        said = super().__new__(cls, private)
+        said.public = public
+        return said
+
+
+def public_safe(state: State, text: str) -> bool:
+    """No canary of any fact or goal appears in a line the whole channel reads.
+
+    Every canary counts, since nobody in the channel is a seat.
+    """
+    return not any(c in text for c in canaries_hidden_from_human(state, ()))
+
+
+def _said(state: State, private: str, public: str = "") -> Said:
+    if public and not public_safe(state, public):
+        log.warning("public line withheld: it named a hidden canary")
+        public = ""
+    return Said(private, public)
+
+
 NOT_LINKED = "You don't hold a seat in this game. Ask the host to link you."
 HOST_ONLY = "Only the host can do that."
 EMPTY_ORDER = "Write what you want done."
@@ -60,6 +88,8 @@ DRAFT_REFUSED = (
     "The GM's draft of that moment did not hold together. Try again, or name it more precisely."
 )
 NO_DISPATCH = "No briefing yet. One arrives after each tick."
+ZERO_LINK = "In Session Zero, use /invite."
+NO_LIVE = "No live game to schedule."
 DRAFTING = (
     "Drafting {place} from the record. This takes about five minutes; "
     "I'll post here when Session Zero is open."
@@ -203,10 +233,14 @@ class Handlers:
                 return BAD_CODE
             campaign_id, seat_id = got
             log.info("/join: user %s now holds %s in %s", user_id, seat_id, campaign_id)
-            seat = load_state(store, campaign_id).seats.get(seat_id)
+            state = load_state(store, campaign_id)
+            seat = state.seats.get(seat_id)
+            public = f"<@{user_id}> joined {sch.campaign_name(store, campaign_id)}."
             if seat is None:  # Session Zero: the seat appears when they claim a character
-                return JOINED_ZERO + " " + self._welcome(user_id, campaign_id, "your seat")
-            return f"You hold {seat.name}. " + self._welcome(user_id, campaign_id, seat.name)
+                private = JOINED_ZERO + " " + self._welcome(user_id, campaign_id, "your seat")
+            else:
+                private = f"You hold {seat.name}. " + self._welcome(user_id, campaign_id, seat.name)
+            return _said(state, private, public)
         except Exception:
             log.exception("/join failed")
             return BROKEN
@@ -266,7 +300,8 @@ class Handlers:
             sch.register(store, self.clock())
             state = load_state(store, campaign_id)
             names = sorted(state.entities[c].name for c in state.roster)
-            return ESTABLISHED.format(place=place.strip(), n=len(names), names=", ".join(names))
+            text = ESTABLISHED.format(place=place.strip(), n=len(names), names=", ".join(names))
+            return _said(state, text, text)
 
         return self._host_store(user_id, "establish", work)
 
@@ -322,10 +357,11 @@ class Handlers:
             for seat in links.users(target):
                 links.unlink(target, seat)
             log.info("/retire: %s (%s) retired by the host", names[target], target)
-            return (
+            text = (
                 f"Retired {names[target]} ({target}): it never ticks again "
                 "and its invites no longer work."
             )
+            return _said(load_state(store, target), text, text)
 
         return self._host_store(user_id, "retire", work)
 
@@ -392,6 +428,10 @@ class Handlers:
 
         def work(store: PostgresEventStore, link: Link) -> str:
             c, seat = link.campaign_id, link.seat_id
+
+            def played(who: str) -> Said:
+                return _said(load_state(store, c), f"You play {who}.", f"<@{user_id}> plays {who}.")
+
             match action:
                 case "roster":
                     return "\n".join(session_zero.roster_lines(load_state(store, c)))
@@ -403,10 +443,9 @@ class Handlers:
                         "/character roster, or play anyone from the record with /character pick."
                     )
                 case "claim":
-                    return f"You play {session_zero.claim(store, c, seat, text)}."
+                    return played(session_zero.claim(store, c, seat, text))
                 case "pick":
-                    who = session_zero.pick(store, c, seat, text, self.transport_factory())
-                    return f"You play {who}."
+                    return played(session_zero.pick(store, c, seat, text, self.transport_factory()))
             return "Choose roster, search, claim or pick."
 
         return self._as_seat(user_id, "character", work)
@@ -447,9 +486,10 @@ class Handlers:
     def begin(self, user_id: str) -> str:
         def work(store: PostgresEventStore, campaign_id: CampaignId) -> str:
             try:
-                return session_zero.begin(store, campaign_id)
+                text = session_zero.begin(store, campaign_id)
             except session_zero.StepRefusedError as exc:
                 return str(exc)
+            return _said(load_state(store, campaign_id), text, text)
 
         return self._as_host(user_id, "begin", work)
 
@@ -472,29 +512,156 @@ class Handlers:
             if o.action is sch.Action.LOCKED:
                 return "A tick is already running."
             if o.action is sch.Action.LEAK:
-                return "Canary leak: the campaign is paused. Run `revisionist leaks` on the host."
+                return "Canary leak: the campaign is paused. Run /host leaks."
             if o.action is sch.Action.FAILED:
-                return (
-                    "The tick failed and resumes on the next run. "
-                    "See `revisionist scheduler status`."
-                )
-            return f"{o.action}: {o.detail}".rstrip(": ")
+                return "The tick failed and resumes on the next run. See /host schedule."
+            private = f"{o.action}: {o.detail}".rstrip(": ")
+            if o.action is not sch.Action.TICKED:
+                return private
+            # The run closed the tick before the one the state now waits on.
+            state = load_state(store, campaign_id)
+            ran = f"Tick {state.tick - 1} has run. Read your briefing with /dispatch."
+            return _said(state, private, ran)
 
         return self._as_host(user_id, "advance", work)
 
     def pause(self, user_id: str) -> str:
         def work(store: PostgresEventStore, campaign_id: CampaignId) -> str:
             sch.register(store, self.clock()).pause(campaign_id, "paused by host on Discord")
-            return "Paused. No ticks until /resume."
+            text = "Paused. No ticks until /resume."
+            return _said(load_state(store, campaign_id), text, text)
 
         return self._as_host(user_id, "pause", work)
 
     def resume(self, user_id: str) -> str:
         def work(store: PostgresEventStore, campaign_id: CampaignId) -> str:
             sch.register(store, self.clock()).resume(campaign_id)
-            return "Resumed."
+            return _said(load_state(store, campaign_id), "Resumed.", "Resumed.")
 
         return self._as_host(user_id, "resume", work)
+
+    # --- host tools under /host (issue 7) ---------------------------------------
+
+    def host_seats(self, user_id: str) -> str:
+        return self._as_host(
+            user_id, "host seats", lambda store, c: "\n".join(host_ops.seat_lines(store.conn, c))
+        )
+
+    def host_invites(self, user_id: str) -> str:
+        return self._as_host(
+            user_id,
+            "host invites",
+            lambda store, c: "\n".join(host_ops.invite_lines(store.conn, c, self.clock())),
+        )
+
+    def host_link(self, user_id: str, target: str, seat: str) -> str:
+        """Host: bind a Discord user to a free human seat, as ``revisionist discord link`` does."""
+
+        def work(store: PostgresEventStore, campaign_id: CampaignId) -> str:
+            state = load_state(store, campaign_id)
+            if state.phase is Phase.SESSION_ZERO:
+                return ZERO_LINK
+            try:
+                seat_id = cmp.resolve_seat(state, seat.strip())
+            except LookupError:
+                return f"No seat called {seat.strip()!r} here."
+            name = state.seats[seat_id].name
+            if state.seats[seat_id].controller is not Controller.HUMAN:
+                return f"{name} is not a human seat."
+            try:
+                SeatLinks(store.conn).link(campaign_id, seat_id, target, self.config.guild_id)
+            except LinkError as exc:
+                return str(exc)
+            log.info("/host link: %s bound to user %s in %s", seat_id, target, campaign_id)
+            return f"Linked {name} to Discord user {target}."
+
+        return self._as_host(user_id, "host link", work)
+
+    def host_unlink(self, user_id: str, seat: str) -> str:
+        def work(store: PostgresEventStore, campaign_id: CampaignId) -> str:
+            state = load_state(store, campaign_id)
+            try:
+                seat_id = cmp.resolve_seat(state, seat.strip())
+            except LookupError:
+                return f"No seat called {seat.strip()!r} here."
+            name = state.seats[seat_id].name
+            if SeatLinks(store.conn).unlink(campaign_id, seat_id):
+                return f"Unlinked {name}."
+            return f"{name} was not linked."
+
+        return self._as_host(user_id, "host unlink", work)
+
+    def host_flags(self, user_id: str) -> str:
+        return self._as_host(
+            user_id, "host flags", lambda store, c: "\n".join(host_ops.goal_flag_lines(store, c))
+        )
+
+    def host_approve(self, user_id: str, seat: str) -> str:
+        def work(store: PostgresEventStore, campaign_id: CampaignId) -> str:
+            try:
+                return host_ops.approve_goal(store, campaign_id, seat)
+            except (host_ops.HostOpError, session_zero.StepRefusedError) as exc:
+                return str(exc)
+
+        return self._as_host(user_id, "host approve", work)
+
+    def host_schedule(self, user_id: str) -> str:
+        def work(store: PostgresEventStore) -> str:
+            live = sch.live_campaigns(store, self.clock())
+            if not live:
+                return NO_LIVE
+            return "\n".join(host_ops.schedule_lines(store, live))
+
+        return self._host_store(user_id, "host schedule", work)
+
+    def host_cost(self, user_id: str) -> str:
+        return self._as_host(
+            user_id,
+            "host cost",
+            lambda store, c: f"```\n{host_ops.cost_text(store, c)}\n```",
+        )
+
+    def host_leaks(self, user_id: str) -> str:
+        def work(store: PostgresEventStore, campaign_id: CampaignId) -> str:
+            held = host_ops.holdings(
+                store.conn, load_state(store, campaign_id), self.config.host_id
+            )
+            lines, _ = host_ops.leak_lines(store, campaign_id, held)
+            return "\n".join(lines)
+
+        return self._as_host(user_id, "host leaks", work)
+
+    def host_why(self, user_id: str, target: str, reason: str = "") -> str:
+        def work(store: PostgresEventStore, campaign_id: CampaignId) -> str:
+            lines = host_ops.why_lines(
+                store, campaign_id, target, reason=reason, actor=f"discord:{user_id}"
+            )
+            return "\n".join(lines)
+
+        return self._as_host(user_id, "host why", work)
+
+    def host_replay(self, user_id: str, tick: int) -> str:
+        return self._as_host(
+            user_id, "host replay", lambda store, c: host_ops.replay_line(store, c, tick)
+        )
+
+    def host_verify(self, user_id: str) -> str:
+        return self._as_host(
+            user_id,
+            "host verify",
+            lambda store, c: "\n".join(host_ops.verify_lines(store, [c])[0]),
+        )
+
+    def report(self, user_id: str) -> str:
+        """The season report for the seat's game, once its season has ended."""
+
+        def work(store: PostgresEventStore, link: Link) -> str:
+            try:
+                return "\n".join(host_ops.season_report_lines(store, link.campaign_id))
+            except season.SeasonError as exc:
+                return str(exc)
+
+        return self._as_seat(user_id, "report", work)
 
     # --- plumbing -----------------------------------------------------------
 
@@ -588,4 +755,6 @@ __all__ = [
     "WITHHELD",
     "BotConfig",
     "Handlers",
+    "Said",
+    "public_safe",
 ]

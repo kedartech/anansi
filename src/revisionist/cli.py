@@ -18,29 +18,20 @@ from typing import TYPE_CHECKING, Annotated
 import typer
 
 from revisionist import __version__
-from revisionist.core.canary import HumanLeak, scan_humans, surfaces_from_log
-from revisionist.core.fold import replay_to, state_hash
 from revisionist.core.ids import CampaignId, EventId, SeatId
 from revisionist.core.ontology import Controller, Persona, Phase
-from revisionist.core.report import (
-    cost_report,
-    leak_report,
-    render_cost,
-    render_leaks,
-    render_why,
-    why,
-)
+from revisionist.core.report import render_leaks
 from revisionist.core.sealing import needs_admin_read
 from revisionist.core.settings import Betrayal, Inertia, Lethality, Plausibility, Settings
 from revisionist.core.state import State
 from revisionist.core.visibility import Visibility
 from revisionist.core.world_compile import WorldError
 from revisionist.engine import campaign as cmp
-from revisionist.engine import play, season, session_zero
+from revisionist.engine import host_ops, play, season, session_zero
 from revisionist.engine import scheduler as sch
 from revisionist.engine.ids import new_id
 from revisionist.engine.llm import Transport, TransportError
-from revisionist.engine.maintenance import copy_campaign, verify_campaign
+from revisionist.engine.maintenance import copy_campaign
 from revisionist.engine.runner import DelivererFactory, Publishes, file_deliverer, play_tick
 from revisionist.engine.store import EventStore, Sealer, StoreError, load_state
 from revisionist.engine.tick import NotInPlayError
@@ -222,7 +213,7 @@ def season_report_cmd() -> None:
     """The season report again, once it has ended."""
     store = cmp.open_store()
     try:
-        lines = season.report(store, _campaign(store))
+        lines = host_ops.season_report_lines(store, _campaign(store))
     except season.SeasonError as exc:
         raise _fail(str(exc), EXIT_REFUSED) from exc
     for line in lines:
@@ -355,27 +346,11 @@ def why_cmd(
     On a sealed campaign, private records stay hidden unless you break glass,
     which first logs an admin read the players are told about.
     """
+    if break_glass and not (reason and reason.strip()):
+        raise _fail("--break-glass needs --reason")
     store = cmp.open_store()
-    campaign_id = _campaign(store)
-    events = list(store.read(campaign_id))
-    lines = why(events, target)
-    sealer: Sealer | None = getattr(store, "sealer", None)
-    if sealer is None or not sealer.sealed(campaign_id):
-        typer.echo(render_why(lines))
-        return
-    by_seq = {e.seq: e for e in events}
-    private = [w for w in lines if needs_admin_read(by_seq[w.seq])]
-    if private and not break_glass:
-        public = [w for w in lines if w not in private]
-        typer.echo(render_why(public) if public else "nothing public found")
-        typer.echo(
-            f"{len(private)} private records hidden; --break-glass --reason reads them "
-            "(logged and announced)"
-        )
-        return
-    if private:
-        _admin_read(store, campaign_id, [by_seq[w.seq].event_id for w in private], reason)
-    typer.echo(render_why(lines))
+    for line in host_ops.why_lines(store, _campaign(store), target, reason):
+        typer.echo(line)
 
 
 def _admin_read(
@@ -392,18 +367,14 @@ def replay_cmd(
 ) -> None:
     """Rebuild the state at a past tick from the log and print its hash."""
     store = cmp.open_store()
-    state = replay_to(list(store.read(_campaign(store))), to)
-    typer.echo(
-        f"tick {state.tick}  seq {state.last_seq}  hash {state_hash(state)}  "
-        f"assets {len(state.assets)}  facts {len(state.facts)}  pending {len(state.pending)}"
-    )
+    typer.echo(host_ops.replay_line(store, _campaign(store), to))
 
 
 @app.command()
 def cost() -> None:
     """Every model call this campaign made, per tick and in total."""
     store = cmp.open_store()
-    typer.echo(render_cost(cost_report(store.read(_campaign(store)))))
+    typer.echo(host_ops.cost_text(store, _campaign(store)))
 
 
 @app.command()
@@ -418,38 +389,21 @@ def leaks(
     """Scan every narration for canaries its reader must not see. Exit 3 on any hit."""
     store = cmp.open_store()
     campaign_id = _campaign(store)
-    state = load_state(store, campaign_id)
-    found = leak_report(state, store.read(campaign_id))
-    typer.echo(render_leaks(found))
-    human_leaks: list[HumanLeak] = []
-    if humans:
-        holdings = _holdings(store, state)
-        seen = surfaces_from_log(store.read(campaign_id), holdings)
-        human_leaks = scan_humans(state, holdings, seen)
-        for leak in human_leaks:
-            typer.echo(f"LEAK human={leak.human} fact={leak.fact_id} in {leak.surface}")
-        if not human_leaks:
-            typer.echo(f"0 leaks across {len(holdings)} people")
-    if found or human_leaks:
+    holdings = _holdings(store, load_state(store, campaign_id)) if humans else None
+    lines, leaked = host_ops.leak_lines(store, campaign_id, holdings)
+    for line in lines:
+        typer.echo(line)
+    if leaked:
         raise typer.Exit(EXIT_LEAK)
 
 
 def _holdings(store: EventStore, state: State) -> dict[str, frozenset[SeatId]]:
-    """Who holds which seats: Discord users from their links, and the host, who
-    can read every human seat nobody else holds through this CLI."""
     if not cmp.is_postgres(cmp.db_target()):
         raise _fail("--humans needs the Postgres store and Discord seat links")
-    from revisionist.engine.discord.tables import SeatLinks
     from revisionist.engine.pg_store import PostgresEventStore
 
     assert isinstance(store, PostgresEventStore)
-    links = SeatLinks(store.conn).users(state.campaign_id)
-    host = os.environ.get("REVISIONIST_DISCORD_HOST_ID") or "host"
-    held: dict[str, set[SeatId]] = {host: set()}
-    for seat, user in links.items():
-        held.setdefault(user, set()).add(seat)
-    held[host] |= {s for s in cmp.human_seats(state) if s not in links}
-    return {human: frozenset(seats) for human, seats in held.items()}
+    return host_ops.holdings(store.conn, state, os.environ.get("REVISIONIST_DISCORD_HOST_ID"))
 
 
 # --- revisionist db ------------------------------------------------------------------
@@ -581,16 +535,7 @@ def goal_confirm(
 @goal_app.command("flags")
 def goal_flags() -> None:
     """Host: goals the balance check flagged. Scores only; never the goal."""
-
-    def work(store: EventStore, c: CampaignId) -> list[str]:
-        state = load_state(store, c)
-        rows = session_zero.flagged(store, c)
-        return [
-            f"{state.seats[s].name}: power {b.power}, difficulty {b.difficulty}, {b.flag}"
-            for s, b in rows
-        ] or ["no goals wait for approval"]
-
-    _zero(work)
+    _zero(host_ops.goal_flag_lines)
 
 
 @goal_app.command("approve")
@@ -598,7 +543,10 @@ def goal_approve(seat: Annotated[str, typer.Argument(help="The seat, by ID or na
     """Host: let one flagged goal stand."""
 
     def work(store: EventStore, c: CampaignId) -> str:
-        return session_zero.approve(store, c, _me(load_state(store, c), seat))
+        try:
+            return host_ops.approve_goal(store, c, seat)
+        except host_ops.HostOpError as exc:
+            raise _fail(str(exc), EXIT_REFUSED) from exc
 
     _zero(work)
 
@@ -702,18 +650,10 @@ def db_verify(campaign: CampaignOpt = None) -> None:
     ids = [CampaignId(campaign)] if campaign else store.campaign_ids()
     if not ids:
         raise _fail("no campaigns to verify")
-    failed = False
-    for campaign_id in ids:
-        v = verify_campaign(store, campaign_id)
-        if v.ok:
-            sealed = f", sealed, {v.erased} erased" if v.sealed else ""
-            typer.echo(
-                f"ok {campaign_id}: {v.events} events, tick {v.tick}, hash {v.state_hash}{sealed}"
-            )
-        else:
-            typer.echo(f"FAIL {campaign_id}: {v.problem}", err=True)
-            failed = True
-    if failed:
+    lines, ok = host_ops.verify_lines(store, ids)
+    for line in lines:
+        typer.echo(line, err=line.startswith("FAIL "))
+    if not ok:
         raise typer.Exit(EXIT_ERROR)
 
 
@@ -860,16 +800,14 @@ def scheduler_status(campaign: CampaignOpt = None) -> None:
     """When each campaign ticks next, and how its last tick went."""
     store = _pg_store()
     try:
-        for row in _scheduled(store, campaign):
-            state = "paused: " + row.paused_reason if row.paused else "active"
-            if row.advance_requested:
-                state += ", advance requested"
-            typer.echo(
-                f"{row.campaign_id}  next {row.next_due_at.astimezone(UTC):%Y-%m-%d %H:%MZ}"
-                f"  {state}  failures {row.consecutive_failures}  last {row.last_status or '-'}"
-            )
+        sch.register(store, clock())
+        lines = host_ops.schedule_lines(store, [CampaignId(campaign)] if campaign else None)
+    except LookupError as exc:
+        raise _fail(str(exc)) from exc
     finally:
         store.close()
+    for line in lines:
+        typer.echo(line)
 
 
 def _set(
@@ -1027,25 +965,14 @@ def discord_invite(
 @discord_app.command("invites")
 def discord_invites(campaign: OneCampaignOpt = None) -> None:
     """Every invite issued for a campaign and whether it was used."""
-    from revisionist.engine.discord.tables import Invites
-
     store = _pg_store(*_DISCORD)
     try:
         campaign_id = CampaignId(campaign) if campaign else _campaign(store)
-        invites = Invites(store.conn).all(campaign_id)
+        lines = host_ops.invite_lines(store.conn, campaign_id, clock())
     finally:
         store.close()
-    if not invites:
-        typer.echo("no invites")
-    now = clock()
-    for i in invites:
-        if i.used_at is not None:
-            state = f"used by {i.used_by} {i.used_at.astimezone(UTC):%Y-%m-%d %H:%MZ}"
-        elif i.expires_at <= now:
-            state = "expired"
-        else:
-            state = f"open until {i.expires_at.astimezone(UTC):%Y-%m-%d %H:%MZ}"
-        typer.echo(f"{i.seat_id}  issued {i.issued_at.astimezone(UTC):%Y-%m-%d %H:%MZ}  {state}")
+    for line in lines:
+        typer.echo(line)
 
 
 @discord_app.command("channel")
@@ -1074,20 +1001,13 @@ def discord_channel(
 @discord_app.command("seats")
 def discord_seats() -> None:
     """Every Discord binding."""
-    from revisionist.engine.discord.tables import SeatLinks
-
     store = _pg_store(*_DISCORD)
     try:
-        links = SeatLinks(store.conn).all()
+        lines = host_ops.seat_lines(store.conn)
     finally:
         store.close()
-    if not links:
-        typer.echo("no seats linked")
-    for link in links:
-        typer.echo(
-            f"{link.campaign_id}  {link.seat_id}  user {link.discord_user_id}"
-            f"  guild {link.guild_id}  since {link.linked_at.astimezone(UTC):%Y-%m-%d %H:%MZ}"
-        )
+    for line in lines:
+        typer.echo(line)
 
 
 @discord_app.command("run")

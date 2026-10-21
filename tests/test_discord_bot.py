@@ -117,6 +117,8 @@ class Game:
         )
         self.bot = bot.RevisionistBot(self.handlers, int(GUILD))
         self.replies: list[str] = []
+        self.public: list[str] = []
+        self.last_sent: list[tuple[str, bool]] = []
 
     def command(self, name: str, user_id: str = PLAYER, **options: str) -> str:
         found = self.bot.tree.get_command(name, guild=self.bot.guild)
@@ -125,8 +127,9 @@ class Game:
         callback: Any = found.callback
         asyncio.run(callback(interaction, **options))
         assert interaction.response.deferred == [{"ephemeral": True, "thinking": True}]
-        assert all(ephemeral for _, ephemeral in interaction.followup.sent)
-        text = "".join(content for content, _ in interaction.followup.sent)
+        self.last_sent = interaction.followup.sent
+        self.public += [content for content, ephemeral in self.last_sent if not ephemeral]
+        text = "".join(content for content, ephemeral in self.last_sent if ephemeral)
         self.replies.append(text)
         return text
 
@@ -155,7 +158,7 @@ class Game:
             store.close()
 
     def outbound(self) -> str:
-        return "\n".join([*self.replies, self.discord.text()])
+        return "\n".join([*self.replies, *self.public, self.discord.text()])
 
 
 @pytest.fixture
@@ -315,7 +318,7 @@ def test_briefing_status_and_stubs(game: Game) -> None:
     out = game.command("briefing")
     assert "Dilemma: Toll or trade?" in out and "  3. c" in out
     assert "tick 0" in game.command("status")
-    assert game.command("report") == handlers.NOT_YET
+    assert game.command("report") == "The season has not ended."
     assert game.command("key") == handlers.NOT_YET
 
 

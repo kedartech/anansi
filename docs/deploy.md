@@ -55,7 +55,9 @@ REVISIONIST_BACKUP_DEST=<rsync target, e.g. user@nas:/backups/revisionist, or rc
 | `REVISIONIST_MASTER_KEY_FILE` | path to the 0600 master-key file that seals new campaigns (§9.8); a path, never the key |
 | `REVISIONIST_DISCORD_*` | the Discord bot and DM delivery; see §9 |
 
-To load a file into a shell: `set -a; . ~/.config/revisionist/revisionist-admin.env; set +a`.
+To run a CLI command with a file loaded, use a subshell, so its variables do not stay in your shell and break the test suite: `(set -a; . ~/.config/revisionist/revisionist.env; set +a; revisionist db verify)`. Load `revisionist-admin.env` the same way, and only for backup, restore and admin work.
+
+Playtest operations run in Discord (`/host ...`); the shell is for migrate, verify, backup and recovery.
 
 ## 3. Install and migrate
 
@@ -63,8 +65,7 @@ To load a file into a shell: `set -a; . ~/.config/revisionist/revisionist-admin.
 git clone <the repo> ~/src/revisionist
 cd ~/src/revisionist
 uv tool install --editable '.[postgres,discord]'   # puts `revisionist` in ~/.local/bin
-set -a; . ~/.config/revisionist/revisionist-admin.env; set +a
-revisionist db migrate                                # "applied 0001_init, 0002_schedule, 0003_discord"
+(set -a; . ~/.config/revisionist/revisionist-admin.env; set +a; revisionist db migrate)   # "applied 0001_init, 0002_schedule, 0003_discord"
 ```
 
 `--editable` keeps `revisionist new salt-strait` finding the bundled `worlds/`. Rerunning `revisionist db migrate` is safe ("up to date"). After pulling new code, run it again before the next tick.
@@ -72,9 +73,11 @@ revisionist db migrate                                # "applied 0001_init, 0002
 Moving a SQLite campaign across, if you have one:
 
 ```
-set -a; . ~/.config/revisionist/revisionist.env; set +a
-revisionist db copy --from ~/revisionist.db --to "$REVISIONIST_DB"     # copies, then verifies event for event
-revisionist db verify
+(
+  set -a; . ~/.config/revisionist/revisionist.env; set +a
+  revisionist db copy --from ~/revisionist.db --to "$REVISIONIST_DB"     # copies, then verifies event for event
+  revisionist db verify
+)
 ```
 
 Or start fresh: `revisionist new salt-strait` with `REVISIONIST_DB` set. Tick cadence is the world's `settings.tick_hours` (set `tick_hours: 12` in the YAML for 12-hour ticks).
@@ -124,8 +127,7 @@ The nightly backup writes `revisionist-<UTC timestamp>.dump` (`pg_dump -Fc`) to 
 Run the drill after setup, after any Postgres upgrade, and monthly:
 
 ```
-set -a; . ~/.config/revisionist/revisionist-admin.env; set +a
-revisionist-restore-drill
+(set -a; . ~/.config/revisionist/revisionist-admin.env; set +a; revisionist-restore-drill)
 ```
 
 It restores the newest local dump into a scratch database, runs `revisionist db verify` against it (replays every campaign from event 0, checks every tick's state hash and the latest snapshot), drops the scratch database, and exits non-zero on any failure. Pull a dump back from the off-box target into `REVISIONIST_BACKUP_DIR` now and then and drill that one too, so the off-box copy is proven, not assumed.
@@ -174,11 +176,12 @@ With the token in `revisionist.env`, the scheduler (§5) delivers by DM too: it 
 ```
 cd ~/src/revisionist && git pull
 uv tool install --editable '.[postgres,discord]' --force
-set -a; . ~/.config/revisionist/revisionist-admin.env; set +a
-revisionist db migrate                               # "applied 0003_discord"
-set -a; . ~/.config/revisionist/revisionist.env; set +a
-revisionist discord link --user "$REVISIONIST_DISCORD_HOST_ID"   # binds the campaign's human seat to you
-revisionist discord seats
+(set -a; . ~/.config/revisionist/revisionist-admin.env; set +a; revisionist db migrate)   # "applied 0003_discord"
+(
+  set -a; . ~/.config/revisionist/revisionist.env; set +a
+  revisionist discord link --user "$REVISIONIST_DISCORD_HOST_ID"   # binds the campaign's human seat to you
+  revisionist discord seats
+)
 cp deploy/systemd/revisionist-discord.service ~/.config/systemd/user/
 systemctl --user daemon-reload
 systemctl --user enable --now revisionist-discord.service
@@ -205,12 +208,13 @@ If `/status` says you hold no seat, the link is missing or `REVISIONIST_DISCORD_
 ### 9.6 A second player (Layer 9b)
 
 ```
-set -a; . ~/.config/revisionist/revisionist-admin.env; set +a
-revisionist db migrate                                    # applies 0005_discord_invites
-set -a; . ~/.config/revisionist/revisionist.env; set +a
-revisionist new salt-strait-duo                           # two human seats: Varda and Ostrel
-revisionist discord link --user "$REVISIONIST_DISCORD_HOST_ID" --seat "First Minister of Varda"
-revisionist discord invite --seat "Ostrel War Council"    # prints a code once; valid 72 h
+(set -a; . ~/.config/revisionist/revisionist-admin.env; set +a; revisionist db migrate)   # applies 0005_discord_invites
+(
+  set -a; . ~/.config/revisionist/revisionist.env; set +a
+  revisionist new salt-strait-duo                           # two human seats: Varda and Ostrel
+  revisionist discord link --user "$REVISIONIST_DISCORD_HOST_ID" --seat "First Minister of Varda"
+  revisionist discord invite --seat "Ostrel War Council"    # prints a code once; valid 72 h
+)
 ```
 
 Send the code to the other player privately, never in a server channel. They join the Discord server by an ordinary server invite, then run `/join <code>` there. The bot binds them to the seat, spends the code and sends them a test DM; if their DMs are closed it says so, and their briefings wait for `/dispatch`. `revisionist discord invites` lists every code issued and whether it was used. A spent, expired or unknown code gets the same refusal. With two human seats, the CLI's `order`, `briefing` and `status` need `--seat`.
@@ -225,8 +229,7 @@ Create one text channel named `#chronicle` and give the bot **View Channel** and
 uv tool install --editable '.[postgres,discord,seal]' --force
 revisionist admin new-master-key ~/.config/revisionist/master.key     # mode 0600, never overwritten
 echo "REVISIONIST_MASTER_KEY_FILE=$HOME/.config/revisionist/master.key" >> ~/.config/revisionist/revisionist.env
-set -a; . ~/.config/revisionist/revisionist-admin.env; set +a
-revisionist db migrate                                    # applies 0007_seal_keys
+(set -a; . ~/.config/revisionist/revisionist-admin.env; set +a; revisionist db migrate)   # applies 0007_seal_keys
 ```
 
 From then on every **new** campaign is sealed: its events and snapshots are AES-GCM ciphertext in Postgres and in every dump, under a campaign key, and each player's own words (orders, their agent's questions, their private briefings, their bug notes) under a key of their own. All the data keys are stored wrapped by the master key, which never enters the database. Campaigns created before stay plaintext; sealing is forward only. The variable holds a path, not the key, and the file must be readable by its owner only. The scheduler and the bot read it from `revisionist.env`; add it to `revisionist-admin.env` too, so the restore drill (§7) can verify a sealed dump.
@@ -251,9 +254,11 @@ From then on every **new** campaign is sealed: its events and snapshots are AES-
 No migration: Session Zero, goals and the season end live in the event log. Update the tool (`uv tool install --editable '.[postgres,discord,seal]' --force`) and restart the bot so the new slash commands sync.
 
 ```
-set -a; . ~/.config/revisionist/revisionist.env; set +a
-revisionist establish "Florence, April 1478" --lethality hard   # or /establish in the server
-revisionist discord invite                                     # one per player, you included; no --seat in Session Zero
+(
+  set -a; . ~/.config/revisionist/revisionist.env; set +a
+  revisionist establish "Florence, April 1478" --lethality hard   # or /establish in the server
+  revisionist discord invite                                     # one per player, you included; no --seat in Session Zero
+)
 ```
 
 Each player redeems their code with `/join`, then works through Session Zero privately: `/character roster` (or `search <what you want>`, `claim <name>`, `pick <anyone from the record>`), `/goal history` or `could_have` or `own <words>`, then `/goal confirm <n>`, `/history` for the tick-0 brief, and `/agent` to design their aide. `revisionist goal flags` shows any goal the balance check flagged, by seat and score only; `revisionist goal approve "<seat>"` lets it stand. When everyone is ready, `/begin` (or `revisionist begin`) closes Session Zero and the scheduler starts ticking. Until then it reports `waiting: session zero`.
@@ -292,7 +297,7 @@ The project was called Wyrd Protocol through Layer 9a. Everything it installed c
    ```
    Check by eye that the DSNs now name the `revisionist` database and roles, and that the briefings and backup paths point at `~/.local/share/revisionist`.
 4. Swap the tool: `uv tool uninstall wyrd-protocol`, then from the checkout `uv tool install --editable '.[postgres,discord]'`.
-5. `set -a; . ~/.config/revisionist/revisionist-admin.env; set +a` and `revisionist db migrate`. It applies `0004_rename`, which renames the trigger function `wyrd_append_only` to `revisionist_append_only`.
+5. `(set -a; . ~/.config/revisionist/revisionist-admin.env; set +a; revisionist db migrate)`. It applies `0004_rename`, which renames the trigger function `wyrd_append_only` to `revisionist_append_only`.
 6. Install and enable the new units and scripts as in §5 and §9.3.
 7. Rename the existing dumps so the restore drill finds them: `cd ~/.local/share/revisionist/backups && for f in wyrd-*.dump; do mv "$f" "revisionist-${f#wyrd-}"; done`. Rename the off-box copies the same way, or leave them and remember the old prefix.
 8. Run the restore drill (§7) and `revisionist scheduler status`.

@@ -48,7 +48,7 @@ from revisionist.core.world_compile import WorldError, check_history, compile_wo
 from revisionist.engine import campaign as cmp
 from revisionist.engine.agent import AGENT_MODEL
 from revisionist.engine.ids import new_id
-from revisionist.engine.llm import RESOLVER_MODEL, Request, Transport, prompt_text
+from revisionist.engine.llm import RESOLVER_MODEL, Request, Transport, TransportError, prompt_text
 from revisionist.engine.store import EventStore, Sealer, StoreError, load_state
 
 log = logging.getLogger(__name__)
@@ -303,7 +303,76 @@ def search(
         log.info(
             "character search: model found none of %d free, words found %d", len(free), len(hits)
         )
-    return [_line(state, free[h]) for h in dict.fromkeys(hits)][:5]
+    lines = [_line(state, free[h]) for h in dict.fromkeys(hits)][:5]
+    people = _record_people(store, campaign_id, seat, state, wanted, transport)
+    if people:
+        lines += [RECORD_HEADER, *(f"{name}: {note}" for name, note in people)]
+    return lines
+
+
+RECORD_HEADER = "From the record, not on the roster (play one with /character pick <name>):"
+RECORD_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "people": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "maxLength": 60},
+                    "note": {"type": "string", "maxLength": 160},
+                },
+                "required": ["name", "note"],
+                "additionalProperties": False,
+            },
+        }
+    },
+    "required": ["people"],
+    "additionalProperties": False,
+}
+
+
+def _record_people(
+    store: EventStore,
+    campaign_id: CampaignId,
+    seat: SeatId | None,
+    state: State,
+    wanted: str,
+    transport: Transport,
+) -> list[tuple[str, str]]:
+    """Real people the record places at the start who fit ``wanted``, none already in the world."""
+    request = Request(
+        call_class="character_record",
+        model=SESSION_ZERO_MODEL,
+        system=prompt_text("character_record"),
+        prompt=f"## Start\n{_start(store, campaign_id)}\n\n## Already in the world\n"
+        + json.dumps(sorted(e.name for e in state.entities.values()))
+        + "\n\n## What the player wants to play\n"
+        + wanted,
+        schema=RECORD_SCHEMA,
+        max_usd=0.3,
+    )
+    try:
+        reply = transport.call(request)
+    except TransportError as exc:
+        log.warning("character record search failed; roster only: %s", exc)
+        return []
+    cmp.log_cost(store, campaign_id, "character_record", [reply.cost("character_record")], seat)
+    raw = reply.output.get("people") if isinstance(reply.output, dict) else None
+    if not isinstance(raw, list):
+        return []
+    seen = {e.name.casefold() for e in state.entities.values()}
+    people: list[tuple[str, str]] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name", "")).strip()[:60]
+        if not name or name.casefold() in seen:
+            continue
+        seen.add(name.casefold())
+        people.append((name, str(item.get("note", "")).strip()[:160]))
+    return people[:5]
 
 
 _SKIP = frozenset(
@@ -729,6 +798,8 @@ def begin(store: EventStore, campaign_id: CampaignId) -> str:
 
 __all__ = [
     "DRAFT_SCHEMA",
+    "RECORD_HEADER",
+    "RECORD_SCHEMA",
     "ROUTES",
     "SESSION_ZERO_MODEL",
     "SUGGESTED",

@@ -63,6 +63,8 @@ class Table:
                 roster = _section(request.prompt, "Roster")
                 banks = [c["id"] for c in roster if "bank" in c["pitch"].lower()]
                 out = {"matches": [*banks, "NOT-A-ROSTER-ID"]}
+            case "character_record":
+                out = {"people": []}
             case "character_pick":
                 if "Luca Pitti" in request.prompt:
                     out = {
@@ -453,7 +455,7 @@ def test_a_search_the_model_finds_nothing_for_retries_then_falls_back_to_words()
     c = _florence(store, table)
     before = len(table.calls)
     found = sz.search(store, c, None, "a banker", table)
-    assert table.calls[before:] == ["character_search", "character_search"]
+    assert table.calls[before:] == ["character_search", "character_search", "character_record"]
     names = {x.split(":")[0] for x in found}
     assert "Lorenzo de' Medici" in names and len(found) <= 5
     assert sz.search(store, c, None, "zzzz qqqq", table) == []
