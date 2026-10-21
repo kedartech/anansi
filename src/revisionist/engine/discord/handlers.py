@@ -27,7 +27,13 @@ from revisionist.core.visibility import Visibility
 from revisionist.engine import campaign as cmp
 from revisionist.engine import host_ops, play, season, session_zero
 from revisionist.engine import scheduler as sch
-from revisionist.engine.discord.rest import CANNOT_DM, DiscordError, DiscordRest, nonce_for
+from revisionist.engine.discord.rest import (
+    CANNOT_DM,
+    DiscordError,
+    DiscordRest,
+    nonce_for,
+    split_message,
+)
 from revisionist.engine.discord.tables import (
     INVITE_HOURS,
     Channels,
@@ -118,6 +124,16 @@ class BotConfig:
     host_id: str | None = None
 
 
+@dataclass(frozen=True)
+class EstablishOutcome:
+    """The last ``/establish`` the host ran, kept so ``/status`` can say how it ended."""
+
+    place: str
+    opened: bool
+    text: str
+    at: datetime
+
+
 class Handlers:
     """Constructed once per bot; connects to the database only inside each call."""
 
@@ -138,6 +154,7 @@ class Handlers:
         self.deliverer_factory = deliverer_factory
         self.rest = rest
         """Sends the welcome DM after ``/join``; without it the join just links."""
+        self.last_establish: EstablishOutcome | None = None
 
     # --- seat commands ------------------------------------------------------
 
@@ -173,7 +190,7 @@ class Handlers:
         return self._as_seat(user_id, "briefing", work)
 
     def status(self, user_id: str) -> str:
-        return self._as_seat(
+        reply = self._as_seat(
             user_id,
             "status",
             lambda store, link: "\n".join(
@@ -184,6 +201,11 @@ class Handlers:
                 )
             ),
         )
+        if reply == NOT_LINKED and user_id == self.config.host_id and self.last_establish:
+            o = self.last_establish
+            how = "opened" if o.opened else "refused"
+            return f"Last /establish: {o.place}, {how} at {o.at:%H:%M} UTC.\n{o.text}"
+        return reply
 
     def bug(self, user_id: str, notes: str) -> str:
         def work(store: PostgresEventStore, link: Link) -> str:
@@ -255,6 +277,22 @@ class Handlers:
         finally:
             store.close()
 
+    def notify(self, user_id: str, text: str, key: str) -> bool:
+        """DM a durable copy of a reply. False when it could not be sent."""
+        if self.rest is None:
+            return False
+        try:
+            channel = self.rest.open_dm(user_id)
+            for i, part in enumerate(split_message(text)):
+                self.rest.send(channel, part, nonce_for(key, i))
+        except DiscordError as exc:
+            if exc.code == CANNOT_DM:
+                log.info("notify: DMs to user %s are closed", user_id)
+            else:
+                log.warning("notify: DM failed: %s", exc)
+            return False
+        return True
+
     def _welcome(self, user_id: str, campaign_id: CampaignId, seat_name: str) -> str:
         if self.rest is None:
             return "Use /dispatch after each tick to read your briefing."
@@ -302,13 +340,21 @@ class Handlers:
                 campaign_id = session_zero.establish(
                     store, place, Settings(), self.transport_factory()
                 )
-            except session_zero.SessionZeroError:
-                log.warning("/establish: the draft for %r did not compile", place)
+            except session_zero.SessionZeroError as exc:
+                log.warning(
+                    "/establish: the draft for %r did not compile: %s",
+                    place,
+                    "; ".join(exc.problems[:3]),
+                )
+                self.last_establish = EstablishOutcome(
+                    place.strip(), False, DRAFT_REFUSED, self.clock()
+                )
                 return DRAFT_REFUSED
             sch.register(store, self.clock())
             state = load_state(store, campaign_id)
             names = sorted(state.entities[c].name for c in state.roster)
             text = ESTABLISHED.format(place=place.strip(), n=len(names), names=", ".join(names))
+            self.last_establish = EstablishOutcome(place.strip(), True, text, self.clock())
             return _said(state, text, text)
 
         return self._host_store(user_id, "establish", work)
@@ -792,6 +838,7 @@ __all__ = [
     "WELCOME",
     "WITHHELD",
     "BotConfig",
+    "EstablishOutcome",
     "Handlers",
     "Said",
     "public_safe",
