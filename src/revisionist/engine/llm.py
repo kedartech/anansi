@@ -409,7 +409,7 @@ def _resolver_prompt(
 ) -> str:
     orders = [
         {
-            "intent": i.model_dump(mode="json"),
+            "intent": i.model_dump(mode="json", exclude_none=True),
             "outcome": rolls[i.intent_id].outcome.value,
             "band": rate(state, i).value,
             "exposed": rolls[i.intent_id].exposed,
@@ -421,7 +421,9 @@ def _resolver_prompt(
         + str(state.tick)
         + ")\n"
         # Goals stay out: no model weighs whether, or how, a goal is met (spec §15).
-        + state.model_dump_json(exclude={"pending", "frozen", "last_seq", "goals"})
+        + state.model_dump_json(
+            exclude={"pending", "frozen", "last_seq", "goals", "roster"}, exclude_none=True
+        )
         + "\n\n## Orders resolved this tick, with their rolled outcomes\n"
         + json.dumps(orders)
         + "\n\nReturn one proposal per order, in the same order."
@@ -466,9 +468,11 @@ def _narrator_prompt(view: View, deltas: Sequence[d.Delta]) -> str:
     return (
         f"## Reader: {seat.name} (seat {view.viewer}), tick {view.tick}\n\n"
         "## What this seat knows\n"
-        + view.model_dump_json(exclude={"own_pending"})
+        + view.model_dump_json(exclude={"own_pending", "roster"}, exclude_none=True)
         + "\n\n## What changed this tick, as this seat can see it\n"
-        + json.dumps([x.model_dump(mode="json", exclude={"delta_id"}) for x in deltas])
+        + json.dumps(
+            [x.model_dump(mode="json", exclude={"delta_id"}, exclude_none=True) for x in deltas]
+        )
         + "\n\nWrite the briefing."
     )
 

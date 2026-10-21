@@ -21,7 +21,16 @@ entities:
   - {key: lemay, kind: person, name: Curtis LeMay, parent: joint_chiefs}
   - {key: stevenson, kind: person, name: Adlai Stevenson, parent: un}
   - {key: dobrynin, kind: person, name: Anatoly Dobrynin, parent: ussr}
-  - {key: scali, kind: person, name: John Scali}
+  - {key: scali, kind: person, name: John Scali, parent: abc}
+  - {key: abc, kind: org, name: ABC News}
+  - {key: white_house, kind: location, name: The White House, parent: usa}
+  - {key: florida, kind: location, name: Florida, parent: usa}
+  - {key: omaha, kind: location, name: Omaha, parent: usa}
+  - {key: guantanamo, kind: location, name: Guantanamo Bay, parent: usa}
+  - {key: caribbean, kind: location, name: The Caribbean}
+  - {key: havana, kind: location, name: Havana, parent: cuba}
+  - {key: moscow, kind: location, name: Moscow, parent: ussr}
+  - {key: turkey, kind: location, name: Turkey}
   - {key: interpreter, kind: person, name: Ruth Calder, parent: usa, tags: [composite]}
   - {key: wire, kind: org, name: The Capitol Wire}
 
@@ -31,12 +40,13 @@ assets:
   - {key: pentagon, kind: office, name: Secretary of Defense, tier: 4, controller: mcnamara}
   - {key: state_dept, kind: office, name: Secretary of State, tier: 4, controller: rusk}
   - {key: nsc_staff, kind: network, name: The NSC staff, tier: 2, controller: bundy}
-  - {key: sac, kind: force, name: Strategic Air Command, tier: 5, controller: lemay}
+  - {key: sac, kind: force, name: Strategic Air Command, tier: 5, controller: lemay, location: omaha}
   - {key: un_seat, kind: office, name: Ambassador to the UN, tier: 2, controller: stevenson}
   - {key: embassy, kind: network, name: The Soviet embassy, tier: 2, controller: dobrynin}
   - {key: abc_desk, kind: info, name: The ABC State Department desk, tier: 1, controller: scali}
   - {key: photographs, kind: info, name: The U-2 photographs, tier: 2, controller: interpreter}
   - {key: wire_desk, kind: info, name: Wire desk, tier: 1, controller: wire}
+  - {key: cuban_forces, kind: force, name: Cuban armed forces, tier: 3, controller: cuba, location: havana}
   - {key: soviet_missiles, kind: force, name: Missiles in Cuba, tier: 4, controller: ussr, location: cuba, scope: {visibility: covert, known_by: [kremlin_seat]}}
 
 relationships:

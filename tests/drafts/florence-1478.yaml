@@ -17,6 +17,11 @@ entities:
   - {key: signoria, kind: org, name: The Signoria, parent: florence}
   - {key: duomo, kind: location, name: Santa Maria del Fiore, parent: florence}
   - {key: palazzo, kind: location, name: Palazzo della Signoria, parent: florence}
+  - {key: pisa, kind: location, name: Pisa, parent: florence}
+  - {key: mugello, kind: location, name: The Mugello, parent: florence}
+  - {key: rome, kind: location, name: Rome, parent: papacy}
+  - {key: imola_town, kind: location, name: Imola, parent: papacy}
+  - {key: urbino_town, kind: location, name: Urbino, parent: urbino}
   - {key: lorenzo, kind: person, name: "Lorenzo de' Medici", parent: medici}
   - {key: giuliano, kind: person, name: "Giuliano de' Medici", parent: medici}
   - {key: lucrezia, kind: person, name: Lucrezia Tornabuoni, parent: medici}
@@ -34,18 +39,18 @@ entities:
 assets:
   - {key: medici_bank, kind: wealth, name: The Medici Bank, tier: 4, controller: lorenzo}
   - {key: medici_friends, kind: network, name: Friends of the Palace, tier: 3, controller: lorenzo}
-  - {key: giuliano_household, kind: force, name: "Giuliano's household", tier: 1, controller: giuliano}
+  - {key: giuliano_household, kind: force, name: "Giuliano's household", tier: 1, controller: giuliano, location: duomo}
   - {key: tornabuoni_ties, kind: network, name: Tornabuoni connections, tier: 2, controller: lucrezia}
   - {key: pazzi_bank, kind: wealth, name: The Pazzi Bank, tier: 3, controller: francesco_pazzi}
-  - {key: pazzi_retainers, kind: force, name: Pazzi retainers, tier: 1, controller: jacopo_pazzi}
+  - {key: pazzi_retainers, kind: force, name: Pazzi retainers, tier: 1, controller: jacopo_pazzi, location: duomo}
   - {key: pisa_see, kind: office, name: Archbishopric of Pisa, tier: 2, controller: salviati}
   - {key: imola, kind: office, name: Lordship of Imola, tier: 2, controller: riario}
-  - {key: papal_soldiers, kind: force, name: Papal soldiers at the gates, tier: 2, controller: montesecco}
-  - {key: bandini_blade, kind: force, name: "Bandini's men", tier: 1, controller: bandini}
+  - {key: papal_soldiers, kind: force, name: Papal soldiers at the gates, tier: 2, controller: montesecco, location: rome}
+  - {key: bandini_blade, kind: force, name: "Bandini's men", tier: 1, controller: bandini, location: duomo}
   - {key: gonfalonier, kind: office, name: Gonfalonier of Justice, tier: 3, controller: petrucci}
   - {key: palace_guard, kind: force, name: Palace guard, tier: 2, controller: petrucci, location: palazzo}
   - {key: ledgers, kind: info, name: The branch ledgers, tier: 1, controller: clerk}
-  - {key: urbino_lances, kind: force, name: Urbino lances, tier: 4, controller: federico}
+  - {key: urbino_lances, kind: force, name: Urbino lances, tier: 4, controller: federico, location: urbino_town}
   - {key: criers, kind: info, name: Criers of the Mercato, tier: 1, controller: gazette}
 
 relationships:

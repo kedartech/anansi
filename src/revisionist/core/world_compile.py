@@ -207,13 +207,15 @@ def _check(world: WorldFile, sections: Mapping[str, str], problems: list[str]) -
 
 
 ROSTER_MIN, ROSTER_MAX = 8, 12
+PLACES_MIN = 6
 
 
 def check_history(world: WorldFile) -> list[str]:
     """What a drafted historical world must also be (spec §5), beyond compiling.
 
     Humans arrive at the character step and goals at the goal step, so a draft
-    has neither; the roster offers 8-12 people to choose from.
+    has neither; the roster offers 8-12 people to choose from. Factions need
+    holdings they can act with, so their people must be linked to them.
     """
     problems: list[str] = []
     if not world.start.strip():
@@ -225,6 +227,27 @@ def check_history(world: WorldFile) -> list[str]:
             problems.append(f"seat {s.key}: a draft has no human seats")
     if world.goals:
         problems.append("goals: a draft has none; players choose them")
+    places = [d for d in world.entities if d.kind is EntityKind.LOCATION]
+    if len(places) < PLACES_MIN:
+        problems.append(f"places: {len(places)} locations, at least {PLACES_MIN}")
+    for a in world.assets:
+        if a.kind is AssetKind.FORCE and a.location is None:
+            problems.append(f"asset {a.key}: a force needs a location")
+    parent = {d.key: d.parent for d in world.entities}
+    controllers = {a.controller for a in world.assets}
+    for d in world.entities:
+        if d.kind is EntityKind.PERSON and d.parent is None and d.key in controllers:
+            problems.append(f"entity {d.key}: holds assets but has no parent faction")
+    for s in world.seats:
+        if s.kind is SeatKind.FACTION and s.controller is Controller.AI:
+            held = s.embodies in controllers or any(
+                parent.get(c) == s.embodies for c in controllers
+            )
+            if not held:
+                problems.append(
+                    f"seat {s.key}: {s.embodies} holds no assets; "
+                    f"set its people's parent to {s.embodies}"
+                )
     return problems
 
 

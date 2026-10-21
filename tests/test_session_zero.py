@@ -110,6 +110,12 @@ def test_two_bad_drafts_write_nothing() -> None:
     assert store.campaign_ids() == []
 
 
+def _without_places(w: dict[str, Any]) -> None:
+    w["entities"] = [e for e in w["entities"] if e["kind"] != "location"]
+    for a in w["assets"]:
+        a.pop("location", None)
+
+
 @pytest.mark.parametrize(
     ("edit", "problem"),
     [
@@ -119,6 +125,21 @@ def test_two_bad_drafts_write_nothing() -> None:
         (lambda w: w["roster"][0].update(means=["pazzi_bank"]), "does not control pazzi_bank"),
         (lambda w: w["roster"][0].pop("composite"), "composite: Field required"),
         (lambda w: w.update(entities="nonsense"), "entities: Input should be a valid"),
+        (lambda w: _without_places(w), "places: 0 locations, at least 6"),
+        (
+            lambda w: next(a for a in w["assets"] if a["key"] == "giuliano_household").pop(
+                "location"
+            ),
+            "asset giuliano_household: a force needs a location",
+        ),
+        (
+            lambda w: next(e for e in w["entities"] if e["key"] == "giuliano").pop("parent"),
+            "entity giuliano: holds assets but has no parent faction",
+        ),
+        (
+            lambda w: w.update(assets=[a for a in w["assets"] if a["controller"] != "federico"]),
+            "seat urbino_seat: urbino holds no assets; set its people's parent to urbino",
+        ),
     ],
 )
 def test_the_history_checks(edit: Any, problem: str) -> None:
@@ -126,6 +147,12 @@ def test_the_history_checks(edit: Any, problem: str) -> None:
     edit(bad)
     world, problems = sz._check(bad, FLORENCE, Settings())
     assert world is None and any(problem in p for p in problems), problems
+
+
+def test_the_drafts_pass_the_history_checks() -> None:
+    for name, place in (("florence-1478.yaml", FLORENCE), ("washington-1962.yaml", WASHINGTON)):
+        _, problems = sz._check(draft(name), place, Settings())
+        assert problems == [], (name, problems)
 
 
 def test_a_place_must_be_named() -> None:

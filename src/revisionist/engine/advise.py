@@ -22,6 +22,8 @@ def advise(
     store: EventStore, campaign_id: CampaignId, seat: SeatId, question: str, transport: Transport
 ) -> str:
     """The agent's answer to ``question``, from what ``seat`` knows. Never files an intent."""
+    if not question.strip():
+        return "Ask your agent a question."
     view = project(load_state(store, campaign_id), seat)
     reply = transport.call(
         Request(
@@ -38,4 +40,5 @@ def advise(
     )
     log_cost(store, campaign_id, "advise", [reply.cost("advise")], seat)
     output = reply.output if isinstance(reply.output, dict) else {}
-    return str(output.get("answer", ""))[:800]
+    text = str(output.get("answer") or output.get("text") or "").strip()
+    return text[:800] or "Your agent has nothing to add."
