@@ -362,7 +362,7 @@ class Handlers:
                 return _said(state, text + hint, text)
             Channels(store.conn).set_public(campaign_id, carried, self.config.guild_id)
             news = f"\nNews will post in <#{carried}>."
-            if self.rest is None:
+            if self.rest is None or not public_safe(state, text):
                 return _said(state, text + news, text)
             # A follow-up's token may have expired by now; a REST post does not depend on it.
             try:
