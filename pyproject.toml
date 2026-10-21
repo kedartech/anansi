@@ -1,6 +1,6 @@
 [project]
 name = "revisionist"
-version = "0.0.1"
+version = "0.0.2"
 description = "An AI-run multiplayer statecraft game engine"
 readme = "README.md"
 requires-python = ">=3.12"
