@@ -12,3 +12,5 @@ A goal must compile to a condition the engine checks in code. Use only these che
 Each option has `text`, the goal in one sentence the player will recognise, and its `condition`. A goal must not already be true and must not be impossible from the start. Prefer goals grounded in what the record shows this character wanted or could have tried. Vague aims such as "be remembered as great" cannot be checked: reword them into something that can, for example "hold the Signoria and outlive the Pazzi".
 
 If the player's own goal cannot be written as a condition, return no options and a `rewording` that could be.
+
+A goal is something the character must make happen: take, win, remove, turn, pass or force. Never offer a goal that is only keeping what they already hold. Offer a spread from a near goal to a long shot, and for a commander prefer goals that use their command.

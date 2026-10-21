@@ -545,7 +545,7 @@ GOAL_SCHEMA: dict[str, Any] = {
     "properties": {
         "options": {
             "type": "array",
-            "maxItems": 3,
+            "maxItems": 5,
             "items": {
                 "type": "object",
                 "properties": {
@@ -561,9 +561,14 @@ GOAL_SCHEMA: dict[str, Any] = {
 }
 
 _ROUTE_ASK = {
-    "history": "Offer up to three goals: what this character really tried for at this date.",
-    "could_have": "Offer up to three goals this character was placed to try that history "
-    "did not see.",
+    "history": (
+        "Offer up to five goals, from easy to hard, at least one hard: what this "
+        "character really tried for at this date."
+    ),
+    "could_have": (
+        "Offer up to five goals, from easy to hard, at least one hard: aims this "
+        "character was placed to try that history did not see."
+    ),
     "own": "The player wrote their own goal, below. Turn it into one option if it can be "
     "checked; if it cannot, return no options and a rewording that could be.",
 }
@@ -614,7 +619,7 @@ def propose_goals(
     out = reply.output if isinstance(reply.output, dict) else {}
     options: list[ev.GoalOption] = []
     problems: list[str] = []
-    for raw in out.get("options", [])[:3]:
+    for raw in out.get("options", [])[:5]:
         try:
             condition = _CONDITION.validate_python(raw.get("condition"))
             why = goals.vet(view, state, condition)
@@ -622,6 +627,9 @@ def propose_goals(
             why = [f"not a condition the engine can check ({type(exc).__name__})"]
         if why:
             problems += why
+            continue
+        if any(goals.goal_met(state, leaf) for leaf in goals.leaves(condition)):
+            problems.append("keeps what you already hold; aim for something you must win")
             continue
         options.append(
             ev.GoalOption(
@@ -641,7 +649,9 @@ def propose_goals(
     for n, o in enumerate(options, 1):
         b = goals.balance(state, seat, o.condition)
         note = f" Balance: {b.suggestion}" if b.flag else ""
-        lines.append(f"{_ROUTE_LETTER[route]}{n}. {o.text} [{o.kind.value}]{note}")
+        d = goals.difficulty(state, seat, o.condition)
+        rank = "Easy" if d <= 4 else "Hard" if d <= 8 else "Long shot"
+        lines.append(f"{_ROUTE_LETTER[route]}{n}. {o.text} [{rank}, {o.kind.value}]{note}")
     return lines
 
 

@@ -110,8 +110,8 @@ class Table:
         if "be remembered" in prompt:
             return {"options": [], "rewording": "Hold the Gonfalonier of Justice at season end."}
         if "did not see" in prompt:  # the could_have route
-            bank = {"check": "controls_asset", "holder": me, "asset": by_name["The Medici Bank"]}
-            both = {"check": "all_of", "conditions": [office, bank]}
+            guard = {"check": "controls_asset", "holder": me, "asset": by_name["Palace guard"]}
+            both = {"check": "all_of", "conditions": [office, guard]}
             return {"options": [{"text": f"Take the bank and the bell. {mark}", "condition": both}]}
         return {
             "options": [
@@ -156,10 +156,10 @@ def test_two_players_go_from_establish_to_play() -> None:
     assert any("[taken]" in line for line in sz.roster_lines(state))
 
     lines = sz.propose_goals(store, c, A, "history", table)
-    assert [x.split(" [")[1] for x in lines] == [
+    assert [x.split(", ")[1] for x in lines] == [
         "undoable]",
         "lasting]",
-    ]  # "already done" is dropped
+    ]  # "already done" is dropped; each line reads "[rank, kind]"
     with pytest.raises(sz.StepRefusedError, match="Choose one"):
         sz.confirm_goal(store, c, A, 7)
     assert "(undoable). It must still hold at season end." in sz.confirm_goal(store, c, A, 1)
