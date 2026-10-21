@@ -643,6 +643,8 @@ def propose_goals(
         hint = f" Try: {rewording}" if rewording else ""
         detail = f" ({problems[0]})" if problems else ""
         raise StepRefusedError(f"That cannot be written as a goal the engine checks{detail}.{hint}")
+    # Easy to hard (D4). Sorted before logging, so label N is stored option N.
+    options.sort(key=lambda o: goals.difficulty(state, seat, o.condition))
     proposed = ev.GoalProposed(seat_id=seat, route=route, options=tuple(options))
     _log(store, campaign_id, [(proposed, private_to(seat), seat)])
     lines = []
@@ -650,10 +652,15 @@ def propose_goals(
         b = goals.balance(state, seat, o.condition)
         note = f" Balance: {b.suggestion}" if b.flag else ""
         d = goals.difficulty(state, seat, o.condition)
-        rank = "Easy" if d <= 4 else "Hard" if d <= 8 else "Long shot"
+        rank = "Easy" if d <= EASY_MAX else "Hard" if d <= HARD_MAX else "Long shot"
         lines.append(f"{_ROUTE_LETTER[route]}{n}. {o.text} [{rank}, {o.kind.value}]{note}")
     return lines
 
+
+EASY_MAX = 4
+"""``goals.difficulty`` at or below this reads Easy: one modest asset or office to take."""
+HARD_MAX = 8
+"""At or below this reads Hard; above it, Long shot (several, or a rival's best)."""
 
 _ROUTE_LETTER: dict[Route, str] = {"history": "H", "could_have": "C", "own": "O"}
 _LETTER_ROUTE: dict[str, Route] = {v: k for k, v in _ROUTE_LETTER.items()}

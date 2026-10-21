@@ -156,13 +156,13 @@ def test_two_players_go_from_establish_to_play() -> None:
     assert any("[taken]" in line for line in sz.roster_lines(state))
 
     lines = sz.propose_goals(store, c, A, "history", table)
-    assert [x.split(", ")[1] for x in lines] == [
-        "undoable]",
-        "lasting]",
-    ]  # "already done" is dropped; each line reads "[rank, kind]"
+    assert [x.split(" [")[1] for x in lines] == [
+        "Easy, lasting]",
+        "Hard, undoable]",
+    ]  # "already done" is dropped; sorted easy to hard; each line reads "[rank, kind]"
     with pytest.raises(sz.StepRefusedError, match="Choose one"):
         sz.confirm_goal(store, c, A, 7)
-    assert "(undoable). It must still hold at season end." in sz.confirm_goal(store, c, A, 1)
+    assert "(undoable). It must still hold at season end." in sz.confirm_goal(store, c, A, 2)
     with pytest.raises(sz.StepRefusedError, match="fixed for the season"):
         sz.propose_goals(store, c, A, "history", table)
 
@@ -380,8 +380,8 @@ def test_the_cli_runs_session_zero_to_the_first_tick(
     assert ok("character", "claim", "Lorenzo de' Medici").strip() == "you play Lorenzo de' Medici"
     again = runner.invoke(cli.app, ["character", "claim", "Giuliano de' Medici"])
     assert again.exit_code == cli.EXIT_REFUSED and "pass --new" in again.output
-    assert "H1. Hold the Gonfalonier" in ok("goal", "suggest", "history")
-    assert "Your goal is fixed" in ok("goal", "confirm", "1")
+    assert "H2. Hold the Gonfalonier" in ok("goal", "suggest", "history")
+    assert "Your goal is fixed" in ok("goal", "confirm", "2")
     assert sz.SUGGESTED in ok("history")
     ok("agent", "--name", "Ser Agnolo", "--role", "chancellor")
     assert "no goals wait" in ok("goal", "flags")
@@ -420,8 +420,8 @@ def test_discord_session_zero_for_two(
     game.command("character", FRIEND, action="claim", text="Giuliano de' Medici")
     for user in (HOST, FRIEND):
         offered = game.command("goal", user, action="history")
-        assert offered.startswith("- **H1** Hold the Gonfalonier")
-        assert "Your goal is fixed" in game.command("goal", user, action="confirm", text="1")
+        assert "- **H2** Hold the Gonfalonier" in offered
+        assert "Your goal is fixed" in game.command("goal", user, action="confirm", text="2")
         assert sz.SUGGESTED in game.command("history", user)
         # Game.command's own first parameter is called name, so the agent step goes
         # straight to its handler; the bot registers it like every other command.

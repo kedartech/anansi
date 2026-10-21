@@ -54,15 +54,17 @@ def test_bare_number_is_refused_when_two_lists_are_open() -> None:
 
 def test_bare_number_works_with_one_list() -> None:
     store, table, c = _seated()
-    sz.propose_goals(store, c, A, "history", table)
-    assert "Hold the Gonfalonier of Justice" in sz.confirm_goal(store, c, A, "1")
+    first = sz.propose_goals(store, c, A, "history", table)[0]
+    text = first.split(". ", 1)[1].split(" [")[0]  # "H1. <text> [rank, kind]"
+    assert text.split(".")[0] in sz.confirm_goal(store, c, A, "1")
     assert len(_goal_sets(store, c)) == 1
 
 
 def test_bare_int_works_with_one_list() -> None:
     store, table, c = _seated()
-    sz.propose_goals(store, c, B, "history", table)
-    assert "Hold the Gonfalonier of Justice" in sz.confirm_goal(store, c, B, 1)
+    first = sz.propose_goals(store, c, B, "history", table)[0]
+    text = first.split(". ", 1)[1].split(" [")[0]  # "H1. <text> [rank, kind]"
+    assert text.split(".")[0] in sz.confirm_goal(store, c, B, 1)
     assert len(_goal_sets(store, c)) == 1
 
 
