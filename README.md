@@ -2,9 +2,15 @@
 
 [![ci](https://github.com/kedartech/revisionist/actions/workflows/ci.yml/badge.svg)](https://github.com/kedartech/revisionist/actions/workflows/ci.yml)
 
-An AI-run multiplayer statecraft game. Players pick a moment in history, take on a real person from it, and pursue a secret goal. An AI game master builds the world from the record and runs everything nobody is playing.
+## TL;DR
 
-Think of a gamified Model UN run like a D&D campaign. You give orders to your own agent in plain language. A deterministic referee decides what succeeds. A model narrates the result. The event log is the one record nobody can rewrite. Everything else is open to revision: who did what, what it meant, and what the history books will say.
+- **What:** an AI-run multiplayer statecraft game. Players pick a moment in history, take on a real person from it, and pursue a secret goal. An AI game master builds the world from the record and runs everything nobody is playing.
+- **How it plays:** you give orders to your own agent in plain language. A deterministic referee decides what succeeds. A model narrates the result.
+- **Status:** pre-release. The engine, Postgres/scheduler and Discord play are built. The first live two-human Discord run has not happened, and there is no public release.
+- **Try it in five minutes:** `uv sync --frozen`, then `uv run revisionist new salt-strait` and `uv run revisionist tick --offline`. No Discord, Postgres or model calls needed. See [Quickstart](#quickstart).
+- **Read more:** the rules and decisions are in [`docs/game-spec.md`](docs/game-spec.md).
+
+Think of a gamified Model UN run like a D&D campaign. The event log is the one record nobody can rewrite. Everything else is open to revision: who did what, what it meant, and what the history books will say.
 
 > **Status:** pre-release. The engine, the Postgres/scheduler layer and Discord play are built and tested. The first live two-human run on Discord has not happened yet, and there is no public release.
 
