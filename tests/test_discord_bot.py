@@ -308,8 +308,11 @@ def test_the_bot_ignores_bots_and_guild_messages(game: Game) -> None:
 # --- the commands ---------------------------------------------------------------
 
 
-def test_a_dm_is_an_order(game: Game) -> None:
-    [reply] = game.dm(PLAYER, ORDER)
+def test_a_dm_is_a_question_and_order_prefix_files(game: Game) -> None:
+    [advice] = game.dm(PLAYER, ORDER)
+    assert advice == "Hold the strait and wait."
+    assert "pending" not in game.command("status")  # a question files nothing
+    [reply] = game.dm(PLAYER, "order: " + ORDER)
     assert reply.startswith("filed ") and "declare" in reply
     assert "pending" in game.command("status")
 

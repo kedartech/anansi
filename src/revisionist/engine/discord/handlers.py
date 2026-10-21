@@ -18,12 +18,15 @@ from pathlib import Path
 
 from revisionist.core import events as ev
 from revisionist.core.canary import canaries_hidden_from_human, scan_text
+from revisionist.core.dossier import dossier
 from revisionist.core.fold import state_hash
 from revisionist.core.ids import CampaignId, SeatId
 from revisionist.core.ontology import Controller, Persona, Phase
+from revisionist.core.project import project
 from revisionist.core.settings import Settings
 from revisionist.core.state import State
 from revisionist.core.visibility import Visibility
+from revisionist.engine import advise as advise_mod
 from revisionist.engine import campaign as cmp
 from revisionist.engine import host_ops, play, season, session_zero
 from revisionist.engine import scheduler as sch
@@ -112,6 +115,11 @@ ONE_GAME = (
     "End it with /season-end, or set it aside with /retire {campaign}."
 )
 WELCOME = "This is your dispatch for {seat}. Your briefings arrive here after each tick."
+ORDER_PREFIX = "order:"
+NOT_AN_ORDER = (
+    "That reads as a question, so I asked your agent. To give an order, "
+    "start the message with order:"
+)
 
 
 ZERO_COMMANDS = frozenset({"character", "goal", "history", "agent"})
@@ -158,6 +166,26 @@ class Handlers:
         self.last_establish: EstablishOutcome | None = None
 
     # --- seat commands ------------------------------------------------------
+
+    def advise(self, user_id: str, question: str) -> str:
+        """A question for the player's own agent. Reads the seat's view only; files nothing."""
+        return self._as_seat(
+            user_id,
+            "advise",
+            lambda store, link: advise_mod.advise(
+                store, link.campaign_id, link.seat_id, question, self.transport_factory()
+            ),
+        )
+
+    def dossier(self, user_id: str) -> str:
+        """The seat's opening dossier, built from its view so it names nothing hidden."""
+        return self._as_seat(
+            user_id,
+            "dossier",
+            lambda store, link: "\n".join(
+                dossier(project(load_state(store, link.campaign_id), link.seat_id))
+            ),
+        )
 
     def order(
         self, user_id: str, text: str, visibility: str = "private", spin: str | None = None
@@ -567,9 +595,24 @@ class Handlers:
                 text = session_zero.begin(store, campaign_id)
             except session_zero.StepRefusedError as exc:
                 return str(exc)
-            return _said(load_state(store, campaign_id), text, text)
+            state = load_state(store, campaign_id)
+            return _said(state, text, text)
 
         return self._as_host(user_id, "begin", work)
+
+    def opening_dossiers(self, user_id: str) -> str:
+        """One dossier per seated player, as ``user_id`` then the lines, blocks split by ``---``."""
+        blocks: list[str] = []
+
+        def work(store: PostgresEventStore, campaign_id: CampaignId) -> str:
+            state = load_state(store, campaign_id)
+            for seat_id, user in SeatLinks(store.conn).users(campaign_id).items():
+                if seat_id in state.seats:
+                    blocks.append(user + "\n" + "\n".join(dossier(project(state, seat_id))))
+            return ""
+
+        self._as_host(user_id, "begin", work)
+        return "\n---\n".join(blocks)
 
     def advance(self, user_id: str) -> str:
         def work(store: PostgresEventStore, campaign_id: CampaignId) -> str:

@@ -49,6 +49,8 @@ class FakeClaude:
                 out = {"intents": [{"verb": "negotiate"}]}
             case "resolver":
                 out = {"proposals": []}
+            case "advise":
+                out = {"answer": "Hold the strait and wait."}
             case _:
                 out = {"text": self.narration}
         return Reply(out, request.model, 100, 20, 0, 0.001)

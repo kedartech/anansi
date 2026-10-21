@@ -28,6 +28,7 @@ LONG_REPLY_S = 60.0
 
 COMMANDS = (
     "order",
+    "dossier",
     "briefing",
     "dispatch",
     "status",
@@ -252,6 +253,17 @@ def register(
     async def begin(interaction: discord.Interaction) -> None:
         user = str(interaction.user.id)
         await answer(interaction, lambda: h.begin(user), notify=dm(user))
+        packed = await _run(lambda: h.opening_dossiers(user))
+        if packed and packed != BROKEN:
+            for block in packed.split("\n---\n"):
+                player, _, text = block.partition("\n")
+                for part in split_message(text):
+                    await asyncio.to_thread(dm(player), part)
+
+    @tree.command(name="dossier", description="What your seat holds, knows and faces", guild=guild)
+    async def dossier(interaction: discord.Interaction) -> None:
+        user = str(interaction.user.id)
+        await answer(interaction, lambda: h.dossier(user), notify=dm(user))
 
     @tree.command(name="dashboard", description="Your standing, means and goal", guild=guild)
     async def dashboard(interaction: discord.Interaction) -> None:
@@ -399,13 +411,20 @@ class RevisionistBot(discord.Client):
         await self.tree.sync(guild=self.guild)
 
     async def on_message(self, message: discord.Message) -> None:
-        """A plain DM to the bot is an order. Guild messages and bots are ignored."""
+        """A DM starting ``order:`` is an order. Any other DM is a question for the agent.
+
+        Guild messages and bots are ignored.
+        """
         if message.guild is not None or message.author.bot or not message.content.strip():
             return
         if self.user is not None and message.author.id == self.user.id:
             return
-        user, text = str(message.author.id), message.content
-        for part in split_message(await _run(lambda: self.handlers.order(user, text))):
+        user, text = str(message.author.id), message.content.strip()
+        if text.lower().startswith("order:"):
+            reply = await _run(lambda: self.handlers.order(user, text.split(":", 1)[1].strip()))
+        else:
+            reply = await _run(lambda: self.handlers.advise(user, text))
+        for part in split_message(reply):
             await message.channel.send(part)
 
 
