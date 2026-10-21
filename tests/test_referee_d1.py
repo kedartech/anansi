@@ -6,8 +6,8 @@ from pydantic import ValidationError
 from revisionist.core.fold import replay
 from revisionist.core.ids import EntityId, FactId, IntentId
 from revisionist.core.intent import Intent, Verb
-from revisionist.core.ontology import Entity, EntityKind, Fact
-from revisionist.core.referee import rate
+from revisionist.core.ontology import Entity, EntityKind, EntityStatus, Fact
+from revisionist.core.referee import SCOUTING_TICKS, rate
 from revisionist.core.resolution import FeasibilityBand
 from revisionist.core.state import State
 from revisionist.core.visibility import PUBLIC, private_to
@@ -109,3 +109,44 @@ def test_destination_accepts_a_place_name(name: str) -> None:
 def test_destination_rejects_what_is_not_a_short_name(bad: str) -> None:
     with pytest.raises(ValidationError):
         _attack(fx.E_HERALD, destination=bad)
+
+
+def test_a_captive_has_no_bodyguards(state: State) -> None:
+    """Playtest #25, tick 7: killing a captured man is not an attack on a guarded one."""
+    aide = state.entities[fx.E_SOUTH_AIDE].model_copy(update={"status": EntityStatus.CAPTURED})
+    held = state.model_copy(update={"entities": {**state.entities, fx.E_SOUTH_AIDE: aide}})
+    assert rate(state, _attack(fx.E_SOUTH_AIDE)) is FeasibilityBand.LIKELY
+    assert rate(held, _attack(fx.E_SOUTH_AIDE)) is FeasibilityBand.ASSURED
+
+
+def test_an_investigation_from_afar_costs_a_band(state: State) -> None:
+    look = _attack(fx.E_SOUTH_AIDE).model_copy(update={"verb": Verb.INVESTIGATE})
+    here = _placed(state, army_at=L_SOUTH_HILLS, aide_at=L_SOUTH_HILLS)
+    away = _placed(state, army_at=L_NORTH_FORD, aide_at=L_SOUTH_HILLS)
+    assert rate(away, look).value != rate(here, look).value
+    order = list(FeasibilityBand)
+    assert order.index(rate(away, look)) == order.index(rate(here, look)) - 1
+
+
+def _scouted_at(state: State, asserted: int, now: int) -> State:
+    fact = Fact(
+        fact_id=FactId("01ARZ3NDEKTSV4RRFFQ69F0097"),
+        subject=fx.E_SOUTH_AIDE,
+        predicate="sleeps_at",
+        obj=fx.E_SOUTH,
+        scope=private_to(fx.NORTH),
+        asserted_tick=asserted,
+    )
+    return state.model_copy(update={"facts": {**state.facts, fact.fact_id: fact}, "tick": now})
+
+
+def test_scouting_goes_stale(state: State) -> None:
+    fresh = _scouted_at(state, asserted=5, now=5 + SCOUTING_TICKS)
+    stale = _scouted_at(state, asserted=5, now=6 + SCOUTING_TICKS)
+    assert rate(fresh, _attack(fx.E_SOUTH_AIDE)) is FeasibilityBand.ASSURED
+    assert rate(stale, _attack(fx.E_SOUTH_AIDE)) is FeasibilityBand.LIKELY
+
+
+def test_scouting_does_not_help_the_next_look(state: State) -> None:
+    look = _attack(fx.E_SOUTH_AIDE).model_copy(update={"verb": Verb.INVESTIGATE})
+    assert rate(_scouted_at(state, 0, 0), look) is rate(state, look)

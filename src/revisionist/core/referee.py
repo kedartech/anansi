@@ -373,7 +373,8 @@ def _opposition(world: World, intent: Intent) -> int:
             if (
                 intent.verb in FORCE_VERBS
                 and world.entities[EntityId(target)].kind is EntityKind.PERSON
-            ):
+                and world.entities[EntityId(target)].status is not EntityStatus.CAPTURED
+            ):  # bodyguards; a captive has none
                 best += 1
     if intent.verb in DEAL_VERBS and intent.counterparty is not None:
         # A deal costs more the richer the other side already is.
@@ -400,8 +401,11 @@ def _at_place(world: World, asset_place: EntityId | None, target_place: EntityId
 
 
 def _distance(world: World, intent: Intent, actor: EntityId) -> int:
-    """-1 when a force order's committed forces are all away from the target's place."""
-    if intent.verb not in FORCE_VERBS:
+    """-1 when a force or information order's committed forces are all away from the target.
+
+    A force with no recorded location is not counted as away.
+    """
+    if intent.verb not in FORCE_VERBS and intent.verb not in INFO_VERBS:
         return 0
     places = [p for p in (_place_of(world, t) for t in intent.targets) if p is not None]
     if not places:
@@ -420,9 +424,14 @@ def _distance(world: World, intent: Intent, actor: EntityId) -> int:
     return -1
 
 
+SCOUTING_TICKS = 3
+
+
 def _scouting(world: World, intent: Intent) -> int:
-    """+1 when the actor's seat holds a non-public fact about a target or its controller."""
-    if intent.verb not in FORCE_VERBS and intent.verb not in INFO_VERBS:
+    """+1 when the actor's seat learned a non-public fact about a target or its controller
+    in the last ``SCOUTING_TICKS`` ticks. Facts from the world file (tick 0) only count
+    while the season is that young, so old secrets do not pay forever."""
+    if intent.verb not in FORCE_VERBS:  # scouting pays off in the strike, not the next look
         return 0
     subjects: set[str] = set(intent.targets)
     for target in intent.targets:
@@ -431,6 +440,8 @@ def _scouting(world: World, intent: Intent) -> int:
             subjects.add(asset.controller)
     for fact in world.facts.values():
         if fact.scope.visibility is Visibility.PUBLIC or not fact.scope.visible_to(intent.actor):
+            continue
+        if world.tick - fact.asserted_tick > SCOUTING_TICKS:
             continue
         if fact.subject in subjects:
             return 1
