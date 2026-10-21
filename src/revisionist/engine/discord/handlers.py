@@ -274,7 +274,11 @@ class Handlers:
                     return "\n".join(session_zero.roster_lines(load_state(store, c)))
                 case "search":
                     found = session_zero.search(store, c, seat, text, self.transport_factory())
-                    return "\n".join(found) or "No one on the roster fits. Try other words."
+                    log.info("/character search: %d chars asked, %d found", len(text), len(found))
+                    return "\n".join(found) or (
+                        "No one on the roster fits. Try other words, see everyone with "
+                        "/character roster, or play anyone from the record with /character pick."
+                    )
                 case "claim":
                     return f"You play {session_zero.claim(store, c, seat, text)}."
                 case "pick":

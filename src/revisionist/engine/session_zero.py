@@ -7,6 +7,8 @@ model's.
 """
 
 import json
+import logging
+import re
 from collections.abc import Sequence
 from typing import Any, Literal
 
@@ -48,6 +50,8 @@ from revisionist.engine.agent import AGENT_MODEL
 from revisionist.engine.ids import new_id
 from revisionist.engine.llm import RESOLVER_MODEL, Request, Transport, prompt_text
 from revisionist.engine.store import EventStore, Sealer, StoreError, load_state
+
+log = logging.getLogger(__name__)
 
 SESSION_ZERO_MODEL = RESOLVER_MODEL
 """Session Zero runs on the frontier model, like the resolver (spec §20)."""
@@ -266,29 +270,62 @@ def search(
 
     The model sees only the public roster and may only name its people.
     """
+    wanted = description.strip()[:400]
+    if not wanted:
+        raise StepRefusedError("Say what you want to play, e.g. /character search a poet at court.")
     state = _open(store, campaign_id)
     free = {ch.entity_id: ch for ch in state.roster.values() if ch.claimed_by is None}
     listing = [
         {"id": e, "name": state.entities[e].name, "pitch": ch.pitch, "reach": ch.reach}
         for e, ch in sorted(free.items())
     ]
-    reply = transport.call(
-        Request(
-            call_class="character_search",
-            model=AGENT_MODEL,
-            system=prompt_text("character_search"),
-            prompt="## Roster\n"
-            + json.dumps(listing)
-            + "\n\n## What the player wants to play\n"
-            + description.strip()[:400],
-            schema=SEARCH_SCHEMA,
-            max_usd=0.1,
-        )
+    request = Request(
+        call_class="character_search",
+        model=AGENT_MODEL,
+        system=prompt_text("character_search"),
+        prompt="## Roster\n"
+        + json.dumps(listing)
+        + "\n\n## What the player wants to play\n"
+        + wanted,
+        schema=SEARCH_SCHEMA,
+        max_usd=0.1,
     )
-    cmp.log_cost(store, campaign_id, "character_search", [reply.cost("character_search")], seat)
-    found = reply.output.get("matches", []) if isinstance(reply.output, dict) else []
-    hits = [EntityId(x) for x in found if isinstance(x, str) and x in free]
-    return [_line(state, free[h]) for h in dict.fromkeys(hits)]
+    hits: list[EntityId] = []
+    for _ in range(2):  # a cheap call; one empty answer is often the model being too strict
+        reply = transport.call(request)
+        cmp.log_cost(store, campaign_id, "character_search", [reply.cost("character_search")], seat)
+        found = reply.output.get("matches", []) if isinstance(reply.output, dict) else []
+        hits = [EntityId(x) for x in found if isinstance(x, str) and x in free]
+        if hits:
+            break
+    if not hits:
+        hits = _word_matches(state, free, wanted)
+        log.info(
+            "character search: model found none of %d free, words found %d", len(free), len(hits)
+        )
+    return [_line(state, free[h]) for h in dict.fromkeys(hits)][:5]
+
+
+_SKIP = frozenset(
+    "the and who with for that someone person character play want like into from".split()
+)
+
+
+def _stem(word: str) -> str:
+    return word[:6] if len(word) > 6 else word
+
+
+def _word_matches(state: State, free: dict[EntityId, Character], wanted: str) -> list[EntityId]:
+    """The fallback when the model names nobody: roster lines sharing the player's words."""
+    words = {_stem(w) for w in re.findall(r"[a-z]+", wanted.casefold())} - _SKIP
+    words = {w for w in words if len(w) > 2}
+    scored = []
+    for e, ch in free.items():
+        text = f"{state.entities[e].name} {ch.pitch} {ch.reach}".casefold()
+        score = sum(1 for w in words if w in text)
+        if score:
+            scored.append((-score, state.entities[e].name, e))
+    return [e for _, _, e in sorted(scored)]
 
 
 PICK_SCHEMA: dict[str, Any] = {

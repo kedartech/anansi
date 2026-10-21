@@ -426,3 +426,33 @@ def test_discord_session_zero_for_two(
     assert game.command("begin", FRIEND) == HOST_ONLY
     assert game.command("begin", HOST).startswith("Session Zero is closed. 2 player(s)")
     assert "Giuliano" in game.command("status", FRIEND)
+
+
+class Strict(Table):
+    """A search model that finds nobody: the playtest's 'assassin' and 'poet' failures."""
+
+    def call(self, request: Request) -> Reply:
+        if request.call_class == "character_search":
+            self.calls.append(request.call_class)
+            return Reply({"matches": []}, request.model, 10, 10, 0, 0.01)
+        return super().call(request)
+
+
+def test_an_empty_search_is_refused_before_any_model_call() -> None:
+    store, table = MemoryStore(), Table()
+    c = _florence(store, table)
+    before = len(table.calls)
+    with pytest.raises(sz.StepRefusedError, match="Say what you want to play"):
+        sz.search(store, c, None, "   ", table)
+    assert len(table.calls) == before
+
+
+def test_a_search_the_model_finds_nothing_for_retries_then_falls_back_to_words() -> None:
+    store, table = MemoryStore(), Strict()
+    c = _florence(store, table)
+    before = len(table.calls)
+    found = sz.search(store, c, None, "a banker", table)
+    assert table.calls[before:] == ["character_search", "character_search"]
+    names = {x.split(":")[0] for x in found}
+    assert "Lorenzo de' Medici" in names and len(found) <= 5
+    assert sz.search(store, c, None, "zzzz qqqq", table) == []
