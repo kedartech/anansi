@@ -19,7 +19,15 @@ import discord
 from discord import app_commands
 
 from revisionist.core.ontology import Persona
-from revisionist.engine.discord.handlers import BROKEN, DRAFTING, NOT_YET, Fenced, Handlers, Said
+from revisionist.engine.discord.handlers import (
+    BROKEN,
+    DRAFTING,
+    NOT_YET,
+    ORDER_PREFIX,
+    Fenced,
+    Handlers,
+    Said,
+)
 from revisionist.engine.discord.rest import PART_LIMIT, split_message
 
 log = logging.getLogger("revisionist.discord")
@@ -420,8 +428,9 @@ class RevisionistBot(discord.Client):
         if self.user is not None and message.author.id == self.user.id:
             return
         user, text = str(message.author.id), message.content.strip()
-        if text.lower().startswith("order:"):
-            reply = await _run(lambda: self.handlers.order(user, text.split(":", 1)[1].strip()))
+        if text.lower().startswith(ORDER_PREFIX):
+            order = text[len(ORDER_PREFIX) :].strip()
+            reply = await _run(lambda: self.handlers.order(user, order))
         else:
             reply = await _run(lambda: self.handlers.advise(user, text))
         for part in split_message(reply):

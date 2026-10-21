@@ -16,7 +16,7 @@ from revisionist.core.project import project
 from revisionist.core.report import leak_report
 from revisionist.core.resolution import TickStage
 from revisionist.engine import campaign as cmp
-from revisionist.engine.agent import Agent, _held
+from revisionist.engine.agent import Agent, held_means
 from revisionist.engine.llm import ClaudeNarrator, ClaudeResolver, Transport, TransportError
 from revisionist.engine.providers import KeywordSafety, ScriptedResolver, TemplateNarrator
 from revisionist.engine.store import EventStore, load_state
@@ -103,7 +103,7 @@ def faction_turns(
         view = project(state, seat)
         agent = Agent.for_seat(state, seat, transport)
         try:
-            if not _held(view):
+            if not held_means(view):
                 warn(f"  {seat}: standing still (no means to move)")
                 continue
             intents = agent.deputy_turn()

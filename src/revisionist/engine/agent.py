@@ -122,7 +122,8 @@ def _ids_visible(view: View, raw: dict[str, Any]) -> bool:
     return all(isinstance(x, str) and x in known for x in named)
 
 
-def _held(view: View) -> list[str]:
+def held_means(view: View) -> list[str]:
+    """Assets this seat's embodied entity holds, sorted."""
     return sorted(a for a in view.assets if holds(view, view.me.embodies, a))
 
 
@@ -142,7 +143,7 @@ def _intent_schema(view: View) -> dict[str, Any]:
             "pattern": "^[A-Za-z][A-Za-z.'-]*( [A-Za-z][A-Za-z.'-]*){0,3}$",
         },
     }
-    held = _held(view)
+    held = held_means(view)
     if held:
         properties["means"] = {"type": "array", "items": {"enum": held}, "maxItems": 4}
     return {

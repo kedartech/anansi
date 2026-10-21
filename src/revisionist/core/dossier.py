@@ -4,8 +4,10 @@ Everything in a View is something the seat may see, so the dossier cannot name
 what the seat does not know, and it costs no model call.
 """
 
+import re
+
 from revisionist.core.dashboard import dashboard
-from revisionist.core.ids import AssetId, EntityId, MeterId
+from revisionist.core.ids import ULID_PATTERN, AssetId, EntityId, MeterId
 from revisionist.core.ontology import AssetStatus, EntityKind
 from revisionist.core.referee import holds
 from revisionist.core.state import View
@@ -25,6 +27,14 @@ def _name(view: View, obj: str) -> str:
     if meter is not None:
         return meter.name
     return "someone unknown"
+
+
+def _object(view: View, obj: str) -> str | None:
+    """A fact's object as words; ``None`` for an id this seat cannot name."""
+    name = _name(view, obj)
+    if name != "someone unknown":
+        return name
+    return None if re.fullmatch(ULID_PATTERN, obj) else obj
 
 
 def _word(disposition: int) -> str:
@@ -116,17 +126,17 @@ def dossier(view: View) -> list[str]:
     if public:
         lines.append("Known to all:")
         for f in public:
-            obj = _name(view, str(f.obj))
-            if obj == "someone unknown":
-                obj = str(f.obj)
+            obj = _object(view, str(f.obj))
+            if obj is None:
+                continue
             lines.append(f"{_name(view, f.subject)} {f.predicate} {obj}")
 
     secrets = [f for f in view.facts.values() if f.scope.visibility is not Visibility.PUBLIC]
     if secrets:
         lines.append("What you know that others may not:")
         for f in sorted(secrets, key=lambda f: f.predicate):
-            obj = _name(view, str(f.obj))
-            if obj == "someone unknown":
-                obj = str(f.obj)
+            obj = _object(view, str(f.obj))
+            if obj is None:
+                continue
             lines.append(f"{_name(view, f.subject)} {f.predicate} {obj}")
     return lines

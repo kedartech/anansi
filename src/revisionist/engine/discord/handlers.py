@@ -94,6 +94,8 @@ EMPTY_ORDER = "Write what you want done."
 MODEL_DOWN = "Your agent can't be reached just now. Try again in a few minutes."
 BROKEN = "Something went wrong on the host's side. The host has the details."
 WITHHELD = "That reply was withheld: it named something your seat cannot know."
+ASK_LIMIT = 20
+ASKED_OUT = "That's 20 questions this hour. Ask again later, or give an order with order:"
 NOT_YET = "Not available yet."
 BAD_CODE = "That code doesn't work. Ask the host for a new one."
 ALREADY_SEATED = "You already hold a seat here."
@@ -117,10 +119,6 @@ ONE_GAME = (
 )
 WELCOME = "This is your dispatch for {seat}. Your briefings arrive here after each tick."
 ORDER_PREFIX = "order:"
-NOT_AN_ORDER = (
-    "That reads as a question, so I asked your agent. To give an order, "
-    "start the message with order:"
-)
 
 
 ZERO_COMMANDS = frozenset({"character", "goal", "history", "agent"})
@@ -165,11 +163,24 @@ class Handlers:
         self.rest = rest
         """Sends the welcome DM after ``/join``; without it the join just links."""
         self.last_establish: EstablishOutcome | None = None
+        self.opened: set[CampaignId] = set()
+        """Campaigns whose last ``/begin`` moved them into play; their dossiers are owed."""
+        self.asked: dict[str, list[datetime]] = {}
+        """Recent agent questions per Discord user, for the hourly cap."""
 
     # --- seat commands ------------------------------------------------------
 
     def advise(self, user_id: str, question: str) -> str:
-        """A question for the player's own agent. Reads the seat's view only; files nothing."""
+        """A question for the player's own agent. Reads the seat's view only; files nothing.
+
+        Each call is a model call, so a player gets ``ASK_LIMIT`` questions an hour.
+        """
+        now = self.clock()
+        recent = [t for t in self.asked.get(user_id, []) if now - t < timedelta(hours=1)]
+        if len(recent) >= ASK_LIMIT:
+            self.asked[user_id] = recent
+            return ASKED_OUT
+        self.asked[user_id] = [*recent, now]
         return self._as_seat(
             user_id,
             "advise",
@@ -592,11 +603,14 @@ class Handlers:
 
     def begin(self, user_id: str) -> str:
         def work(store: PostgresEventStore, campaign_id: CampaignId) -> str:
+            before = load_state(store, campaign_id).phase
             try:
                 text = session_zero.begin(store, campaign_id)
             except session_zero.StepRefusedError as exc:
                 return str(exc)
             state = load_state(store, campaign_id)
+            if before is not Phase.PLAY and state.phase is Phase.PLAY:
+                self.opened.add(campaign_id)
             return _said(state, text, text)
 
         return self._as_host(user_id, "begin", work)
@@ -606,9 +620,10 @@ class Handlers:
         blocks: list[str] = []
 
         def work(store: PostgresEventStore, campaign_id: CampaignId) -> str:
+            if campaign_id not in self.opened:
+                return ""  # this /begin opened nothing: refused, or play already running
+            self.opened.discard(campaign_id)
             state = load_state(store, campaign_id)
-            if state.phase is not Phase.PLAY:
-                return ""  # /begin was refused: nothing opens yet
             for seat_id, user in SeatLinks(store.conn).users(campaign_id).items():
                 if seat_id not in state.seats:
                     continue
@@ -616,6 +631,7 @@ class Handlers:
                 # Built from the seat's view; scan anyway, as every seat reply is.
                 if scan_text(state, seat_id, text):
                     log.warning("opening dossier for %s withheld: canary hit", seat_id)
+                    blocks.append(user + "\n" + WITHHELD)
                     continue
                 blocks.append(user + "\n" + text)
             return ""

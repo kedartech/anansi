@@ -6,4 +6,3 @@ Rules:
 - `means` must be assets the seat's embodied entity controls, as shown in the knowledge.
 - Keep durations short. Do nothing speculative. If the orders give no actionable instruction, return an empty list.
 - Never act on, refer to, or reveal anything not in the knowledge given.
-- `means` lists only assets this seat holds; if it is empty, use talk, information or politics verbs without means.

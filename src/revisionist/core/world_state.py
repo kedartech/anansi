@@ -5,12 +5,21 @@ so the event's scope is not enough: a change counts only when the object it
 touches is public in ``state``. Nothing private, and no roll or order, is read.
 """
 
+import re
 from collections import defaultdict
 from collections.abc import Sequence
 
 from revisionist.core import delta as d
 from revisionist.core.events import DeltaApplied, Event
-from revisionist.core.ids import AssetId, ClockId, EntityId, FactId, MeterId, RelationshipId
+from revisionist.core.ids import (
+    ULID_PATTERN,
+    AssetId,
+    ClockId,
+    EntityId,
+    FactId,
+    MeterId,
+    RelationshipId,
+)
 from revisionist.core.ontology import EntityStatus
 from revisionist.core.referee import touched
 from revisionist.core.state import State
@@ -32,6 +41,18 @@ def _public(state: State, obj: str) -> bool:
         return True
     item = _scoped(state, obj)
     return item is not None and item.scope.visibility is Visibility.PUBLIC  # type: ignore[attr-defined]
+
+
+def _object(state: State, obj: str) -> str | None:
+    """A fact's object as words: a name if it is a public thing, free text as given.
+
+    ``None`` for an id that names nothing public, so no raw id reaches the channel.
+    """
+    if EntityId(obj) in state.entities:
+        return state.entities[EntityId(obj)].name
+    if _scoped(state, obj) is not None:
+        return _name(state, obj) if _public(state, obj) else None
+    return None if re.fullmatch(ULID_PATTERN, obj) else obj
 
 
 def _name(state: State, obj: str) -> str:
@@ -114,14 +135,16 @@ def world_state(state: State, events: Sequence[Event], tick: int) -> list[str]:
     known: list[str] = []
     for c in changes:
         if isinstance(c, d.FactAssert) and c.scope.visibility is Visibility.PUBLIC:
-            known_obj = str(c.obj) in state.entities or str(c.obj) in state.assets
-            obj = _name(state, str(c.obj)) if known_obj else str(c.obj)
-            known.append(f"{_name(state, c.subject)} {c.predicate} {obj}")
+            thing = _object(state, str(c.obj))
+            if thing is not None:
+                known.append(f"{_name(state, c.subject)} {c.predicate} {thing}")
         granted = (
             state.facts.get(FactId(str(c.target))) if isinstance(c, d.KnowledgeGrant) else None
         )
         if isinstance(c, d.KnowledgeGrant) and c.make_public and granted is not None:
-            known.append(f"{_name(state, granted.subject)} {granted.predicate} {granted.obj}")
+            told = _object(state, str(granted.obj))
+            if told is not None:
+                known.append(f"{_name(state, granted.subject)} {granted.predicate} {told}")
     sections.append(("Now public:", known))
 
     clocks = []

@@ -247,6 +247,7 @@ def test_begin_dms_each_player_their_own_opening_dossier(zero: Game) -> None:
     finally:
         store.close()
     assert by_user[HOST] != by_user[FRIEND]  # each reads their own seat, not a shared page
+    assert zero.handlers.opening_dossiers(HOST) == ""  # owed once: a second /begin sends none
     for user, text in by_user.items():
         assert seats_of.get(user), user
         hidden = canaries_hidden_from_human(state, seats_of[user])

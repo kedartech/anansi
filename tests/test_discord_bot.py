@@ -317,6 +317,19 @@ def test_a_dm_is_a_question_and_order_prefix_files(game: Game) -> None:
     assert "pending" in game.command("status")
 
 
+def test_the_order_prefix_ignores_case(game: Game) -> None:
+    [reply] = game.dm(PLAYER, "ORDER: " + ORDER)
+    assert reply.startswith("filed ")
+
+
+def test_agent_questions_are_capped_per_hour(game: Game) -> None:
+    for _ in range(handlers.ASK_LIMIT):
+        game.dm(PLAYER, "What now?")
+    assert game.dm(PLAYER, "And now?") == [handlers.ASKED_OUT]
+    game.clock.now += timedelta(hours=1, seconds=1)
+    assert game.dm(PLAYER, "And now?") != [handlers.ASKED_OUT]
+
+
 def test_briefing_status_and_stubs(game: Game) -> None:
     out = game.command("briefing")
     assert "Dilemma: Toll or trade?" in out and "  3. c" in out
