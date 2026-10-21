@@ -12,6 +12,7 @@ Only the resolver sees ``State`` (truth). The narrator's input type is ``View``.
 
 import hashlib
 import json
+import logging
 import os
 import re
 import subprocess
@@ -33,6 +34,7 @@ from revisionist.engine.tick import Narration, Proposal, Resolution
 PROMPTS = Path(__file__).parent / "prompts"
 RESOLVER_MODEL = "claude-sonnet-5-5"
 NARRATOR_MODEL = "claude-haiku-5-5"
+log = logging.getLogger(__name__)
 
 
 # --- transport -----------------------------------------------------------------
@@ -106,7 +108,7 @@ class ClaudeCli:
             "-p",
             request.prompt,
             "--model",
-            request.model,
+            _model_for(request),
             "--system-prompt",
             request.system,
             "--json-schema",
@@ -153,6 +155,21 @@ class ClaudeCli:
             + int(usage.get("cache_creation_input_tokens", 0)),
             usd=float(result.get("total_cost_usd", 0.0)),
         )
+
+
+def _model_for(request: Request) -> str:
+    """``REVISIONIST_MODEL_<CALL>`` when it names a Claude model, else the request's own.
+
+    Read per call so a trial copy can switch models without a code change.
+    """
+    var = f"REVISIONIST_MODEL_{request.call_class.upper()}"
+    override = os.environ.get(var)
+    if override is None:
+        return request.model
+    if override.startswith("claude-"):
+        return override
+    log.warning("ignoring %s: not a claude- model id", var)
+    return request.model
 
 
 def _subtype(result: dict[str, Any]) -> str:

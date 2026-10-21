@@ -54,6 +54,7 @@ REVISIONIST_BACKUP_DEST=<rsync target, e.g. user@nas:/backups/revisionist, or rc
 | `REVISIONIST_APP_ROLE` | role `revisionist db migrate` grants to; default `revisionist_app` |
 | `REVISIONIST_MASTER_KEY_FILE` | path to the 0600 master-key file that seals new campaigns (§9.8); a path, never the key |
 | `REVISIONIST_DISCORD_*` | the Discord bot and DM delivery; see §9 |
+| `REVISIONIST_MODEL_<CALL>` | optional per-call model for the Claude CLI, e.g. `REVISIONIST_MODEL_RESOLVER=claude-haiku-5-5`; must start with `claude-`, otherwise it is ignored with a warning. Call classes: `resolver`, `narrator`, `structure`, `brief`, `deputy`, `session_zero`, `character_search`, `character_record`, `character_pick`, `goal`, `history_brief` |
 
 To run a CLI command with a file loaded, use a subshell, so its variables do not stay in your shell and break the test suite: `(set -a; . ~/.config/revisionist/revisionist.env; set +a; revisionist db verify)`. Load `revisionist-admin.env` the same way, and only for backup, restore and admin work.
 
