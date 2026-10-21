@@ -607,9 +607,17 @@ class Handlers:
 
         def work(store: PostgresEventStore, campaign_id: CampaignId) -> str:
             state = load_state(store, campaign_id)
+            if state.phase is not Phase.PLAY:
+                return ""  # /begin was refused: nothing opens yet
             for seat_id, user in SeatLinks(store.conn).users(campaign_id).items():
-                if seat_id in state.seats:
-                    blocks.append(user + "\n" + "\n".join(dossier(project(state, seat_id))))
+                if seat_id not in state.seats:
+                    continue
+                text = "\n".join(dossier(project(state, seat_id)))
+                # Built from the seat's view; scan anyway, as every seat reply is.
+                if scan_text(state, seat_id, text):
+                    log.warning("opening dossier for %s withheld: canary hit", seat_id)
+                    continue
+                blocks.append(user + "\n" + text)
             return ""
 
         self._as_host(user_id, "begin", work)

@@ -251,3 +251,10 @@ def test_begin_dms_each_player_their_own_opening_dossier(zero: Game) -> None:
         assert seats_of.get(user), user
         hidden = canaries_hidden_from_human(state, seats_of[user])
         assert not [c for c in hidden if c in text], (user, text)
+
+
+def test_a_refused_begin_sends_no_dossier(zero: Game) -> None:
+    _seated(zero)
+    zero.command("begin", HOST)  # refused: nobody has a character yet
+    assert zero.handlers.opening_dossiers(HOST) == ""
+    assert not [m for m in zero.discord.messages if "Your holdings:" in m.content]
