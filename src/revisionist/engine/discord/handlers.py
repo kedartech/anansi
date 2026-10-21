@@ -502,7 +502,7 @@ class Handlers:
         return self._as_seat(user_id, "character", work)
 
     def goal(self, user_id: str, action: str, text: str = "") -> str:
-        """``history``, ``could_have``, ``own <your goal>`` or ``confirm <number>``."""
+        """``history``, ``could_have``, ``own <your goal>`` or ``confirm <label>``."""
 
         def work(store: PostgresEventStore, link: Link) -> str:
             c, seat = link.campaign_id, link.seat_id
@@ -511,11 +511,9 @@ class Handlers:
                     lines = session_zero.propose_goals(
                         store, c, seat, action, self.transport_factory(), text
                     )
-                    return "\n".join(lines) + "\nChoose one with /goal confirm <number>."
+                    return "\n".join(lines) + "\nChoose one with /goal confirm <label>, e.g. H1."
                 case "confirm":
-                    if not text.strip().isdigit():
-                        return "Give the number of the goal you choose."
-                    return session_zero.confirm_goal(store, c, seat, int(text))
+                    return session_zero.confirm_goal(store, c, seat, text.strip())
             return "Choose history, could_have, own or confirm."
 
         return self._as_seat(user_id, "goal", work)

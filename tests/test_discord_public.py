@@ -171,7 +171,7 @@ def test_goals_and_invites_are_never_announced(zero: Game) -> None:
     zero.command("join", HOST, code=_invite(zero))
     zero.command("character", HOST, action="claim", text="Lorenzo de' Medici")
     zero.public.clear()
-    assert zero.command("goal", HOST, action="history").endswith("/goal confirm <number>.")
+    assert zero.command("goal", HOST, action="history").endswith("/goal confirm <label>, e.g. H1.")
     assert zero.command("goal", HOST, action="confirm", text="1").startswith("Your goal is fixed")
     assert zero.command("invite", HOST).startswith("Invite for a new player")
     assert zero.public == []

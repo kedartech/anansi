@@ -641,25 +641,48 @@ def propose_goals(
     for n, o in enumerate(options, 1):
         b = goals.balance(state, seat, o.condition)
         note = f" Balance: {b.suggestion}" if b.flag else ""
-        lines.append(f"{n}. {o.text} [{o.kind.value}]{note}")
+        lines.append(f"{_ROUTE_LETTER[route]}{n}. {o.text} [{o.kind.value}]{note}")
     return lines
 
 
-def _proposed(store: EventStore, campaign_id: CampaignId, seat: SeatId) -> ev.GoalProposed | None:
-    last = None
+_ROUTE_LETTER: dict[Route, str] = {"history": "H", "could_have": "C", "own": "O"}
+_LETTER_ROUTE: dict[str, Route] = {v: k for k, v in _ROUTE_LETTER.items()}
+_LABEL = re.compile(r"([HCO])?(\d+)", re.IGNORECASE)
+
+
+def _offers(
+    store: EventStore, campaign_id: CampaignId, seat: SeatId
+) -> dict[Route, ev.GoalProposed]:
+    """The latest offer on each route, so each list keeps its own labels."""
+    latest: dict[Route, ev.GoalProposed] = {}
     for e in store.read(campaign_id):
         if isinstance(e.payload, ev.GoalProposed) and e.payload.seat_id == seat:
-            last = e.payload
-    return last
+            latest[e.payload.route] = e.payload
+    return latest
 
 
-def confirm_goal(store: EventStore, campaign_id: CampaignId, seat: SeatId, number: int) -> str:
+def confirm_goal(
+    store: EventStore, campaign_id: CampaignId, seat: SeatId, choice: str | int
+) -> str:
     """Fix one offered goal for the season: its objective clock and ``goal_set``."""
     state = _open(store, campaign_id)
     _seat_of(state, seat)
     if any(g.seat_id == seat for g in state.goals.values()):
         raise StepRefusedError("Your goal is fixed for the season.")
-    offered = _proposed(store, campaign_id, seat)
+    label = _LABEL.fullmatch(str(choice).strip())
+    if label is None:
+        raise StepRefusedError("Give the label of the goal you choose, e.g. H1.")
+    letter, digits = label.groups()
+    offers = _offers(store, campaign_id, seat)
+    if letter is not None:
+        offered = offers.get(_LETTER_ROUTE[letter.upper()])
+    elif len(offers) > 1:
+        raise StepRefusedError(
+            "You have offers from more than one list. Give the label, e.g. H2 or C1."
+        )
+    else:
+        offered = next(iter(offers.values()), None)
+    number = int(digits)
     if offered is None or not 1 <= number <= len(offered.options):
         raise StepRefusedError("Choose one of the goals your agent offered.")
     option = offered.options[number - 1]

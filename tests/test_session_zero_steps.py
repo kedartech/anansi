@@ -380,7 +380,7 @@ def test_the_cli_runs_session_zero_to_the_first_tick(
     assert ok("character", "claim", "Lorenzo de' Medici").strip() == "you play Lorenzo de' Medici"
     again = runner.invoke(cli.app, ["character", "claim", "Giuliano de' Medici"])
     assert again.exit_code == cli.EXIT_REFUSED and "pass --new" in again.output
-    assert "1. Hold the Gonfalonier" in ok("goal", "suggest", "history")
+    assert "H1. Hold the Gonfalonier" in ok("goal", "suggest", "history")
     assert "Your goal is fixed" in ok("goal", "confirm", "1")
     assert sz.SUGGESTED in ok("history")
     ok("agent", "--name", "Ser Agnolo", "--role", "chancellor")
@@ -420,7 +420,7 @@ def test_discord_session_zero_for_two(
     game.command("character", FRIEND, action="claim", text="Giuliano de' Medici")
     for user in (HOST, FRIEND):
         offered = game.command("goal", user, action="history")
-        assert offered.startswith("1. Hold the Gonfalonier")
+        assert offered.startswith("H1. Hold the Gonfalonier")
         assert "Your goal is fixed" in game.command("goal", user, action="confirm", text="1")
         assert sz.SUGGESTED in game.command("history", user)
         # Game.command's own first parameter is called name, so the agent step goes

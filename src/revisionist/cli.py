@@ -523,14 +523,12 @@ def goal_own(
 
 @goal_app.command("confirm")
 def goal_confirm(
-    number: Annotated[int, typer.Argument(help="Which of the offered goals")],
+    label: Annotated[str, typer.Argument(help="The label of an offered goal, e.g. H1")],
     seat: PlayerSeat = None,
 ) -> None:
     """Fix one offered goal for the season."""
     _zero(
-        lambda store, c: session_zero.confirm_goal(
-            store, c, _me(load_state(store, c), seat), number
-        )
+        lambda store, c: session_zero.confirm_goal(store, c, _me(load_state(store, c), seat), label)
     )
 
 

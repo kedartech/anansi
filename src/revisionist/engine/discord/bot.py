@@ -207,8 +207,8 @@ def register(
 
     @tree.command(name="goal", description="Session Zero: choose your secret goal", guild=guild)
     @app_commands.describe(
-        action="as history went, as it could have gone, your own, or confirm a number",
-        text="Your own goal, or the number to confirm",
+        action="as history went, as it could have gone, your own, or confirm a label (H1, C2)",
+        text="Your own goal, or the label to confirm",
     )
     async def goal(
         interaction: discord.Interaction,
