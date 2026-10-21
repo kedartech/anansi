@@ -133,7 +133,7 @@ def test_begin_is_announced_and_its_refusals_are_not(zero: Game) -> None:
 
 def test_advance_is_announced_when_the_tick_runs(salt: Game) -> None:
     assert salt.command("advance") == "ticked: tick 0 resolved (advance)"
-    assert salt.public == ["Tick 0 has run. Read your briefing with /dispatch."]
+    assert salt.public == ["The world after tick 0:\nNo public change this tick."]
     assert salt.last_sent[-1] == (salt.public[0], False)
 
 

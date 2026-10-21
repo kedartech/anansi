@@ -26,6 +26,7 @@ from revisionist.core.project import project
 from revisionist.core.settings import Settings
 from revisionist.core.state import State
 from revisionist.core.visibility import Visibility
+from revisionist.core.world_state import world_state
 from revisionist.engine import advise as advise_mod
 from revisionist.engine import campaign as cmp
 from revisionist.engine import host_ops, play, season, session_zero
@@ -647,8 +648,9 @@ class Handlers:
                     "orders were resolved. They carry to the next tick."
                 )
                 return _said(load_state(store, campaign_id), text, text)
-            public = f"Tick {tick} has run. Read your briefing with /dispatch."
-            return _said(load_state(store, campaign_id), private, public)
+            state = load_state(store, campaign_id)
+            public = "\n".join(world_state(state, list(store.read(campaign_id)), tick))
+            return _said(state, private, public)
 
         return self._as_host(user_id, "advance", work)
 
