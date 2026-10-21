@@ -25,7 +25,7 @@ from revisionist.core.ids import (
 )
 from revisionist.core.intent import IRREVERSIBLE_VERBS, Intent, Verb
 from revisionist.core.project import project
-from revisionist.core.referee import Rejection, rate
+from revisionist.core.referee import Rejection, holds, rate
 from revisionist.core.resolution import FeasibilityBand
 from revisionist.core.state import State, View
 from revisionist.core.visibility import Scope, private_to
@@ -62,13 +62,12 @@ class StructureResult(Model):
 
 
 def structure_schema(view: View) -> dict[str, Any]:
-    ids = _visible_ids(view)
     return {
         "type": "object",
         "properties": {
             "kind": {"enum": ["intent", "question"]},
             "question": {"type": "string", "maxLength": 500},
-            "intent": _intent_schema(ids),
+            "intent": _intent_schema(view),
         },
         "required": ["kind"],
         "additionalProperties": False,
@@ -78,9 +77,7 @@ def structure_schema(view: View) -> dict[str, Any]:
 def deputy_schema(view: View) -> dict[str, Any]:
     return {
         "type": "object",
-        "properties": {
-            "intents": {"type": "array", "items": _intent_schema(_visible_ids(view)), "maxItems": 3}
-        },
+        "properties": {"intents": {"type": "array", "items": _intent_schema(view), "maxItems": 3}},
         "required": ["intents"],
         "additionalProperties": False,
     }
@@ -125,24 +122,32 @@ def _ids_visible(view: View, raw: dict[str, Any]) -> bool:
     return all(isinstance(x, str) and x in known for x in named)
 
 
-def _intent_schema(ids: dict[str, list[str]]) -> dict[str, Any]:
+def _held(view: View) -> list[str]:
+    return sorted(a for a in view.assets if holds(view, view.me.embodies, a))
+
+
+def _intent_schema(view: View) -> dict[str, Any]:
+    ids = _visible_ids(view)
     targets = [i for group in ids.values() for i in group]
+    properties: dict[str, Any] = {
+        "verb": {"enum": [v.value for v in Verb]},
+        "targets": {"type": "array", "items": {"enum": targets}, "maxItems": 6},
+        "counterparty": {"enum": ids["entities"]},
+        "duration_ticks": {"type": "integer", "minimum": 1, "maximum": 12},
+        "spin": {"type": "string", "maxLength": 280},
+        "condition": {"type": "string", "maxLength": 200},
+        "destination": {
+            "type": "string",
+            "maxLength": 40,
+            "pattern": "^[A-Za-z][A-Za-z.'-]*( [A-Za-z][A-Za-z.'-]*){0,3}$",
+        },
+    }
+    held = _held(view)
+    if held:
+        properties["means"] = {"type": "array", "items": {"enum": held}, "maxItems": 4}
     return {
         "type": "object",
-        "properties": {
-            "verb": {"enum": [v.value for v in Verb]},
-            "targets": {"type": "array", "items": {"enum": targets}, "maxItems": 6},
-            "means": {"type": "array", "items": {"enum": ids["assets"]}, "maxItems": 4},
-            "counterparty": {"enum": ids["entities"]},
-            "duration_ticks": {"type": "integer", "minimum": 1, "maximum": 12},
-            "spin": {"type": "string", "maxLength": 280},
-            "condition": {"type": "string", "maxLength": 200},
-            "destination": {
-                "type": "string",
-                "maxLength": 40,
-                "pattern": "^[A-Za-z][A-Za-z.'-]*( [A-Za-z][A-Za-z.'-]*){0,3}$",
-            },
-        },
+        "properties": properties,
         "required": ["verb"],
         "additionalProperties": False,
     }
@@ -316,7 +321,7 @@ def _structure_prompt(view: View, text: str) -> str:
     return (
         f"## Seat: {seat.name} ({seat.persona.role if seat.persona else 'no persona'})\n"
         "## What this seat knows\n"
-        + view.model_dump_json(exclude={"own_pending"})
+        + view.model_dump_json(exclude={"own_pending", "roster"}, exclude_none=True)
         + "\n\n## The player wrote\n"
         + text
         + "\n\nReturn one intent or one question."
@@ -333,7 +338,7 @@ def _brief_prompt(view: View) -> str:
     return (
         f"## Reader: {seat.name}, tick {view.tick}\n"
         "## What this seat knows\n"
-        + view.model_dump_json(exclude={"own_pending"})
+        + view.model_dump_json(exclude={"own_pending", "roster"}, exclude_none=True)
         + "\n\n## Open clocks\n"
         + str(clocks)
         + "\n\nWrite the briefing."
@@ -347,7 +352,7 @@ def _deputy_prompt(view: View) -> str:
         "## Standing orders\n"
         + "\n".join(f"- {o}" for o in seat.standing_orders)
         + "\n\n## What this seat knows\n"
-        + view.model_dump_json(exclude={"own_pending"})
+        + view.model_dump_json(exclude={"own_pending", "roster"}, exclude_none=True)
         + "\n\nReturn up to three intents that carry out the orders."
     )
 
