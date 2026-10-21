@@ -13,21 +13,30 @@ the host; the player gets one line and never a stack trace.
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from revisionist.core import events as ev
 from revisionist.core.canary import scan_text
 from revisionist.core.fold import state_hash
-from revisionist.core.ids import CampaignId
-from revisionist.core.ontology import Persona
+from revisionist.core.ids import CampaignId, SeatId
+from revisionist.core.ontology import Controller, Persona, Phase
 from revisionist.core.settings import Settings
 from revisionist.core.visibility import Visibility
 from revisionist.engine import campaign as cmp
 from revisionist.engine import play, season, session_zero
 from revisionist.engine import scheduler as sch
 from revisionist.engine.discord.rest import CANNOT_DM, DiscordError, DiscordRest, nonce_for
-from revisionist.engine.discord.tables import Invites, Link, LinkError, SeatLinks, file_bug
+from revisionist.engine.discord.tables import (
+    INVITE_HOURS,
+    Channels,
+    Invites,
+    Link,
+    LinkError,
+    SeatLinks,
+    file_bug,
+)
+from revisionist.engine.ids import new_id
 from revisionist.engine.llm import Transport, TransportError
 from revisionist.engine.pg_store import PostgresEventStore
 from revisionist.engine.runner import DelivererFactory, Publishes
@@ -51,6 +60,14 @@ DRAFT_REFUSED = (
     "The GM's draft of that moment did not hold together. Try again, or name it more precisely."
 )
 NO_DISPATCH = "No briefing yet. One arrives after each tick."
+DRAFTING = (
+    "Drafting {place} from the record. This takes about five minutes; "
+    "I'll post here when Session Zero is open."
+)
+ONE_GAME = (
+    "{name} ({campaign}) is still live: one game at a time. "
+    "End it with /season-end, or set it aside with /retire {campaign}."
+)
 WELCOME = "This is your dispatch for {seat}. Your briefings arrive here after each tick."
 
 
@@ -215,6 +232,20 @@ class Handlers:
 
     # --- host commands ------------------------------------------------------
 
+    def establish_refusal(self, user_id: str) -> str:
+        """Why ``/establish`` cannot start now, or ``""``. Checked before the slow draft."""
+
+        def work(store: PostgresEventStore) -> str:
+            return self._one_game(store)
+
+        return self._host_store(user_id, "establish", work)
+
+    def _one_game(self, store: PostgresEventStore) -> str:
+        live = sch.live_campaigns(store, self.clock())
+        if not live:
+            return ""
+        return ONE_GAME.format(name=sch.campaign_name(store, live[-1]), campaign=live[-1])
+
     def establish(self, user_id: str, place: str) -> str:
         """Host: lock a point in history and draft its world (spec §5 step 2).
 
@@ -223,6 +254,8 @@ class Handlers:
         """
 
         def work(store: PostgresEventStore) -> str:
+            if refused := self._one_game(store):
+                return refused
             try:
                 campaign_id = session_zero.establish(
                     store, place, Settings(), self.transport_factory()
@@ -261,6 +294,96 @@ class Handlers:
             return "\n".join(lines)
 
         return self._as_host(user_id, "season-end", work)
+
+    def retire(self, user_id: str, campaign: str = "") -> str:
+        """Host: set a campaign aside for good, with no reveal. No argument lists them."""
+
+        def work(store: PostgresEventStore) -> str:
+            now = self.clock()
+            live = sch.live_campaigns(store, now)
+            names = {c: sch.campaign_name(store, c) for c in live}
+            if not campaign.strip():
+                if not live:
+                    return "No live game to retire."
+                return (
+                    "Live: "
+                    + "; ".join(f"{n} ({c})" for c, n in names.items())
+                    + (". Retire one with /retire <id>.")
+                )
+            want = campaign.strip()
+            hits = [
+                c for c, n in names.items() if want in (c, n) or want.casefold() == n.casefold()
+            ]
+            if len(hits) != 1:
+                return f"No single live game matches {want!r}. Run /retire alone to list them."
+            target = hits[0]
+            sch.ScheduleTable(store.conn).retire(target, now)
+            links = SeatLinks(store.conn)
+            for seat in links.users(target):
+                links.unlink(target, seat)
+            log.info("/retire: %s (%s) retired by the host", names[target], target)
+            return (
+                f"Retired {names[target]} ({target}): it never ticks again "
+                "and its invites no longer work."
+            )
+
+        return self._host_store(user_id, "retire", work)
+
+    def invite(self, user_id: str, seat: str = "") -> str:
+        """Host: a single-use /join code for the live game, shown only to the host."""
+
+        def work(store: PostgresEventStore, campaign_id: CampaignId) -> str:
+            state = load_state(store, campaign_id)
+            linked = SeatLinks(store.conn).users(campaign_id)
+            if state.phase is Phase.SESSION_ZERO and not seat.strip():
+                seat_id, who = SeatId(new_id()), "a new player"
+            else:
+                free = [
+                    s.seat_id
+                    for s in state.seats.values()
+                    if s.controller is Controller.HUMAN and s.seat_id not in linked
+                ]
+                if seat.strip():
+                    try:
+                        seat_id = cmp.resolve_seat(state, seat.strip())
+                    except LookupError:
+                        return f"No seat called {seat.strip()!r} here."
+                    if seat_id not in free:
+                        return "That seat is not a free human seat."
+                elif len(free) == 1:
+                    seat_id = free[0]
+                else:
+                    return (
+                        "No free human seat to invite into."
+                        if not free
+                        else (
+                            "Name the seat: " + ", ".join(state.seats[s].name for s in free) + "."
+                        )
+                    )
+                who = state.seats[seat_id].name
+            now = self.clock()
+            code = Invites(store.conn).issue(campaign_id, seat_id, now)
+            expires = now + timedelta(hours=INVITE_HOURS)
+            log.info("/invite: issued for %s in %s", seat_id, campaign_id)
+            return (
+                f"Invite for {who} in {sch.campaign_name(store, campaign_id)}, "
+                f"good once until {expires:%Y-%m-%d %H:%M} UTC:\n{code}\n"
+                "Send it to the player privately; they run /join with it."
+            )
+
+        return self._as_host(user_id, "invite", work)
+
+    def channel(self, user_id: str, channel_id: str, in_guild: bool) -> str:
+        """Host: make the channel this is run in the live game's public channel."""
+        if not in_guild or not channel_id.isdigit():
+            return "Run /channel in the server channel you want the public news posted in."
+
+        def work(store: PostgresEventStore, campaign_id: CampaignId) -> str:
+            Channels(store.conn).set_public(campaign_id, channel_id, self.config.guild_id)
+            name = sch.campaign_name(store, campaign_id)
+            return f"Public statements and the press for {name} now post in this channel."
+
+        return self._as_host(user_id, "channel", work)
 
     # --- Session Zero (Layer 10 item 1) -----------------------------------------
 
@@ -419,8 +542,12 @@ class Handlers:
         self, user_id: str, name: str, work: Callable[[PostgresEventStore, CampaignId], str]
     ) -> str:
         def current(store: PostgresEventStore) -> str:
+            # The host's own game if they hold a seat in it, else the live game.
             link = SeatLinks(store.conn).for_user(user_id, self.config.guild_id)
-            return work(store, link.campaign_id if link else cmp.current_campaign(store))
+            if link is not None:
+                return work(store, link.campaign_id)
+            live = sch.live_campaigns(store, self.clock())
+            return work(store, live[-1] if live else cmp.current_campaign(store))
 
         return self._host_store(user_id, name, current)
 
@@ -447,6 +574,7 @@ __all__ = [
     "ALREADY_SEATED",
     "BAD_CODE",
     "BROKEN",
+    "DRAFTING",
     "DRAFT_REFUSED",
     "EMPTY_ORDER",
     "ESTABLISHED",
@@ -455,6 +583,7 @@ __all__ = [
     "NOT_LINKED",
     "NOT_YET",
     "NO_DISPATCH",
+    "ONE_GAME",
     "WELCOME",
     "WITHHELD",
     "BotConfig",

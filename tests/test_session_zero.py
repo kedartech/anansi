@@ -20,7 +20,7 @@ from revisionist.core.ontology import Phase
 from revisionist.core.settings import Lethality, Plausibility, Settings
 from revisionist.engine import scheduler as sch
 from revisionist.engine import session_zero as sz
-from revisionist.engine.discord.handlers import DRAFT_REFUSED, HOST_ONLY
+from revisionist.engine.discord.handlers import DRAFT_REFUSED, DRAFTING, HOST_ONLY
 from revisionist.engine.llm import Reply, Request
 from revisionist.engine.pg_store import PostgresEventStore
 from revisionist.engine.providers import RecordingDeliverer, ScriptedResolver, TemplateNarrator
@@ -208,8 +208,9 @@ def test_discord_establish_is_the_hosts(pg_db: PgDb, tmp_path: Path) -> None:
     bad["roster"] = []
     game = Game(pg_db, GM(bad, bad, draft("florence-1478.yaml")), tmp_path)
     assert game.command("establish", STRANGER, place=FLORENCE) == HOST_ONLY
-    assert game.command("establish", HOST, place=FLORENCE) == DRAFT_REFUSED
-    reply = game.command("establish", HOST, place=FLORENCE)
+    heads_up = DRAFTING.format(place=FLORENCE)
+    assert game.command("establish", HOST, place=FLORENCE) == heads_up + DRAFT_REFUSED
+    reply = game.command("establish", HOST, place=FLORENCE).removeprefix(heads_up)
     assert reply.startswith("Session Zero is open at Florence, April 1478. 11 characters")
     assert "Lorenzo de' Medici" in reply and "Tommaso Vanni" in reply
     assert game.command("advance", HOST) == "waiting: session zero"

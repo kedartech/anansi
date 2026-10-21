@@ -23,7 +23,7 @@ from revisionist.core.sealing import seal_holder
 from revisionist.core.settings import Settings
 from revisionist.core.state import State
 from revisionist.engine import session_zero as sz
-from revisionist.engine.discord.handlers import HOST_ONLY, JOINED_ZERO, PICK_FIRST
+from revisionist.engine.discord.handlers import DRAFTING, HOST_ONLY, JOINED_ZERO, PICK_FIRST
 from revisionist.engine.llm import Reply, Request
 from revisionist.engine.pg_store import PostgresEventStore
 from revisionist.engine.providers import RecordingDeliverer, ScriptedResolver, TemplateNarrator
@@ -397,12 +397,13 @@ def test_discord_session_zero_for_two(
     monkeypatch.setenv("REVISIONIST_DB", pg_db.app_dsn)
     monkeypatch.setenv("REVISIONIST_DISCORD_GUILD_ID", GUILD)
     monkeypatch.setattr(cli, "clock", game.clock)
-    assert game.command("establish", HOST, place=FLORENCE).startswith("Session Zero is open")
+    opened = game.command("establish", HOST, place=FLORENCE)
+    assert opened.startswith(DRAFTING.format(place=FLORENCE) + "Session Zero is open")
 
     def invite() -> str:
-        result = runner.invoke(cli.app, ["discord", "invite"])
-        assert result.exit_code == 0 and "a new player" in result.output, result.output
-        return result.output.splitlines()[1].strip()
+        reply = game.command("invite", HOST)
+        assert "a new player" in reply, reply
+        return reply.splitlines()[1].strip()
 
     for user in (HOST, FRIEND):
         assert game.command("join", user, code=invite()).startswith(JOINED_ZERO)

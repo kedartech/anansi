@@ -65,6 +65,7 @@ class Schedule:
     last_started_at: datetime | None = None
     last_finished_at: datetime | None = None
     last_status: str = ""
+    retired_at: datetime | None = None
 
 
 class Why(StrEnum):
@@ -75,7 +76,7 @@ class Why(StrEnum):
 
 
 def due(row: Schedule, now: datetime, *, in_flight: bool, submitted: bool) -> Why | None:
-    if row.paused:
+    if row.paused or row.retired_at is not None:
         return None
     if in_flight:
         return Why.RESUME
@@ -125,7 +126,7 @@ def all_submitted(state: State, tail: Sequence[Event]) -> bool:
 
 _COLUMNS = (
     "campaign_id, next_due_at, advance_requested, paused, paused_reason,"
-    " consecutive_failures, last_started_at, last_finished_at, last_status"
+    " consecutive_failures, last_started_at, last_finished_at, last_status, retired_at"
 )
 
 
@@ -200,8 +201,16 @@ class ScheduleTable:
     def resume(self, campaign_id: CampaignId) -> None:
         self.conn.execute(
             "UPDATE schedule SET paused = FALSE, paused_reason = '', consecutive_failures = 0"
-            " WHERE campaign_id = %s",
+            " WHERE campaign_id = %s AND retired_at IS NULL",
             (campaign_id,),
+        )
+
+    def retire(self, campaign_id: CampaignId, now: datetime) -> None:
+        """Set the campaign aside for good: paused, and ``resume`` no longer clears it."""
+        self.conn.execute(
+            "UPDATE schedule SET retired_at = %s, paused = TRUE, paused_reason = 'retired'"
+            " WHERE campaign_id = %s AND retired_at IS NULL",
+            (now, campaign_id),
         )
 
     def try_lock(self, campaign_id: CampaignId) -> bool:
@@ -221,6 +230,28 @@ def register(store: "PostgresEventStore", now: datetime) -> ScheduleTable:
         hours = load_state(store, campaign_id).settings.tick_hours
         table.ensure(campaign_id, now + timedelta(hours=hours))
     return table
+
+
+def live_campaigns(store: "PostgresEventStore", now: datetime) -> list[CampaignId]:
+    """Campaigns still in play or in Session Zero: not retired, season not over.
+
+    One game at a time (playtest issue 6): ``/establish`` refuses while this is
+    not empty. A paused campaign is still live; retire it or end its season.
+    """
+    table = register(store, now)
+    return [
+        c
+        for c in store.campaign_ids()
+        if table.get(c).retired_at is None and load_state(store, c).phase is not Phase.SEASON_OVER
+    ]
+
+
+def campaign_name(store: EventStore, campaign_id: CampaignId) -> str:
+    """What the host calls a campaign: its world's name, else its ID."""
+    for e in store.read(campaign_id):
+        if isinstance(e.payload, ev.CampaignCreated):
+            return e.payload.name
+    return campaign_id
 
 
 # --- one scheduler run ----------------------------------------------------------
@@ -364,8 +395,10 @@ __all__ = [
     "ScheduleTable",
     "Why",
     "all_submitted",
+    "campaign_name",
     "due",
     "in_flight",
+    "live_campaigns",
     "next_due_after",
     "register",
     "run",

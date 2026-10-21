@@ -75,6 +75,8 @@ class FakeFollowup:
 @dataclass
 class FakeInteraction:
     user_id: str
+    channel_id: int = 777777777777777777
+    guild_id: int | None = int(GUILD)
     response: FakeResponse = field(default_factory=FakeResponse)
     followup: FakeFollowup = field(default_factory=FakeFollowup)
 

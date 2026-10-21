@@ -16,7 +16,7 @@ import discord
 from discord import app_commands
 
 from revisionist.core.ontology import Persona
-from revisionist.engine.discord.handlers import BROKEN, NOT_YET, Handlers
+from revisionist.engine.discord.handlers import BROKEN, DRAFTING, NOT_YET, Handlers
 from revisionist.engine.discord.rest import split_message
 
 log = logging.getLogger("revisionist.discord")
@@ -28,6 +28,9 @@ COMMANDS = (
     "status",
     "join",
     "establish",
+    "retire",
+    "invite",
+    "channel",
     "character",
     "goal",
     "history",
@@ -54,7 +57,11 @@ async def _run(work: Callable[[], str]) -> str:
 
 async def answer(interaction: discord.Interaction, work: Callable[[], str]) -> None:
     await interaction.response.defer(ephemeral=True, thinking=True)
-    for part in split_message(await _run(work)) or ["(nothing to show)"]:
+    await _reply(interaction, await _run(work))
+
+
+async def _reply(interaction: discord.Interaction, text: str) -> None:
+    for part in split_message(text) or ["(nothing to show)"]:
         await interaction.followup.send(part, ephemeral=True)
 
 
@@ -107,7 +114,38 @@ def register(
         interaction: discord.Interaction, place: app_commands.Range[str, 1, 80]
     ) -> None:
         user = str(interaction.user.id)
-        await answer(interaction, lambda: h.establish(user, place))
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        refused = await _run(lambda: h.establish_refusal(user))
+        if refused:
+            await _reply(interaction, refused)
+            return
+        # The draft is one long model call; say so before it starts.
+        await interaction.followup.send(DRAFTING.format(place=place.strip()), ephemeral=True)
+        await _reply(interaction, await _run(lambda: h.establish(user, place)))
+
+    @tree.command(name="retire", description="Host: set a game aside, no reveal", guild=guild)
+    @app_commands.describe(campaign="The game's ID or name; leave empty to list live games")
+    async def retire(
+        interaction: discord.Interaction, campaign: app_commands.Range[str, 1, 80] | None = None
+    ) -> None:
+        user = str(interaction.user.id)
+        await answer(interaction, lambda: h.retire(user, campaign or ""))
+
+    @tree.command(
+        name="invite", description="Host: a one-time /join code for a player", guild=guild
+    )
+    @app_commands.describe(seat="Only in play: the seat to invite into, by name")
+    async def invite(
+        interaction: discord.Interaction, seat: app_commands.Range[str, 1, 80] | None = None
+    ) -> None:
+        user = str(interaction.user.id)
+        await answer(interaction, lambda: h.invite(user, seat or ""))
+
+    @tree.command(name="channel", description="Host: post public news in this channel", guild=guild)
+    async def channel(interaction: discord.Interaction) -> None:
+        user = str(interaction.user.id)
+        where, in_guild = str(interaction.channel_id), interaction.guild_id is not None
+        await answer(interaction, lambda: h.channel(user, where, in_guild))
 
     @tree.command(name="character", description="Session Zero: choose who you play", guild=guild)
     @app_commands.describe(

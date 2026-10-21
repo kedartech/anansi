@@ -141,7 +141,10 @@ class Invites:
         with self.conn.transaction():
             row = self.conn.execute(
                 "SELECT campaign_id, seat_id FROM discord_invites"
-                " WHERE code_hash = %s AND used_at IS NULL AND expires_at > %s FOR UPDATE",
+                " WHERE code_hash = %s AND used_at IS NULL AND expires_at > %s"
+                " AND NOT EXISTS (SELECT 1 FROM schedule s"
+                "  WHERE s.campaign_id = discord_invites.campaign_id AND s.retired_at IS NOT NULL)"
+                " FOR UPDATE OF discord_invites",
                 (code_hash(code), now),
             ).fetchone()
             if row is None:
