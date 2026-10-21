@@ -101,7 +101,7 @@ class PostgresEventStore:
 
     def campaign_ids(self) -> list[CampaignId]:
         rows = self.conn.execute(
-            "SELECT campaign_id FROM events WHERE seq = 0 ORDER BY event_id"
+            "SELECT campaign_id FROM events WHERE seq = 0 ORDER BY campaign_id"
         ).fetchall()
         return [CampaignId(r[0]) for r in rows]
 

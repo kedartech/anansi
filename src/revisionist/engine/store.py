@@ -50,7 +50,11 @@ class EventStore(Protocol):
     def latest_snapshot(self, campaign_id: CampaignId) -> State | None: ...
 
     def campaign_ids(self) -> list[CampaignId]:
-        """Every campaign in the store, oldest first by first event."""
+        """Every campaign in the store, oldest first.
+
+        Campaign IDs are ULIDs, so their order is creation order. The first
+        event's ID is not: Session Zero derives it from a hash.
+        """
         ...
 
 
@@ -163,9 +167,7 @@ class MemoryStore:
         return state_from(self.sealer, campaign_id, *found) if found else None
 
     def campaign_ids(self) -> list[CampaignId]:
-        return sorted(
-            (c for c, log in self._events.items() if log), key=lambda c: self._events[c][0].event_id
-        )
+        return sorted(c for c, log in self._events.items() if log)
 
 
 _SCHEMA = """
@@ -262,7 +264,7 @@ class SqliteStore:
 
     def campaign_ids(self) -> list[CampaignId]:
         rows = self._conn.execute(
-            "SELECT campaign_id FROM events WHERE seq = 0 ORDER BY event_id"
+            "SELECT campaign_id FROM events WHERE seq = 0 ORDER BY campaign_id"
         ).fetchall()
         return [CampaignId(r[0]) for r in rows]
 

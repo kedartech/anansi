@@ -121,12 +121,13 @@ def test_mixed_campaign_batch_is_refused(store: EventStore) -> None:
 
 
 def test_campaign_ids_oldest_first(store: EventStore) -> None:
+    # The later campaign's first event sorts first; the campaign ID decides.
     assert store.campaign_ids() == []
     first = fx.creation_events()
     store.append_all(first)
     later = fx.CampaignId("7ZZZZZZZZZZZZZZZZZZZZZZZZZ")
     renamed = [
-        e.model_copy(update={"campaign_id": later, "event_id": EventId("Z" + e.event_id[1:])})
+        e.model_copy(update={"campaign_id": later, "event_id": EventId("00" + e.event_id[2:])})
         for e in first[:1]
     ]
     store.append_all(renamed)
