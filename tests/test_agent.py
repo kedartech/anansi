@@ -9,9 +9,12 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from revisionist.core import canary
+from revisionist.core import events as ev
 from revisionist.core.events import Versions
 from revisionist.core.fold import replay
+from revisionist.core.ids import EntityId, SeatId
 from revisionist.core.intent import IRREVERSIBLE_VERBS, Intent, Verb
+from revisionist.core.ontology import Controller, Entity, EntityKind, Seat, SeatKind
 from revisionist.core.project import project
 from revisionist.core.referee import rate
 from revisionist.core.state import State, View
@@ -23,6 +26,7 @@ from revisionist.engine.agent import (
 )
 from revisionist.engine.llm import RecordedTransport, Reply, Request
 from revisionist.engine.providers import RecordingDeliverer, ScriptedResolver, TemplateNarrator
+from revisionist.engine.runner import faction_turns
 from revisionist.engine.store import MemoryStore, load_state
 from revisionist.engine.tick import Providers, run_tick
 from tests import fixtures as fx
@@ -170,6 +174,51 @@ def test_receive_order_rejects_what_the_seat_cannot_afford(state: State) -> None
 def test_deputy_does_nothing_without_standing_orders(state: State) -> None:
     agent, t = _agent(state, [], fx.SOUTH)
     assert agent.deputy_turn() == [] and t.requests == []
+
+
+def test_faction_deputy_skipped_when_it_has_no_means_to_move(state: State) -> None:
+    """A faction that holds no assets is never asked — no model call, no cost.
+
+    It *does* carry standing orders, which is exactly the case the runner must
+    skip rather than feed the model. GUILD holds an asset and is left alone
+    here.
+    """
+    base = fx.creation_events()
+    extra_eid = EntityId("01ARZ3NDEKTSV4RRFFQ69G5EEM0")
+    empty_seat = SeatId("01ARZ3NDEKTSV4RRFFQ69G5SE0")
+    extra: list[ev.Payload] = [
+        ev.EntityCreated(
+            entity=Entity(entity_id=extra_eid, kind=EntityKind.FACTION, name="The Empty Hand")
+        ),
+        ev.SeatCreated(
+            seat=Seat(
+                seat_id=empty_seat,
+                kind=SeatKind.FACTION,
+                name="The Empty Hand",
+                embodies=extra_eid,
+                controller=Controller.AI,
+                standing_orders=("report every turn",),
+            )
+        ),
+    ]
+    store = MemoryStore()
+    store.append_all(base)
+    store.append_all(list(fx.envelope(i, p) for i, p in enumerate(extra, start=len(base))))
+
+    calls: list[Request] = []
+
+    class RecordingTransport:
+        def call(self, request: Request) -> Reply:
+            calls.append(request)
+            return Reply({"intents": []}, request.model, 8, 4, 0, 0.0)
+
+    warns: list[str] = []
+    faction_turns(store, fx.CAMPAIGN, RecordingTransport(), warns.append)
+
+    assert len(warns) == 1
+    assert "no means to move" in warns[0]
+    assert str(empty_seat) in warns[0]
+    assert not calls
 
 
 def test_deputy_refuses_irreversible_verbs_unless_an_order_names_them(state: State) -> None:

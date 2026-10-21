@@ -12,10 +12,11 @@ from typing import Protocol, runtime_checkable
 from revisionist.core.canary import Leak
 from revisionist.core.ids import CampaignId, SeatId
 from revisionist.core.ontology import Phase
+from revisionist.core.project import project
 from revisionist.core.report import leak_report
 from revisionist.core.resolution import TickStage
 from revisionist.engine import campaign as cmp
-from revisionist.engine.agent import Agent
+from revisionist.engine.agent import Agent, _held
 from revisionist.engine.llm import ClaudeNarrator, ClaudeResolver, Transport, TransportError
 from revisionist.engine.providers import KeywordSafety, ScriptedResolver, TemplateNarrator
 from revisionist.engine.store import EventStore, load_state
@@ -92,10 +93,19 @@ def faction_turns(
     transport: Transport,
     warn: Callable[[str], None],
 ) -> None:
-    """Each AI faction's deputy files up to three intents from its own view."""
-    for seat in cmp.faction_seats(load_state(store, campaign_id)):
-        agent = Agent.for_seat(load_state(store, campaign_id), seat, transport)
+    """Each AI faction's deputy files up to three intents from its own view.
+
+    A faction with no held means has nothing to move, so its deputy is not
+    asked (no model call, no cost).
+    """
+    state = load_state(store, campaign_id)
+    for seat in cmp.faction_seats(state):
+        view = project(state, seat)
+        agent = Agent.for_seat(state, seat, transport)
         try:
+            if not _held(view):
+                warn(f"  {seat}: standing still (no means to move)")
+                continue
             intents = agent.deputy_turn()
         except TransportError as exc:
             warn(f"  {seat}: deputy call failed, standing still ({exc})")
