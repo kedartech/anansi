@@ -22,12 +22,15 @@ uninterrupted one.
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Protocol
 
 from pydantic import Field
 
 from revisionist import __version__
-from revisionist.core import SCHEMA_VERSION, dashboard, goals, intel, orders, referee
+from revisionist.core import SCHEMA_VERSION, dashboard, goals, history, intel, orders, referee
+from revisionist.core import calendar as cal
+from revisionist.core import contest as contests
 from revisionist.core import delta as d
 from revisionist.core import events as ev
 from revisionist.core._base import Model
@@ -403,6 +406,7 @@ def run_tick(
         tail = tail.model_copy(update={"intel": (*tail.intel, *learned)})
         batch.extend(found)
         batch.extend(_scheduled(em))
+        batch.extend(_history(em, batch))
         batch.extend(_goals(em))
         batch.append(em.event(ev.TickStageCompleted(stage=TickStage.APPLY)))
         em.commit(batch)
@@ -665,6 +669,34 @@ def _scheduled(em: _Emitter) -> list[Event]:
         and s.source is ScheduleSource.PLAY
         and s.fire_at_tick <= state.tick
     ]
+
+
+def _history(em: _Emitter, batch: Sequence[Event]) -> list[Event]:
+    """Session Zero v3 (spec §5.3, §5.4, §5.7): advance the in-world date by the
+    calendar's span, run each contest's momentum and countdown, decide the
+    contests that are due, then fire or skip history's due events. Each step sees
+    the state after the ones before it. A campaign with no in-world date (every
+    older world) gets nothing, so its replay hash is unchanged."""
+    state = replay(batch, initial=em.state) if batch else em.state
+    today = state.in_world_date
+    if today is None:
+        return []
+    days = cal.span(state)
+    out: list[Event] = []
+
+    def add(payloads: Sequence[ev.Payload]) -> None:
+        nonlocal state
+        events = [em.event(p) for p in payloads]
+        state = replay(events, initial=state)
+        out.extend(events)
+
+    if days > 0:
+        today = cal.next_date(state) or today + timedelta(days=days)
+        add([ev.DateAdvanced(to=today)])
+    add(contests.momentum_moves(state, days))
+    add(contests.decisions(state))
+    add(history.settle(state, today))
+    return out
 
 
 def _topped(state: State, seat_id: SeatId, text: str) -> str:
