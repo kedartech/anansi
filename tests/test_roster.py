@@ -6,7 +6,7 @@ import yaml
 
 from revisionist.core.fold import replay
 from revisionist.core.ids import EntityId, SeatId
-from revisionist.core.ontology import AssetKind, AssetStatus, Character, EntityKind
+from revisionist.core.ontology import AssetKind, AssetStatus, Character, CharacterSide, EntityKind
 from revisionist.core.roster import nearest, problems, qualifies
 from revisionist.core.state import State
 from revisionist.core.world import AssetDecl, EntityDecl, WorldFile
@@ -157,3 +157,38 @@ def test_problems_are_empty_without_contests() -> None:
     state = _state(contests=False)
     state = _roster(state, "Mira Toll")
     assert problems(state) == []
+
+
+def _declared(state: State, name: str, side: str | None) -> State:
+    who = _id(state, name)
+    contest_id = next(iter(state.contests))
+    sides = (CharacterSide(contest_id=contest_id, side=_id(state, side)),) if side else ()
+    char = Character(entity_id=who, pitch="p", reach="r", composite=False, sides=sides)
+    return state.model_copy(update={"roster": {who: char}})
+
+
+def test_a_declared_side_counts_for_a_person_under_no_side() -> None:
+    gov = EntityDecl(key="gov", kind=EntityKind.PERSON, name="Governor Border")
+    state = _state(
+        assets=(
+            AssetDecl(key="gov_office", kind=AssetKind.OFFICE, name="o", tier=3, controller="gov"),
+        ),
+        people=(gov,),
+    )
+    assert not qualifies(_declared(state, "Governor Border", None), _id(state, "Governor Border"))
+    declared = _declared(state, "Governor Border", "Varda")
+    assert qualifies(declared, _id(state, "Governor Border"))
+    assert problems(declared) == []
+
+
+def test_a_declared_side_still_needs_a_qualifying_asset() -> None:
+    gov = EntityDecl(key="gov", kind=EntityKind.PERSON, name="Governor Border")
+    state = _state(
+        assets=(
+            AssetDecl(key="gov_ledger", kind=AssetKind.WEALTH, name="w", tier=4, controller="gov"),
+        ),
+        people=(gov,),
+    )
+    assert not qualifies(
+        _declared(state, "Governor Border", "Varda"), _id(state, "Governor Border")
+    )

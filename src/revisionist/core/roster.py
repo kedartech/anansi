@@ -6,7 +6,7 @@ qualify.
 """
 
 from revisionist.core import contest
-from revisionist.core.ids import EntityId
+from revisionist.core.ids import ContestId, EntityId
 from revisionist.core.ontology import AssetKind, AssetStatus, EntityKind
 from revisionist.core.state import State
 
@@ -28,7 +28,21 @@ def qualifies(state: State, entity: EntityId) -> bool:
     )
     if not holds:
         return False
-    return not state.contests or bool(contest.bearing(state, entity))
+    return not state.contests or bool(_bearing(state, entity))
+
+
+def _bearing(state: State, entity: EntityId) -> tuple[ContestId, ...]:
+    """Undecided contests ``entity`` stands in: through its ``parent`` chain, or
+    by the side its roster entry declares (spec §5.5, "their side in each
+    contest"). A governor or envoy under no side can still declare one."""
+    found = set(contest.bearing(state, entity))
+    listed = state.roster.get(entity)
+    if listed is not None:
+        for s in listed.sides:
+            k = state.contests.get(s.contest_id)
+            if k is not None and not k.decided and s.side in k.sides:
+                found.add(s.contest_id)
+    return tuple(sorted(found))
 
 
 def nearest(state: State, entity: EntityId) -> EntityId | None:
@@ -44,8 +58,8 @@ def nearest(state: State, entity: EntityId) -> EntityId | None:
     same_parent = [
         c for c in people if found.parent is not None and state.entities[c].parent == found.parent
     ]
-    mine = set(contest.bearing(state, entity))
-    shared = [c for c in people if mine & set(contest.bearing(state, c))]
+    mine = set(_bearing(state, entity))
+    shared = [c for c in people if mine & set(_bearing(state, c))]
     for group in (same_parent, shared):
         if group:
             return min(group, key=lambda c: _order(state, c))
