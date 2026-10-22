@@ -332,12 +332,69 @@ def roster_lines(state: State) -> list[str]:
     ]
 
 
-def _find(state: State, name: str) -> Character:
+_PARTICLES = frozenset({"de", "di", "da", "del", "von", "van", "of", "the"})
+
+
+def _words(name: str) -> list[str]:
+    """A name as comparable words: no case, accents, punctuation or particles."""
+    return [w for w in _name_key(name).split() if w not in _PARTICLES]
+
+
+def _initial_fit(a: str, b: str) -> bool:
+    return a == b or (len(a) == 1 and b.startswith(a)) or (len(b) == 1 and a.startswith(b))
+
+
+def _same_name(typed: list[str], listed: list[str]) -> bool:
+    """Equal word for word, a lone initial standing for any word it starts, or equal
+    once initials are left out ("Thomas J. Jackson" against "Thomas Jackson")."""
+    if len(typed) == len(listed) and all(
+        _initial_fit(a, b) for a, b in zip(typed, listed, strict=True)
+    ):
+        return True
+    full_t, full_l = [w for w in typed if len(w) > 1], [w for w in listed if len(w) > 1]
+    return bool(full_t) and full_t == full_l
+
+
+def _resolve(state: State, name: str) -> list[Character]:
+    """Who on the roster a typed name means: the first step below that finds anyone."""
+    chars = list(state.roster.values())
+    typed = _words(name)
     wanted = name.strip().casefold()
-    for ch in state.roster.values():
-        if state.entities[ch.entity_id].name.casefold() == wanted:
-            return ch
-    raise StepRefusedError(f"No one called {name.strip()!r} is on the roster.")
+    steps: list[Callable[[], list[Character]]] = [
+        lambda: [c for c in chars if state.entities[c.entity_id].name.casefold() == wanted],
+        lambda: [c for c in chars if _same_name(typed, _words(state.entities[c.entity_id].name))],
+        lambda: [
+            c
+            for c in chars
+            if len(typed) == 1 and typed[0] in _words(state.entities[c.entity_id].name)
+        ],
+        lambda: [c for c in chars if any(_same_name(typed, _words(a)) for a in c.aliases)],
+    ]
+    if not typed:
+        return steps[0]()
+    for step in steps:
+        found = step()
+        if found:
+            return found
+    return []
+
+
+def _match(state: State, name: str) -> Character | None:
+    """The one listed person a typed name means; None if no one, a refusal if several."""
+    found = _resolve(state, name)
+    if len(found) > 1:
+        names = ", ".join(sorted(state.entities[c.entity_id].name for c in found))
+        raise StepRefusedError(
+            f"{name.strip()!r} could be more than one person: {names}. Type the full name."
+        )
+    return found[0] if found else None
+
+
+def _find(state: State, name: str) -> Character:
+    ch = _match(state, name)
+    if ch is None:
+        raise StepRefusedError(f"No one called {name.strip()!r} is on the roster.")
+    return ch
 
 
 def _unclaimed_seat(state: State, seat: SeatId) -> None:
@@ -414,6 +471,7 @@ def search(
         schema=SEARCH_SCHEMA,
         max_usd=0.1,
     )
+    named = [c.entity_id for c in _resolve(state, wanted) if c.entity_id in free]
     hits: list[EntityId] = []
     for _ in range(2):  # a cheap call; one empty answer is often the model being too strict
         try:
@@ -431,7 +489,7 @@ def search(
         log.info(
             "character search: model found none of %d free, words found %d", len(free), len(hits)
         )
-    lines = [_line(state, free[h]) for h in dict.fromkeys(hits)][:5]
+    lines = [_line(state, free[h]) for h in dict.fromkeys([*named, *hits])][:5]
     people = _record_people(store, campaign_id, seat, state, wanted, transport)
     if people:
         lines += [RECORD_HEADER, *(f"{name}: {note}" for name, note in people)]
@@ -564,6 +622,7 @@ PICK_SCHEMA: dict[str, Any] = {
         "pitch": {"type": "string", "maxLength": 200},
         "reach": {"type": "string", "maxLength": 200},
         "composite": {"type": "boolean"},
+        "same_as": {"type": "string", "maxLength": 60},
         "means": {
             "type": "array",
             "maxItems": PICK_MEANS_MAX,
@@ -595,9 +654,9 @@ def pick(
     wanted = name.strip()[:60]
     if not wanted:
         raise StepRefusedError("Name the person you want to play.")
-    for ch in state.roster.values():
-        if state.entities[ch.entity_id].name.casefold() == wanted.casefold():
-            return claim(store, campaign_id, seat, wanted)
+    listed = _match(state, wanted)
+    if listed is not None:
+        return claim(store, campaign_id, seat, state.entities[listed.entity_id].name)
     known = sorted(e.name for e in state.entities.values())
     if wanted.casefold() in {k.casefold() for k in known}:
         raise StepRefusedError(f"{wanted} is already in the world but not on the roster.")
@@ -607,13 +666,28 @@ def pick(
             model=SESSION_ZERO_MODEL,
             system=prompt_text("character_pick"),
             prompt=f"## Start\n{_start(store, campaign_id)}\n\n## The person\n{wanted}\n\n"
-            "## Already in the world\n" + json.dumps(known),
+            "## Already in the world\n"
+            + json.dumps(known)
+            + "\n\n## On the roster\n"
+            + json.dumps(sorted(state.entities[c.entity_id].name for c in state.roster.values())),
             schema=PICK_SCHEMA,
             max_usd=0.5,
         )
     )
     cmp.log_cost(store, campaign_id, "character_pick", [reply.cost("character_pick")], seat)
     out = reply.output if isinstance(reply.output, dict) else {}
+    same_as = out.get("same_as")
+    if isinstance(same_as, str):
+        listed = next(
+            (
+                c
+                for c in state.roster.values()
+                if state.entities[c.entity_id].name.casefold() == same_as.strip().casefold()
+            ),
+            None,
+        )
+        if listed is not None:
+            return claim(store, campaign_id, seat, state.entities[listed.entity_id].name)
     if not (out.get("existed") and out.get("placed")):
         note = str(out.get("note", ""))[:200]
         raise StepRefusedError(f"The record does not place {wanted} at the start. {note}".strip())
@@ -710,6 +784,13 @@ def _warning(text: str | None) -> str:
     return f" Warning: {text}" if text else ""
 
 
+def _three(options: list[ev.GoalOption]) -> list[ev.GoalOption]:
+    """The event holds three; the player still sees the easiest, a middle and the hardest."""
+    if len(options) <= 3:
+        return options
+    return [options[0], options[len(options) // 2], options[-1]]
+
+
 def propose_goals(
     store: EventStore,
     campaign_id: CampaignId,
@@ -776,6 +857,7 @@ def propose_goals(
         raise StepRefusedError(f"That cannot be written as a goal the engine checks{detail}.{hint}")
     # Easy to hard (D4). Sorted before logging, so label N is stored option N.
     options.sort(key=lambda o: goals.difficulty(state, seat, o.condition))
+    options = _three(options)
     proposed = ev.GoalProposed(seat_id=seat, route=route, options=tuple(options))
     _log(store, campaign_id, [(proposed, private_to(seat), seat)])
     lines = []

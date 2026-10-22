@@ -89,7 +89,7 @@ def _said(state: State, private: str, public: str = "") -> Said:
     return Said(private, public)
 
 
-NOT_LINKED = "You don't hold a seat in this game. Ask the host to link you."
+NOT_LINKED = "You don't hold a seat in this game. Ask the host for an invite code, then /join."
 HOST_ONLY = "Only the host can do that."
 EMPTY_ORDER = "Write what you want done."
 MODEL_DOWN = "Your agent can't be reached just now. Try again in a few minutes."
@@ -250,7 +250,11 @@ class Handlers:
                 )
             ),
         )
-        if reply == NOT_LINKED and user_id == self.config.host_id and self.last_establish:
+        if (
+            reply in (NOT_LINKED, NO_GAME)
+            and user_id == self.config.host_id
+            and self.last_establish
+        ):
             o = self.last_establish
             how = "opened" if o.opened else "refused"
             return f"Last /establish: {o.place}, {how} at {o.at:%H:%M} UTC.\n{o.text}"
@@ -911,9 +915,10 @@ class Handlers:
             log.exception("/%s: cannot open the store", name)
             return BROKEN
         try:
-            link = SeatLinks(store.conn).for_user(user_id, self.config.guild_id)
-            if link is None:
-                return NOT_LINKED
+            found = self._game_of(store, user_id, name)
+            if isinstance(found, str):
+                return found
+            link = found
             if (
                 name not in ZERO_COMMANDS
                 and link.seat_id not in load_state(store, link.campaign_id).seats
@@ -937,6 +942,28 @@ class Handlers:
         finally:
             store.close()
 
+    def _game_of(self, store: PostgresEventStore, user_id: str, name: str) -> Link | str:
+        """The user's seat in the game in play, else the reply that says why not.
+
+        Only a live game counts; a retired one never answers. ``/report`` also reaches
+        a season that is over but not retired, so players can read how it ended.
+        """
+        now = self.clock()
+        live = sch.live_campaigns(store, now)
+        links = SeatLinks(store.conn)
+        link = links.for_user(user_id, self.config.guild_id, live)
+        if link is not None:
+            return link
+        if name == "report":
+            table = sch.register(store, now)
+            ended = [c for c in store.campaign_ids() if table.get(c).retired_at is None]
+            link = links.for_user(user_id, self.config.guild_id, ended)
+            if link is not None:
+                return link
+        if live:
+            return NOT_LINKED
+        return NO_GAME
+
     def _as_host(
         self,
         user_id: str,
@@ -957,7 +984,9 @@ class Handlers:
             try:
                 newest = cmp.current_campaign(store)
             except LookupError:
-                return NO_GAME
+                raise host_ops.HostOpError(NO_GAME) from None
+            if sch.register(store, self.clock()).get(newest).retired_at is not None:
+                raise host_ops.HostOpError(NO_GAME)
             return work(store, newest)
 
         return self._host_store(user_id, name, current, code=code)

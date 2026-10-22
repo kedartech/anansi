@@ -8,3 +8,5 @@ Decide from the documented record:
 If both are true, also give their `name` as the record has it, a one-line `pitch`, their `reach`, `composite: false`, and up to three `means`: what they actually controlled at that date, each with a kind and a tier from 0 to 5. Be modest; the engine caps the tiers. A playable person must command a force, hold an office or run a network of tier 2 or more that bears on a contest; money, information or facilities alone do not count.
 
 Never include a living private individual. Never invent crimes, corruption, sexual misconduct, health conditions or private scandal about anyone. If the person is already in the world under another spelling, say so in the note and set `placed` to false.
+
+You are also given the roster's names. If the player's name is a nickname or another spelling of someone on the roster ("Il Magnifico", "Stonewall Jackson"), give that person's exact roster name as `same_as`; otherwise leave `same_as` out. Use only names from the roster given.

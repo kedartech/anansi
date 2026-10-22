@@ -9,6 +9,7 @@ extra; this module is only used on a Postgres store.
 import base64
 import hashlib
 import secrets
+from collections.abc import Collection
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
@@ -70,15 +71,21 @@ class SeatLinks:
         ).fetchall()
         return [_link(r) for r in rows]
 
-    def for_user(self, user_id: str, guild_id: str) -> Link | None:
-        """The user's newest binding in this guild."""
-        row = self.conn.execute(
+    def for_user(
+        self, user_id: str, guild_id: str, campaigns: Collection[CampaignId] | None = None
+    ) -> Link | None:
+        """The user's newest binding in this guild, among ``campaigns`` when given."""
+        rows = self.conn.execute(
             f"SELECT {_LINK_COLUMNS} FROM discord_seats"
             " WHERE discord_user_id = %s AND guild_id = %s"
-            " ORDER BY linked_at DESC LIMIT 1",
+            " ORDER BY linked_at DESC",
             (user_id, guild_id),
-        ).fetchone()
-        return _link(row) if row else None
+        ).fetchall()
+        for row in rows:
+            link = _link(row)
+            if campaigns is None or link.campaign_id in campaigns:
+                return link
+        return None
 
     def users(self, campaign_id: CampaignId) -> dict[SeatId, str]:
         rows = self.conn.execute(

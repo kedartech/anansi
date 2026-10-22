@@ -64,8 +64,21 @@ def _fail(message: str, code: int = EXIT_ERROR) -> typer.Exit:
 
 
 def _campaign(store: EventStore) -> CampaignId:
+    """The newest campaign; on Postgres the live one, never a retired one."""
     try:
-        return cmp.current_campaign(store)
+        newest = cmp.current_campaign(store)
+        if not hasattr(store, "conn"):
+            return newest
+        pg: PostgresEventStore = store  # type: ignore[assignment]
+        now = clock()
+        live = sch.live_campaigns(pg, now)
+        if live:
+            return live[-1]
+        table = sch.register(pg, now)
+        kept = [c for c in pg.campaign_ids() if table.get(c).retired_at is None]
+        if not kept:
+            raise LookupError("every campaign is retired: start one with `revisionist new <world>`")
+        return kept[-1]
     except LookupError as exc:
         raise _fail(str(exc)) from exc
 
