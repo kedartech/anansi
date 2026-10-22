@@ -7,6 +7,7 @@ it near a contest's deciding point or a due history event.
 
 from datetime import date
 
+from revisionist.core.settings import Settings
 from revisionist.core.state import State
 
 
@@ -15,6 +16,18 @@ def base_days(start: date, end: date, ticks: int) -> int:
     raise NotImplementedError("Session Zero v3, Phase 2: calendar")
 
 
-def next_date(state: State, ticks_left: int) -> date:
-    """Today's in-world date after the coming tick."""
+def total_ticks(settings: Settings) -> int | None:
+    """Ticks in the campaign: ``real_days`` of ``tick_hours`` turns, rounded up.
+    None when the table set no end date or no real-life length."""
+    raise NotImplementedError("Session Zero v3, Phase 2: calendar")
+
+
+def span(state: State) -> int:
+    """In-world days the coming tick covers. Falls back to
+    ``settings.world_days_per_tick`` when the campaign has no calendar."""
+    raise NotImplementedError("Session Zero v3, Phase 2: calendar")
+
+
+def next_date(state: State) -> date | None:
+    """Today's in-world date after the coming tick; None without a calendar."""
     raise NotImplementedError("Session Zero v3, Phase 2: calendar")

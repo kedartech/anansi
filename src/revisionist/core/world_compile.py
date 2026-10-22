@@ -29,12 +29,14 @@ from revisionist.core.ids import (
     CampaignId,
     ClockId,
     CommitmentId,
+    ContestId,
     EntityId,
     EventId,
     FactId,
     GoalId,
     MeterId,
     RelationshipId,
+    ScheduledEventId,
     SeatId,
     derived_id,
 )
@@ -42,10 +44,13 @@ from revisionist.core.ontology import (
     Asset,
     AssetKind,
     Character,
+    CharacterSide,
     Clause,
     Clock,
     ClockKind,
     Commitment,
+    Contest,
+    ContestKind,
     Controller,
     Entity,
     EntityKind,
@@ -53,6 +58,8 @@ from revisionist.core.ontology import (
     Meter,
     Persona,
     Relationship,
+    ScheduledEvent,
+    ScheduleSource,
     Seat,
     SeatKind,
 )
@@ -206,11 +213,12 @@ def _check(world: WorldFile, sections: Mapping[str, str], problems: list[str]) -
     _check_seats(world, sections, problems)
     _check_goals(world, sections, problems)
     _check_roster(world, sections, problems)
-    _check_v3(world, problems)
+    _check_v3(world, sections, problems)
 
 
 ROSTER_MIN, ROSTER_MAX = 8, 12
 PLACES_MIN = 6
+CONTESTS_MAX = 3
 
 
 def check_history(world: WorldFile) -> list[str]:
@@ -251,18 +259,48 @@ def check_history(world: WorldFile) -> list[str]:
                     f"seat {s.key}: {s.embodies} holds no assets; "
                     f"set its people's parent to {s.embodies}"
                 )
+    if world.start_date is not None and not 1 <= len(world.contests) <= CONTESTS_MAX:
+        problems.append(f"contests: {len(world.contests)}, not 1-{CONTESTS_MAX}")
     return problems
 
 
-def _check_v3(world: WorldFile, problems: list[str]) -> None:
-    """Session Zero v3 sections parse and keep their keys, but compiling them is
-    Phase 2 work (core.contest, core.history). Refuse rather than drop them."""
-    if world.contests:
-        problems.append("contests: not compiled yet (Session Zero v3, Phase 2)")
-    if world.schedule:
-        problems.append("schedule: not compiled yet (Session Zero v3, Phase 2)")
-    if any(c.sides for c in world.roster):
-        problems.append("roster: sides not compiled yet (Session Zero v3, Phase 2)")
+def _check_v3(world: WorldFile, sections: Mapping[str, str], problems: list[str]) -> None:
+    """Contests, history's clock and roster sides (spec §5.3-5.5)."""
+    contests = {d.key: d for d in world.contests}
+    for k in world.contests:
+        where = f"contest {k.key}"
+        for side in k.sides:
+            _ref(problems, where, side, "entity", sections)
+        if len(set(k.sides)) != len(k.sides):
+            problems.append(f"{where}: a side is named twice")
+        if k.kind is ContestKind.RIVALRY and len(k.sides) < 2:
+            problems.append(f"{where}: a rivalry has at least two sides")
+        if k.kind is ContestKind.TRIAL and len(k.sides) != 1:
+            problems.append(f"{where}: a trial has one power under trial")
+        if k.kind is ContestKind.TRIAL and k.track < 0:
+            problems.append(f"{where}: a trial's track runs 0..100")
+    if world.schedule and world.start_date is None:
+        problems.append("schedule: history's clock needs a start_date")
+    for h in world.schedule:
+        where = f"history {h.key}"
+        if world.start_date is not None and h.on_date < world.start_date:
+            problems.append(f"{where}: dated before the start date")
+        if depth(h.condition) > MAX_DEPTH or len(leaves(h.condition)) > MAX_PARTS:
+            problems.append(f"{where}: condition too large")
+        for leaf in leaves(h.condition):
+            for name, section in _CONDITION_REFS.items():
+                _ref(problems, where, getattr(leaf, name, None), section, sections)
+    for c in world.roster:
+        where = f"character {c.entity}"
+        seen: set[str] = set()
+        for s in c.sides:
+            _ref(problems, where, s.contest, "contest", sections)
+            if s.contest in seen:
+                problems.append(f"{where}: two sides in contest {s.contest}")
+            seen.add(s.contest)
+            decl = contests.get(s.contest)
+            if decl is not None and s.side not in decl.sides:
+                problems.append(f"{where}: {s.side} is not a side of {s.contest}")
 
 
 def _check_roster(world: WorldFile, sections: Mapping[str, str], problems: list[str]) -> None:
@@ -545,6 +583,35 @@ def _emit(
             scope=scope,
         )
         out.append((ev.CommitmentCreated(commitment=commitment), scope))
+    if world.start_date is not None:
+        out.append((ev.DateAdvanced(to=world.start_date), PUBLIC))
+    for k in world.contests:
+        scope = _scope(k.scope, ids)
+        contest = Contest(
+            contest_id=ContestId(ids[k.key]),
+            kind=k.kind,
+            name=k.name,
+            prize=k.prize,
+            sides=tuple(EntityId(ids[s]) for s in k.sides),
+            track=k.track,
+            momentum=k.momentum,
+            countdown_days=k.countdown_days,
+            scope=scope,
+        )
+        out.append((ev.ContestCreated(contest=contest), scope))
+    for h in world.schedule:
+        scope = _scope(h.scope, ids)
+        scheduled = ScheduledEvent(
+            scheduled_id=ScheduledEventId(ids[h.key]),
+            fire_at_tick=0,
+            name=h.name,
+            scope=scope,
+            source=ScheduleSource.HISTORY,
+            on_date=h.on_date,
+            condition=_bind(h.condition, ids),
+            weight=h.weight,
+        )
+        out.append((ev.ScheduledEventCreated(scheduled=scheduled), scope))
     for s in world.seats:
         seat = Seat(
             seat_id=SeatId(ids[s.key]),
@@ -595,6 +662,10 @@ def _emit(
             reach=ch.reach,
             composite=ch.composite,
             means=frozenset(AssetId(ids[m]) for m in ch.means),
+            sides=tuple(
+                CharacterSide(contest_id=ContestId(ids[s.contest]), side=EntityId(ids[s.side]))
+                for s in ch.sides
+            ),
         )
         out.append((ev.CharacterListed(character=character), PUBLIC))
     if world.start:

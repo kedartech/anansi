@@ -381,6 +381,13 @@ class Phase(StrEnum):
     SEASON_OVER = "season_over"
 
 
+class CharacterSide(Model):
+    """Where a roster character stands in one contest. Public, like the roster."""
+
+    contest_id: ContestId
+    side: EntityId
+
+
 class Character(Model):
     """A real person from the chosen moment that a player may claim (spec §5 step 3).
 
@@ -395,6 +402,10 @@ class Character(Model):
     composite: bool
     means: frozenset[AssetId] = frozenset()
     claimed_by: SeatId | None = None
+    sides: tuple[CharacterSide, ...] = ()
+    """The character's side in each contest they bear on (spec §5.5)."""
+
+    late_fields: ClassVar[frozenset[str]] = frozenset({"sides"})
 
 
 # ScheduledEvent.condition names a WinCondition, and goals imports this module.

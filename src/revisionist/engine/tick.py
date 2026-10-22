@@ -35,7 +35,14 @@ from revisionist.core.events import CallCost, Event, Versions
 from revisionist.core.fold import replay, state_hash
 from revisionist.core.ids import CampaignId, ClockId, DeltaId, EventId, IntentId, SeatId, derived_id
 from revisionist.core.intent import Intent
-from revisionist.core.ontology import ClockKind, ClockStatus, Controller, Phase, SeatKind
+from revisionist.core.ontology import (
+    ClockKind,
+    ClockStatus,
+    Controller,
+    Phase,
+    ScheduleSource,
+    SeatKind,
+)
 from revisionist.core.project import project
 from revisionist.core.resolution import OutcomeTier, TickStage
 from revisionist.core.state import State, View
@@ -653,7 +660,10 @@ def _scheduled(em: _Emitter) -> list[Event]:
     return [
         em.event(ev.ScheduledEventFired(scheduled_id=s.scheduled_id), scope=s.scope)
         for s in sorted(state.scheduled.values(), key=lambda s: s.scheduled_id)
-        if not s.fired and s.fire_at_tick <= state.tick
+        if not s.fired
+        and not s.skipped
+        and s.source is ScheduleSource.PLAY
+        and s.fire_at_tick <= state.tick
     ]
 
 

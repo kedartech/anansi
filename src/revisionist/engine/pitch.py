@@ -9,9 +9,10 @@ named. Nothing is written to a campaign until the host confirms a start point.
 from datetime import date
 
 from revisionist.core._base import Model
+from revisionist.core.events import CallCost
 from revisionist.engine.llm import Transport
 
-PITCH_MAX = 600
+PITCH_MAX = 200
 
 
 class StartPoint(Model):
@@ -20,6 +21,8 @@ class StartPoint(Model):
     contests: tuple[str, ...]
     powers: tuple[str, ...]
     focus: str
+    schedule: tuple[str, ...] = ()
+    """What really followed this date, one line each, as the host may strike."""
 
 
 class SettingCard(Model):
@@ -28,6 +31,18 @@ class SettingCard(Model):
     named: tuple[str, ...] = ()
 
 
-def read_pitch(pitch: str, transport: Transport) -> SettingCard:
+class PitchError(ValueError):
+    """The pitch was refused: empty, too long, or no readable period. ``reason`` is
+    plain text for the host."""
+
+    def __init__(self, reason: str, costs: list[CallCost] | None = None) -> None:
+        super().__init__(reason)
+        self.reason = reason
+        self.costs = costs or []
+
+
+def read_pitch(
+    pitch: str, transport: Transport, effort: int | None = None
+) -> tuple[SettingCard, list[CallCost]]:
     """One model call; refuses an empty or over-long pitch before calling."""
     raise NotImplementedError("Session Zero v3, Phase 2: pitch card")

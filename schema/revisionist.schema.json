@@ -612,6 +612,14 @@
             "maxLength": 200,
             "title": "Reach",
             "type": "string"
+          },
+          "sides": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/CharacterSide"
+            },
+            "title": "Sides",
+            "type": "array"
           }
         },
         "required": [
@@ -667,6 +675,26 @@
           "character"
         ],
         "title": "CharacterListed",
+        "type": "object"
+      },
+      "CharacterSide": {
+        "additionalProperties": false,
+        "description": "Where a roster character stands in one contest. Public, like the roster.",
+        "properties": {
+          "contest_id": {
+            "title": "Contest Id",
+            "type": "string"
+          },
+          "side": {
+            "title": "Side",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contest_id",
+          "side"
+        ],
+        "title": "CharacterSide",
         "type": "object"
       },
       "ClarificationAsked": {
@@ -4919,6 +4947,14 @@
             "maxLength": 200,
             "title": "Reach",
             "type": "string"
+          },
+          "sides": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/CharacterSide"
+            },
+            "title": "Sides",
+            "type": "array"
           }
         },
         "required": [
@@ -4928,6 +4964,26 @@
           "composite"
         ],
         "title": "Character",
+        "type": "object"
+      },
+      "CharacterSide": {
+        "additionalProperties": false,
+        "description": "Where a roster character stands in one contest. Public, like the roster.",
+        "properties": {
+          "contest_id": {
+            "title": "Contest Id",
+            "type": "string"
+          },
+          "side": {
+            "title": "Side",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contest_id",
+          "side"
+        ],
+        "title": "CharacterSide",
         "type": "object"
       },
       "Clause": {
@@ -6904,6 +6960,14 @@
             "maxLength": 200,
             "title": "Reach",
             "type": "string"
+          },
+          "sides": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/CharacterSide"
+            },
+            "title": "Sides",
+            "type": "array"
           }
         },
         "required": [
@@ -6913,6 +6977,26 @@
           "composite"
         ],
         "title": "Character",
+        "type": "object"
+      },
+      "CharacterSide": {
+        "additionalProperties": false,
+        "description": "Where a roster character stands in one contest. Public, like the roster.",
+        "properties": {
+          "contest_id": {
+            "title": "Contest Id",
+            "type": "string"
+          },
+          "side": {
+            "title": "Side",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contest_id",
+          "side"
+        ],
+        "title": "CharacterSide",
         "type": "object"
       },
       "Clause": {

@@ -395,3 +395,9 @@ def balance(state: State, seat: SeatId, c: WinCondition) -> Balance:
             suggestion="A weak character with a hard goal: keep one part, or aim nearer.",
         )
     return Balance(power=p, difficulty=diff)
+
+
+def pressure_warning(state: State, seat: SeatId, c: WinCondition) -> str | None:
+    """A plain warning when ``c`` bears on no contest and no item on history's
+    clock, or None. Warn only: the player may confirm anyway (spec §5.6)."""
+    raise NotImplementedError("Session Zero v3, Phase 2: goal rule")

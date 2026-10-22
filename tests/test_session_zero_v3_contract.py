@@ -186,22 +186,40 @@ def test_an_old_campaign_replays_to_the_same_hash() -> None:
 # --- World file and draft ---------------------------------------------------
 
 
-def test_v3_world_sections_are_refused_until_phase_2_compiles_them() -> None:
+def test_v3_world_sections_compile_into_contests_and_history() -> None:
     raw: dict[str, object] = yaml.safe_load(SALT_STRAIT.read_text())
+    raw["start_date"] = "1500-03-01"
     raw["contests"] = [
         {
             "key": "war",
             "kind": "rivalry",
             "name": "War",
-            "prize": "p",
-            "sides": ["a", "b"],
+            "prize": "the strait",
+            "sides": ["varda", "ostrel"],
+            "momentum": -2,
             "countdown_days": 30,
         }
     ]
-    world = WorldFile.model_validate(raw)
+    raw["schedule"] = [
+        {
+            "key": "treaty",
+            "name": "Treaty of Harrow",
+            "on_date": "1500-04-01",
+            "condition": {"check": "entity_is", "entity": "mira", "status": "active"},
+            "weight": 2,
+        }
+    ]
+    state = replay(compile_world(WorldFile.model_validate(raw), fx.CAMPAIGN, fx.VERSIONS))
+    (war,) = state.contests.values()
+    assert war.momentum == -2 and len(war.sides) == 2
+    history = [s for s in state.scheduled.values() if s.source is ScheduleSource.HISTORY]
+    assert [h.name for h in history] == ["Treaty of Harrow"]
+    assert state.in_world_date == date(1500, 3, 1)
+
+    raw["contests"] = [{**raw["contests"][0], "sides": ["varda"]}]  # type: ignore[index]
     with pytest.raises(WorldError) as info:
-        compile_world(world, fx.CAMPAIGN, fx.VERSIONS)
-    assert any("contests: not compiled yet" in p for p in info.value.problems)
+        compile_world(WorldFile.model_validate(raw), fx.CAMPAIGN, fx.VERSIONS)
+    assert "contest war: a rivalry has at least two sides" in info.value.problems
 
 
 def test_the_draft_schema_hides_v3_sections_until_phase_2() -> None:
@@ -218,3 +236,29 @@ def test_establish_passes_effort_to_the_model() -> None:
     req = sz._request("Florence, April 1478", Settings(), (), effort=1)
     assert req.effort == 1
     assert sz._request("Florence, April 1478", Settings(), ()).effort is None
+
+
+def test_a_side_is_found_up_the_parent_chain() -> None:
+    from revisionist.core import contest
+
+    raw: dict[str, object] = yaml.safe_load(SALT_STRAIT.read_text())
+    raw["start_date"] = "1500-03-01"
+    raw["contests"] = [
+        {
+            "key": "war",
+            "kind": "rivalry",
+            "name": "War",
+            "prize": "the strait",
+            "sides": ["varda", "ostrel"],
+            "countdown_days": 30,
+        }
+    ]
+    state = replay(compile_world(WorldFile.model_validate(raw), fx.CAMPAIGN, fx.VERSIONS))
+    (war,) = state.contests.values()
+    by_name = {e.name: e.entity_id for e in state.entities.values()}
+    varda = war.sides[0]
+    child = next(e.entity_id for e in state.entities.values() if e.parent == varda)
+    assert contest.side_of(state, child, war) == varda
+    assert contest.bearing(state, child) == (war.contest_id,)
+    strait = next(v for k, v in by_name.items() if "strait" in k.lower())
+    assert contest.side_of(state, strait, war) is None

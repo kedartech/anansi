@@ -10,7 +10,8 @@ import json
 import logging
 import re
 import unicodedata
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from datetime import date
 from typing import Any, Literal
 
 from pydantic import TypeAdapter, ValidationError
@@ -51,6 +52,7 @@ from revisionist.engine import campaign as cmp
 from revisionist.engine.agent import AGENT_MODEL
 from revisionist.engine.ids import new_id
 from revisionist.engine.llm import RESOLVER_MODEL, Request, Transport, TransportError, prompt_text
+from revisionist.engine.pitch import SettingCard
 from revisionist.engine.store import EventStore, Sealer, StoreError, load_state
 
 log = logging.getLogger(__name__)
@@ -172,6 +174,40 @@ def establish(
     store.append_all(compile_world(world, campaign_id, cmp.versions()))
     cmp.log_cost(store, campaign_id, "session_zero", costs)
     return campaign_id
+
+
+# --- Session Zero v3: pitch, card, confirm (spec §5.2) -------------------------
+
+
+def propose(
+    pitch: str, transport: Transport, effort: int | None = None
+) -> tuple[SettingCard, list[CallCost]]:
+    """Read the pitch into a setting card for the host. Logs nothing: a card is
+    not a campaign until the host confirms it, so the caller keeps the costs and
+    hands them to ``confirm``. Raises ``PitchError``."""
+    raise NotImplementedError("Session Zero v3, Phase 2: Session Zero engine")
+
+
+def confirm(
+    store: EventStore,
+    card: SettingCard,
+    choice: int,
+    settings: Settings,
+    transport: Transport,
+    *,
+    strikes: Sequence[int] = (),
+    end_date: date | None = None,
+    real_days: int | None = None,
+    effort: int | None = None,
+    progress: Callable[[str], None] | None = None,
+    card_costs: Sequence[CallCost] = (),
+) -> CampaignId:
+    """Draft (``engine.draft``), compile and open the campaign for start point
+    ``choice`` (1-based), without the struck schedule items (1-based). The end
+    date and real-life length go into the settings; ``card_costs`` are logged with
+    the draft's. Raises ``SessionZeroError`` (draft) or ``StepRefusedError`` (a bad
+    choice, strike, end date or length)."""
+    raise NotImplementedError("Session Zero v3, Phase 2: Session Zero engine")
 
 
 # --- the private steps: character, goal, brief, agent (spec §5 steps 3-5) --------
