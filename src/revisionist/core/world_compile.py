@@ -671,6 +671,7 @@ def _emit(
                 CharacterSide(contest_id=ContestId(ids[s.contest]), side=EntityId(ids[s.side]))
                 for s in ch.sides
             ),
+            aliases=ch.aliases,
         )
         out.append((ev.CharacterListed(character=character), PUBLIC))
     if world.start:

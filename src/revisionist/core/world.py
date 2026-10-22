@@ -232,6 +232,10 @@ class CharacterDecl(Model):
     """Asset keys the character controls at the start date."""
     sides: tuple[SideDecl, ...] = ()
     """The character's side in each contest they bear on. Public."""
+    aliases: tuple[Annotated[str, StringConstraints(max_length=60)], ...] = Field(
+        default=(), max_length=6
+    )
+    """Other names people use for this person. Public."""
 
 
 Slug = Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_-]*$", max_length=40)]

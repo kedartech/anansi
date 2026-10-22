@@ -574,6 +574,16 @@
         "additionalProperties": false,
         "description": "A real person from the chosen moment that a player may claim (spec \u00a75 step 3).\n\nJudged by agency in history, not fame. Where the record names no one, the\ncharacter is a composite: named, built from what people in that role did,\nand labelled as such in the brief.",
         "properties": {
+          "aliases": {
+            "default": [],
+            "items": {
+              "maxLength": 60,
+              "type": "string"
+            },
+            "maxItems": 6,
+            "title": "Aliases",
+            "type": "array"
+          },
           "claimed_by": {
             "anyOf": [
               {
@@ -4909,6 +4919,16 @@
         "additionalProperties": false,
         "description": "A real person from the chosen moment that a player may claim (spec \u00a75 step 3).\n\nJudged by agency in history, not fame. Where the record names no one, the\ncharacter is a composite: named, built from what people in that role did,\nand labelled as such in the brief.",
         "properties": {
+          "aliases": {
+            "default": [],
+            "items": {
+              "maxLength": 60,
+              "type": "string"
+            },
+            "maxItems": 6,
+            "title": "Aliases",
+            "type": "array"
+          },
           "claimed_by": {
             "anyOf": [
               {
@@ -6922,6 +6942,16 @@
         "additionalProperties": false,
         "description": "A real person from the chosen moment that a player may claim (spec \u00a75 step 3).\n\nJudged by agency in history, not fame. Where the record names no one, the\ncharacter is a composite: named, built from what people in that role did,\nand labelled as such in the brief.",
         "properties": {
+          "aliases": {
+            "default": [],
+            "items": {
+              "maxLength": 60,
+              "type": "string"
+            },
+            "maxItems": 6,
+            "title": "Aliases",
+            "type": "array"
+          },
           "claimed_by": {
             "anyOf": [
               {

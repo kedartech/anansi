@@ -10,9 +10,9 @@ append-only and so is the ontology.
 
 from datetime import date
 from enum import StrEnum
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Annotated, ClassVar
 
-from pydantic import Field, model_validator
+from pydantic import Field, StringConstraints, model_validator
 
 from revisionist.core._base import Label, Model
 from revisionist.core.ids import (
@@ -404,8 +404,12 @@ class Character(Model):
     claimed_by: SeatId | None = None
     sides: tuple[CharacterSide, ...] = ()
     """The character's side in each contest they bear on (spec §5.5)."""
+    aliases: tuple[Annotated[str, StringConstraints(max_length=60)], ...] = Field(
+        default=(), max_length=6
+    )
+    """Other names people use for this person ("Stonewall"). Public; used to match a typed name."""
 
-    late_fields: ClassVar[frozenset[str]] = frozenset({"sides"})
+    late_fields: ClassVar[frozenset[str]] = frozenset({"sides", "aliases"})
 
 
 # ScheduledEvent.condition names a WinCondition, and goals imports this module.
