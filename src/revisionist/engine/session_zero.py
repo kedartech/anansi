@@ -17,9 +17,10 @@ from typing import Any, Literal
 from pydantic import TypeAdapter, ValidationError
 
 from revisionist.core import events as ev
-from revisionist.core import goals
+from revisionist.core import goals, roster
 from revisionist.core.canary import canaries_hidden_from_human
 from revisionist.core.events import CallCost, Event
+from revisionist.core.fold import replay
 from revisionist.core.ids import (
     AssetId,
     CampaignId,
@@ -52,7 +53,7 @@ from revisionist.engine import campaign as cmp
 from revisionist.engine.agent import AGENT_MODEL
 from revisionist.engine.ids import new_id
 from revisionist.engine.llm import RESOLVER_MODEL, Request, Transport, TransportError, prompt_text
-from revisionist.engine.pitch import SettingCard
+from revisionist.engine.pitch import SettingCard, read_pitch
 from revisionist.engine.store import EventStore, Sealer, StoreError, load_state
 
 log = logging.getLogger(__name__)
@@ -167,6 +168,10 @@ def establish(
     """Draft, compile and open a new campaign at ``place``. Its first tick waits for
     the character, goal and brief steps."""
     world, costs = draft_world(place, settings, transport, effort)
+    return _open_campaign(store, world, costs)
+
+
+def _open_campaign(store: EventStore, world: WorldFile, costs: Sequence[CallCost]) -> CampaignId:
     campaign_id = CampaignId(new_id())
     sealer: Sealer | None = getattr(store, "sealer", None)
     if sealer is not None:
@@ -185,7 +190,7 @@ def propose(
     """Read the pitch into a setting card for the host. Logs nothing: a card is
     not a campaign until the host confirms it, so the caller keeps the costs and
     hands them to ``confirm``. Raises ``PitchError``."""
-    raise NotImplementedError("Session Zero v3, Phase 2: Session Zero engine")
+    return read_pitch(pitch, transport, effort)
 
 
 def confirm(
@@ -207,7 +212,29 @@ def confirm(
     date and real-life length go into the settings; ``card_costs`` are logged with
     the draft's. Raises ``SessionZeroError`` (draft) or ``StepRefusedError`` (a bad
     choice, strike, end date or length)."""
-    raise NotImplementedError("Session Zero v3, Phase 2: Session Zero engine")
+    if not 1 <= choice <= len(card.start_points):
+        raise StepRefusedError(f"Pick a start point from 1 to {len(card.start_points)}.")
+    start = card.start_points[choice - 1]
+    if any(not 1 <= n <= len(start.schedule) for n in strikes):
+        raise StepRefusedError(
+            f"Strike items from 1 to {len(start.schedule)} of that start point's schedule."
+        )
+    if end_date is not None and end_date <= start.start_date:
+        raise StepRefusedError(
+            f"The end date must come after the start, {start.start_date.isoformat()}."
+        )
+    if real_days is not None and not 1 <= real_days <= 365:
+        raise StepRefusedError("The real-life length is 1 to 365 days.")
+    struck = set(strikes)
+    schedule = tuple(item for n, item in enumerate(start.schedule, 1) if n not in struck)
+    start = start.model_copy(update={"schedule": schedule})
+    dates = {k: v for k, v in (("end_date", end_date), ("real_days", real_days)) if v is not None}
+    settings = settings.model_copy(update=dates)
+    # Imported here: engine.draft imports this module for its error and retry limit.
+    from revisionist.engine import draft as world_draft
+
+    world, costs = world_draft.draft(card, start, settings, transport, effort, progress=progress)
+    return _open_campaign(store, world, [*card_costs, *costs])
 
 
 # --- the private steps: character, goal, brief, agent (spec §5 steps 3-5) --------
@@ -223,16 +250,15 @@ PICK_TIER_MAX = 3
 PICK_MEANS_MAX = 3
 
 
-def _log(
-    store: EventStore,
+def _events(
+    state: State,
     campaign_id: CampaignId,
     items: Sequence[tuple[ev.Payload, Scope, SeatId | None]],
     *,
     first_id: str | None = None,
-) -> None:
-    """Append ``items`` in one batch. ``first_id`` names the first event deterministically."""
-    state = load_state(store, campaign_id)
-    events = [
+) -> list[Event]:
+    """``items`` as events after ``state``. ``first_id`` names the first event deterministically."""
+    return [
         Event(
             event_id=EventId(first_id if (i == 0 and first_id) else new_id()),
             campaign_id=campaign_id,
@@ -245,7 +271,18 @@ def _log(
         )
         for i, (payload, scope, actor) in enumerate(items)
     ]
-    store.append_all(events)
+
+
+def _log(
+    store: EventStore,
+    campaign_id: CampaignId,
+    items: Sequence[tuple[ev.Payload, Scope, SeatId | None]],
+    *,
+    first_id: str | None = None,
+) -> None:
+    """Append ``items`` in one batch. ``first_id`` names the first event deterministically."""
+    state = load_state(store, campaign_id)
+    store.append_all(_events(state, campaign_id, items, first_id=first_id))
 
 
 def _open(store: EventStore, campaign_id: CampaignId) -> State:
@@ -265,7 +302,26 @@ def _start(store: EventStore, campaign_id: CampaignId) -> str:
 def _line(state: State, ch: Character) -> str:
     name = state.entities[ch.entity_id].name
     tags = (" (composite)" if ch.composite else "") + (" [taken]" if ch.claimed_by else "")
-    return f"{name}{tags}: {ch.pitch} Reach: {ch.reach}"
+    stands = [
+        f"{state.contests[s.contest_id].name}: {state.entities[s.side].name}" for s in ch.sides
+    ]
+    sides = f" Sides: {'; '.join(stands)}." if stands else ""
+    return f"{name}{tags}: {ch.pitch} Reach: {ch.reach}{sides}"
+
+
+def _eligible(state: State, entity: EntityId) -> bool:
+    """The character rule (spec §5.5), which applies once the world has contests."""
+    return not state.contests or roster.qualifies(state, entity)
+
+
+def _unqualified(state: State, entity: EntityId) -> StepRefusedError:
+    name = state.entities[entity].name
+    near = roster.nearest(state, entity)
+    tail = f" Nearest who does: {state.entities[near].name}." if near is not None else ""
+    return StepRefusedError(
+        f"{name} does not meet the character rule: a playable character needs a force, "
+        "office or network of tier 2 or more in one of the world's contests." + tail
+    )
 
 
 def roster_lines(state: State) -> list[str]:
@@ -301,6 +357,8 @@ def claim(store: EventStore, campaign_id: CampaignId, seat: SeatId, name: str) -
     taken = StepRefusedError(f"{state.entities[ch.entity_id].name} is already taken.")
     if ch.claimed_by is not None:
         raise taken
+    if not _eligible(state, ch.entity_id):
+        raise _unqualified(state, ch.entity_id)
     claimed = ev.CharacterClaimed(seat_id=seat, entity_id=ch.entity_id)
     try:
         _log(
@@ -336,7 +394,11 @@ def search(
     if not wanted:
         raise StepRefusedError("Say what you want to play, e.g. /character search a poet at court.")
     state = _open(store, campaign_id)
-    free = {ch.entity_id: ch for ch in state.roster.values() if ch.claimed_by is None}
+    free = {
+        ch.entity_id: ch
+        for ch in state.roster.values()
+        if ch.claimed_by is None and _eligible(state, ch.entity_id)
+    }
     listing = [
         {"id": e, "name": state.entities[e].name, "pitch": ch.pitch, "reach": ch.reach}
         for e, ch in sorted(free.items())
@@ -592,8 +654,13 @@ def pick(
         *((ev.AssetCreated(asset=a), PUBLIC, None) for a in assets),
         (ev.CharacterListed(character=character), PUBLIC, None),
     ]
+    first = derived_id(campaign_id, "pick-entity", entity)
+    if state.contests:
+        added = replay(_events(state, campaign_id, items, first_id=first), initial=state)
+        if not roster.qualifies(added, entity):
+            raise _unqualified(added, entity)
     try:
-        _log(store, campaign_id, items, first_id=derived_id(campaign_id, "pick-entity", entity))
+        _log(store, campaign_id, items, first_id=first)
     except StoreError as exc:
         raise StepRefusedError(f"{person} was just added by someone else.") from exc
     return claim(store, campaign_id, seat, person)
@@ -637,6 +704,10 @@ _ROUTE_ASK = {
 def _seat_of(state: State, seat: SeatId) -> None:
     if seat not in state.seats:
         raise StepRefusedError("Pick a character first.")
+
+
+def _warning(text: str | None) -> str:
+    return f" Warning: {text}" if text else ""
 
 
 def propose_goals(
@@ -713,7 +784,8 @@ def propose_goals(
         note = f" Balance: {b.suggestion}" if b.flag else ""
         d = goals.difficulty(state, seat, o.condition)
         rank = "Easy" if d <= EASY_MAX else "Hard" if d <= HARD_MAX else "Long shot"
-        lines.append(f"{_ROUTE_LETTER[route]}{n}. {o.text} [{rank}, {o.kind.value}]{note}")
+        warn = _warning(goals.pressure_warning(state, seat, o.condition))
+        lines.append(f"{_ROUTE_LETTER[route]}{n}. {o.text} [{rank}, {o.kind.value}]{note}{warn}")
     return lines
 
 
@@ -800,7 +872,8 @@ def confirm_goal(
         else ("Once met, it stays met.")
     )
     flag = " The host has to approve it before play begins." if b.flag else ""
-    return f"Your goal is fixed: {option.text} ({option.kind.value}). {held}{flag}"
+    warn = _warning(goals.pressure_warning(state, seat, option.condition))
+    return f"Your goal is fixed: {option.text} ({option.kind.value}). {held}{flag}{warn}"
 
 
 BRIEF_SCHEMA: dict[str, Any] = {

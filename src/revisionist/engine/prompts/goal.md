@@ -13,4 +13,4 @@ Each option has `text`, the goal in one sentence the player will recognise, and 
 
 If the player's own goal cannot be written as a condition, return no options and a `rewording` that could be.
 
-A goal is something the character must make happen: take, win, remove, turn, pass or force. Never offer a goal that is only keeping what they already hold. Offer a spread from a near goal to a long shot, and for a commander prefer goals that use their command.
+A goal is something the character must make happen: take, win, remove, turn, pass or force. Never offer a goal that is only keeping what they already hold. Offer a spread from a near goal to a long shot, and for a commander prefer goals that use their command. When the character commands a force, offer political goals as well as military ones: seize or block an office, force a policy, break or save a government, or keep the army out of politics. The record has these: Boulanger 1886-89, Schleicher 1932, MacArthur against Truman 1951. Prefer goals that bear on one of the world's contests or on an event on history's clock: cause it, prevent it, or bring it forward.

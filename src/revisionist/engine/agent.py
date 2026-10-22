@@ -16,7 +16,7 @@ from typing import Any
 from pydantic import TypeAdapter, ValidationError
 
 from revisionist.core import events as ev
-from revisionist.core import places
+from revisionist.core import history, places
 from revisionist.core._base import Model
 from revisionist.core.events import CallCost, Versions
 from revisionist.core.ids import (
@@ -367,9 +367,24 @@ def _deputy_prompt(view: View) -> str:
         f"## Seat: {seat.name}, tick {view.tick}\n"
         "## Standing orders\n"
         + "\n".join(f"- {o}" for o in seat.standing_orders)
-        + "\n\n## What this seat knows\n"
+        + "\n\n"
+        + _history_clock(view)
+        + "## What this seat knows\n"
         + view.model_dump_json(exclude={"own_pending", "roster"}, exclude_none=True)
         + "\n\nReturn up to three intents that carry out the orders."
+    )
+
+
+def _history_clock(view: View) -> str:
+    """The deputy's note on the record's next event; empty when none is pending."""
+    upcoming = history.next_due(view, view.in_world_date)
+    if upcoming is None:
+        return ""
+    return (
+        "## History's clock\n"
+        f"Next as recorded: {upcoming.name} ({upcoming.on_date}). "
+        "Act as the record has this seat act unless the world as it stands has made that "
+        "impossible; then replan from what you know.\n\n"
     )
 
 

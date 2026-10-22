@@ -16,12 +16,13 @@ from revisionist.core import events as ev
 from revisionist.core import goals as g
 from revisionist.core.canary import surfaces_from_log
 from revisionist.core.fold import replay
-from revisionist.core.ids import CampaignId, EventId, SeatId, derived_id
-from revisionist.core.ontology import EntityStatus, Persona, Phase
+from revisionist.core.ids import CampaignId, EntityId, EventId, SeatId, derived_id
+from revisionist.core.ontology import Character, Entity, EntityKind, EntityStatus, Persona, Phase
 from revisionist.core.project import project
 from revisionist.core.sealing import seal_holder
 from revisionist.core.settings import Settings
 from revisionist.core.state import State
+from revisionist.core.visibility import PUBLIC
 from revisionist.engine import session_zero as sz
 from revisionist.engine.discord.handlers import DRAFTING, HOST_ONLY, JOINED_ZERO, PICK_FIRST
 from revisionist.engine.llm import Reply, Request
@@ -33,6 +34,7 @@ from tests import fixtures as fx
 from tests.pg import PgDb
 from tests.test_discord_bot import GUILD, HOST, Game
 from tests.test_discord_duo import FRIEND
+from tests.test_draft import CARD, FEUD, _good
 from tests.test_session_zero import FLORENCE, draft
 
 runner = CliRunner()
@@ -459,3 +461,112 @@ def test_a_search_the_model_finds_nothing_for_retries_then_falls_back_to_words()
     names = {x.split(":")[0] for x in found}
     assert "Lorenzo de' Medici" in names and len(found) <= 5
     assert sz.search(store, c, None, "zzzz qqqq", table) == []
+
+
+# --- the character rule and the goal warning, in a world with contests (spec §5.5, §5.6) ---
+
+UNTIED = (
+    "This goal ties to none of the world's contests or coming events. "
+    "You can keep it, but it may sit outside the main action."
+)
+
+
+def _contest_world(store: EventStore) -> CampaignId:
+    return sz.confirm(store, CARD, 1, Settings(), _good())
+
+
+def _add_bystander(store: EventStore, campaign_id: CampaignId) -> None:
+    """A roster person under Florence who holds no tier 2 force, office or network."""
+    state = load_state(store, campaign_id)
+    florence = next(
+        e.entity_id for e in state.entities.values() if e.name == "Republic of Florence"
+    )
+    entity = EntityId(derived_id(campaign_id, "bystander"))
+    person = Entity(entity_id=entity, kind=EntityKind.PERSON, name="Tommaso Vanni", parent=florence)
+    listed = Character(
+        entity_id=entity,
+        pitch="A banker who moves money for the Medici.",
+        reach="Florentine credit.",
+        composite=True,
+    )
+    sz._log(
+        store,
+        campaign_id,
+        [
+            (ev.EntityCreated(entity=person), PUBLIC, None),
+            (ev.CharacterListed(character=listed), PUBLIC, None),
+        ],
+    )
+
+
+def test_a_roster_line_ends_with_the_sides_and_only_those_lines() -> None:
+    store = MemoryStore()
+    state = load_state(store, _contest_world(store))
+    lorenzo = next(x for x in sz.roster_lines(state) if x.startswith("Lorenzo de' Medici"))
+    assert lorenzo.endswith(f" Sides: {FEUD}: Republic of Florence.")
+    old_store, table = MemoryStore(), Table()
+    old = _florence(old_store, table)
+    assert not any("Sides:" in x for x in sz.roster_lines(load_state(old_store, old)))
+
+
+def test_claim_refuses_a_person_who_fails_the_rule_and_names_the_nearest() -> None:
+    store = MemoryStore()
+    c = _contest_world(store)
+    _add_bystander(store, c)
+    with pytest.raises(sz.StepRefusedError) as refused:
+        sz.claim(store, c, A, "Tommaso Vanni")
+    assert str(refused.value) == (
+        "Tommaso Vanni does not meet the character rule: a playable character needs a force, "
+        "office or network of tier 2 or more in one of the world's contests. "
+        "Nearest who does: Bernardo Bandini Baroncelli."
+    )
+    assert sz.claim(store, c, A, "Lorenzo de' Medici") == "Lorenzo de' Medici"
+
+
+def test_search_offers_only_people_who_pass_the_rule() -> None:
+    store, table = MemoryStore(), Table()
+    c = _contest_world(store)
+    _add_bystander(store, c)
+    found = {x.split(":")[0] for x in sz.search(store, c, None, "someone who moves money", table)}
+    assert found and "Tommaso Vanni" not in found
+
+
+def test_an_own_pick_that_fails_the_rule_is_refused_and_logs_nothing_more() -> None:
+    store, table = MemoryStore(), Table()
+    c = _contest_world(store)
+    with pytest.raises(sz.StepRefusedError, match="Luca Pitti does not meet the character rule"):
+        sz.pick(store, c, B, "Luca Pitti", table)
+    assert table.calls[-1] == "character_pick"
+    assert not any(e.name == "Luca Pitti" for e in load_state(store, c).entities.values())
+    purposes = [e.payload.purpose for e in store.read(c) if isinstance(e.payload, ev.CostLogged)]
+    assert purposes == ["session_zero", "character_pick"]  # the model call is still paid for
+
+
+class Untied(Table):
+    """A goal on a power that stands on no side and in no coming event."""
+
+    def _goals(self, prompt: str) -> dict[str, Any]:
+        view = _section(prompt, "What your character knows")
+        urbino = next(k for k, e in view["entities"].items() if e["name"] == "Duchy of Urbino")
+        condition = {"check": "entity_is", "entity": urbino, "status": "dissolved"}
+        return {"options": [{"text": "Hold Urbino quiet.", "condition": condition}]}
+
+
+def test_a_goal_tied_to_nothing_is_offered_with_a_warning_and_can_be_confirmed() -> None:
+    store, table = MemoryStore(), Untied()
+    c = _contest_world(store)
+    sz.claim(store, c, A, "Lorenzo de' Medici")
+    [line] = sz.propose_goals(store, c, A, "history", table)
+    assert line.endswith(f" Warning: {UNTIED}")
+    reply = sz.confirm_goal(store, c, A, 1)
+    assert reply.startswith("Your goal is fixed: Hold Urbino quiet.")
+    assert reply.endswith(f" Warning: {UNTIED}")
+
+
+def test_a_goal_on_a_contest_carries_no_warning() -> None:
+    store, table = MemoryStore(), Table()
+    c = _contest_world(store)
+    sz.claim(store, c, A, "Lorenzo de' Medici")
+    lines = sz.propose_goals(store, c, A, "history", table)
+    [office] = [x for x in lines if "Hold the Gonfalonier" in x]
+    assert "Warning" not in office

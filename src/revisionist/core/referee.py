@@ -21,6 +21,7 @@ from typing import Literal, Protocol
 
 from pydantic import Field
 
+from revisionist.core import contest
 from revisionist.core import delta as d
 from revisionist.core._base import Model
 from revisionist.core.fold import FoldError, apply_delta
@@ -311,7 +312,8 @@ def rate(world: World, intent: Intent) -> FeasibilityBand:
     committed force is at the target's place), and scouting (+1 for a
     non-public fact about a target). A person target counts as guarded
     (+1 opposition). An order naming a place the world left out is a long
-    shot at best. Free verbs are Assured.
+    shot at best. Free verbs are Assured. An order that bears on a contest
+    moves up to two bands by strength against strength on it (contest.edge).
     """
     seat = own_seat(world, intent.actor)
     if seat is None:
@@ -348,15 +350,27 @@ def rate(world: World, intent: Intent) -> FeasibilityBand:
 
     score += _distance(world, intent, seat.embodies)
     score += _scouting(world, intent)
-    band = _band(score)
+    band = _step(_band(score), contest.edge(world, intent))
     if (intent.verb in MEANS_VERBS and not intent.means) or intent.destination:
         band = min(band, FeasibilityBand.LONG_SHOT, key=_BAND_ORDER.index)
     return band
 
 
 _BAND_ORDER = list(FeasibilityBand)
+_LADDER = (
+    FeasibilityBand.LONG_SHOT,
+    FeasibilityBand.CONTESTED,
+    FeasibilityBand.LIKELY,
+    FeasibilityBand.ASSURED,
+)
 FORCE_KINDS = frozenset({AssetKind.FORCE})
 ALL_KINDS = frozenset(AssetKind)
+
+
+def _step(band: FeasibilityBand, steps: int) -> FeasibilityBand:
+    """Move ``band`` up or down the odds ladder, stopping at either end."""
+    at = _LADDER.index(band) + steps
+    return _LADDER[max(0, min(len(_LADDER) - 1, at))]
 
 
 def _opposition(world: World, intent: Intent) -> int:

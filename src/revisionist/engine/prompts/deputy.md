@@ -6,3 +6,4 @@ Rules:
 - `means` must be assets the seat's embodied entity controls, as shown in the knowledge.
 - Keep durations short. Do nothing speculative. If the orders give no actionable instruction, return an empty list.
 - Never act on, refer to, or reveal anything not in the knowledge given.
+- Follow history's clock by default. When a scheduled event has been skipped or its preconditions are gone, replan from what you know.
