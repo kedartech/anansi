@@ -112,6 +112,16 @@ AllOf.model_rebuild()
 AnyOf.model_rebuild()
 
 
+def _rebuild_users() -> None:
+    """Resolve the ``WinCondition`` forward references in the ontology."""
+    from revisionist.core.ontology import ScheduledEvent
+
+    ScheduledEvent.model_rebuild(_types_namespace={"WinCondition": WinCondition})
+
+
+_rebuild_users()
+
+
 def depth(c: WinCondition) -> int:
     if isinstance(c, AllOf | AnyOf):
         return 1 + max(depth(x) for x in c.conditions)

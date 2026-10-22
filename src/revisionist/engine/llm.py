@@ -36,6 +36,13 @@ RESOLVER_MODEL = "claude-sonnet-5-5"
 NARRATOR_MODEL = "claude-haiku-5-5"
 log = logging.getLogger(__name__)
 
+_EFFORT_LEVELS: Mapping[int, str] = {1: "low", 2: "medium", 3: "high", 4: "max"}
+
+
+def _effort_level(effort: int) -> str:
+    """Map ``Request.effort`` (1-4) to the CLI ``--effort`` level (low..max)."""
+    return _EFFORT_LEVELS.get(effort, "medium")
+
 
 # --- transport -----------------------------------------------------------------
 
@@ -52,6 +59,7 @@ class Request:
     prompt: str
     schema: dict[str, Any]
     max_usd: float = 1.0
+    effort: int | None = None
 
     def key(self) -> str:
         h = hashlib.blake2b(digest_size=12)
@@ -125,36 +133,66 @@ class ClaudeCli:
             "--max-budget-usd",
             f"{request.max_usd:.2f}",
         ]
+        if request.effort is not None:
+            argv += ["--effort", _effort_level(request.effort)]
         env = {k: v for k, v in os.environ.items() if not k.startswith("REVISIONIST_")}
-        try:
-            proc = subprocess.run(
-                argv, capture_output=True, text=True, timeout=self.timeout_s, check=False, env=env
+        for attempt in (1, 2):
+            try:
+                proc = subprocess.run(
+                    argv,
+                    capture_output=True,
+                    text=True,
+                    timeout=self.timeout_s,
+                    check=False,
+                    env=env,
+                )
+            except subprocess.TimeoutExpired:
+                # Not chained: TimeoutExpired's own message quotes the argv, prompt included.
+                raise TransportError(f"claude cli timed out after {self.timeout_s:.0f}s") from None
+            except OSError as exc:
+                raise TransportError(f"claude cli: {type(exc).__name__}: {exc.strerror}") from None
+            try:
+                result = json.loads(proc.stdout) if proc.stdout.lstrip().startswith("{") else {}
+            except json.JSONDecodeError:
+                result = {}
+            if proc.returncode != 0:
+                stderr = (proc.stderr or "").strip()
+                last_msg = result.get("result") if isinstance(result, dict) else None
+                log.warning(
+                    "claude cli exit %d (%s, model=%s): stderr=%r result=%r",
+                    proc.returncode,
+                    request.call_class,
+                    _model_for(request),
+                    stderr[:400] or "-",
+                    last_msg[:200] if isinstance(last_msg, str) else "-",
+                )
+                why = _flag_error(proc.stderr) or _subtype(result)
+                if proc.returncode == 1 and why == "success" and attempt < 2:
+                    # Transient: the turn completed (subtype success) but no structured
+                    # output came back \u2014 session-window or output-size limit, or the
+                    # model emitted prose. Retry once.
+                    continue
+                if proc.returncode == 1 and why == "success":
+                    if isinstance(last_msg, str):
+                        tail = last_msg.strip()[-150:].strip()
+                        if "limit" in tail.lower():
+                            raise TransportError(f"claude cli exit {proc.returncode}: {tail}")
+                    raise TransportError(f"claude cli exit {proc.returncode} ({why})")
+                raise TransportError(f"claude cli exit {proc.returncode} ({why})")
+            if result.get("is_error") or result.get("structured_output") is None:
+                raise TransportError(f"claude cli error ({_subtype(result)})")
+            usage = result.get("usage", {})
+            models = list(result.get("modelUsage", {}))
+            return Reply(
+                output=result["structured_output"],
+                model=models[0] if models else request.model,
+                input_tokens=int(usage.get("input_tokens", 0)),
+                output_tokens=int(usage.get("output_tokens", 0)),
+                cached_tokens=int(usage.get("cache_read_input_tokens", 0))
+                + int(usage.get("cache_creation_input_tokens", 0)),
+                usd=float(result.get("total_cost_usd", 0.0)),
             )
-        except subprocess.TimeoutExpired:
-            # Not chained: TimeoutExpired's own message quotes the argv, prompt included.
-            raise TransportError(f"claude cli timed out after {self.timeout_s:.0f}s") from None
-        except OSError as exc:
-            raise TransportError(f"claude cli: {type(exc).__name__}: {exc.strerror}") from None
-        try:
-            result = json.loads(proc.stdout) if proc.stdout.lstrip().startswith("{") else {}
-        except json.JSONDecodeError:
-            result = {}
-        if proc.returncode != 0:
-            why = _flag_error(proc.stderr) or _subtype(result)
-            raise TransportError(f"claude cli exit {proc.returncode} ({why})")
-        if result.get("is_error") or result.get("structured_output") is None:
-            raise TransportError(f"claude cli error ({_subtype(result)})")
-        usage = result.get("usage", {})
-        models = list(result.get("modelUsage", {}))
-        return Reply(
-            output=result["structured_output"],
-            model=models[0] if models else request.model,
-            input_tokens=int(usage.get("input_tokens", 0)),
-            output_tokens=int(usage.get("output_tokens", 0)),
-            cached_tokens=int(usage.get("cache_read_input_tokens", 0))
-            + int(usage.get("cache_creation_input_tokens", 0)),
-            usd=float(result.get("total_cost_usd", 0.0)),
-        )
+        raise TransportError("claude cli exhausted retries")
 
 
 def _model_for(request: Request) -> str:

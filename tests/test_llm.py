@@ -409,6 +409,83 @@ def test_a_refused_flag_is_named_without_its_text(monkeypatch: pytest.MonkeyPatc
     assert str(caught.value) == "claude cli exit 1 (bad_flag_json_schema)"
 
 
+# --- transport retry (Phase 1) ---------------------------------------------------
+
+
+def test_transport_retries_once_then_recovers(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The 18:32 /establish mode: exit 1, subtype success, no structured output.
+    We retry once and recover if the second call lands (a fresh session)."""
+    calls = {"n": 0}
+    limit = {
+        "result": "You've hit your session limit - resets 11:40pm (America/New_York)",
+        "subtype": "success",
+        "is_error": False,
+        "total_cost_usd": 0.0,
+    }
+
+    def fake_run(argv: list[str], **kw: Any) -> object:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return subprocess.CompletedProcess(argv, 1, json.dumps(limit), "")
+        return subprocess.CompletedProcess(
+            argv,
+            0,
+            json.dumps({"structured_output": {"ok": True}, "usage": {}, "modelUsage": {}}),
+            "",
+        )
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    reply = llm.ClaudeCli().call(_cli_request())
+    assert calls["n"] == 2
+    assert reply.output == {"ok": True}
+
+
+def test_transport_raises_after_the_single_retry_when_limit_persists(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Both attempts hit the window: we raise after exactly two calls, name the
+    limit, and never leak the prompt."""
+    calls = {"n": 0}
+    limit = {
+        "result": "You've hit your session limit - resets 11:40pm (America/New_York)",
+        "subtype": "success",
+        "is_error": False,
+        "total_cost_usd": 0.0,
+    }
+
+    def fake_run(argv: list[str], **kw: Any) -> object:
+        calls["n"] += 1
+        return subprocess.CompletedProcess(argv, 1, json.dumps(limit), "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    with pytest.raises(TransportError) as caught:
+        llm.ClaudeCli().call(_cli_request())
+    assert calls["n"] == 2  # 1 + 1 retry, no loop
+    message = str(caught.value)
+    assert "session limit" in message and "claude cli" in message and "PROMPT" not in message
+
+
+def test_transport_does_not_retry_a_hard_exit(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A bad-flag or non-success exit is deterministic: a single call, no retry,
+    and the flag name is surfaced without its quoted text."""
+    calls = {"n": 0}
+
+    def fake_run(argv: list[str], **kw: Any) -> object:
+        calls["n"] += 1
+        return subprocess.CompletedProcess(
+            argv,
+            1,
+            "",
+            "Error: --json-schema is not a valid JSON Schema: PROMPT secret",
+        )
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    with pytest.raises(TransportError) as caught:
+        llm.ClaudeCli().call(_cli_request())
+    assert calls["n"] == 1
+    assert str(caught.value) == "claude cli exit 1 (bad_flag_json_schema)"
+
+
 def test_hoisting_refuses_two_different_defs_with_one_name() -> None:
     a = {"type": "object", "$defs": {"X": {"type": "string"}}}
     b = {"type": "object", "properties": {"y": {"$defs": {"X": {"type": "integer"}}}}}

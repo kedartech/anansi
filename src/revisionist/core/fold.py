@@ -21,6 +21,7 @@ from revisionist.core.events import MUTATING_KINDS, Event
 from revisionist.core.goals import GoalKind, season_winners
 from revisionist.core.ids import CampaignId
 from revisionist.core.ontology import (
+    TRACK_MAX,
     Asset,
     Clock,
     ClockKind,
@@ -182,8 +183,55 @@ def _mutate(state: State, event: Event) -> State:
             return _apply_delta(state, p.delta, event.tick)
         case ev.ScheduledEventFired():
             s = _need(state.scheduled, p.scheduled_id, "scheduled event")
+            if s.skipped:
+                raise FoldError(f"scheduled event {s.scheduled_id!r} was skipped")
             s = s.model_copy(update={"fired": True})
             return state.model_copy(update={"scheduled": _put(state.scheduled, s.scheduled_id, s)})
+        case ev.ScheduledEventCreated():
+            s = p.scheduled
+            _fresh(state.scheduled, s.scheduled_id, "scheduled event")
+            if s.fired or s.skipped:
+                raise FoldError(f"scheduled event {s.scheduled_id!r} must start pending")
+            return state.model_copy(update={"scheduled": _put(state.scheduled, s.scheduled_id, s)})
+        case ev.ScheduledEventSkipped():
+            s = _need(state.scheduled, p.scheduled_id, "scheduled event")
+            if s.fired or s.skipped:
+                raise FoldError(f"scheduled event {s.scheduled_id!r} is already settled")
+            s = s.model_copy(update={"skipped": True})
+            return state.model_copy(update={"scheduled": _put(state.scheduled, s.scheduled_id, s)})
+        case ev.ContestCreated():
+            k = p.contest
+            _fresh(state.contests, k.contest_id, "contest")
+            for side in k.sides:
+                _need(state.entities, side, "entity")
+            if k.decided:
+                raise FoldError(f"contest {k.contest_id!r} must start undecided")
+            return state.model_copy(update={"contests": _put(state.contests, k.contest_id, k)})
+        case ev.ContestMoved():
+            k = _need(state.contests, p.contest_id, "contest")
+            if k.decided:
+                raise FoldError(f"contest {k.contest_id!r} is decided")
+            k = k.model_copy(
+                update={
+                    "track": _clamp(k.track + p.change, k.floor, TRACK_MAX),
+                    "countdown_days": max(0, k.countdown_days - p.days),
+                }
+            )
+            return state.model_copy(update={"contests": _put(state.contests, k.contest_id, k)})
+        case ev.ContestDecided():
+            k = _need(state.contests, p.contest_id, "contest")
+            if k.decided:
+                raise FoldError(f"contest {k.contest_id!r} is already decided")
+            if p.winner is not None and p.winner not in k.sides:
+                raise FoldError(f"contest {k.contest_id!r}: winner is not a side")
+            k = k.model_copy(update={"decided": True, "winner": p.winner, "countdown_days": 0})
+            return state.model_copy(update={"contests": _put(state.contests, k.contest_id, k)})
+        case ev.DivergenceChanged():
+            return state.model_copy(update={"divergence": max(0, state.divergence + p.change)})
+        case ev.DateAdvanced():
+            if state.in_world_date is not None and p.to < state.in_world_date:
+                raise FoldError("the in-world date never runs backwards")
+            return state.model_copy(update={"in_world_date": p.to})
         case ev.SessionZeroOpened():
             humans = any(x.controller is Controller.HUMAN for x in state.seats.values())
             if state.tick != 0 or state.phase is not Phase.PLAY or humans:

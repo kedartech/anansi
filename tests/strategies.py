@@ -1,5 +1,6 @@
 """Hypothesis strategies for every core model. Reused by Layers 2 and 3."""
 
+from datetime import date
 from typing import cast
 
 from hypothesis import strategies as st
@@ -12,6 +13,7 @@ from revisionist.core.ids import (
     CampaignId,
     ClockId,
     CommitmentId,
+    ContestId,
     DeltaId,
     EntityId,
     EventId,
@@ -34,6 +36,8 @@ from revisionist.core.ontology import (
     ClockKind,
     ClockStatus,
     Commitment,
+    Contest,
+    ContestKind,
     Entity,
     EntityKind,
     EntityStatus,
@@ -42,6 +46,7 @@ from revisionist.core.ontology import (
     Persona,
     Relationship,
     ScheduledEvent,
+    ScheduleSource,
     Seat,
     SeatKind,
 )
@@ -60,6 +65,7 @@ meter_ids = ulid.map(MeterId)
 clock_ids = ulid.map(ClockId)
 fact_ids = ulid.map(FactId)
 scheduled_ids = ulid.map(ScheduledEventId)
+contest_ids = ulid.map(ContestId)
 commitment_ids = ulid.map(CommitmentId)
 seat_ids = ulid.map(SeatId)
 intent_ids = ulid.map(IntentId)
@@ -79,7 +85,16 @@ def scopes(draw: st.DrawFn) -> Scope:
     return Scope(visibility=vis, known_by=holders)
 
 
-settings = st.builds(Settings, lines=tags.map(tuple), veils=tags.map(tuple), tone=short_text)
+in_world_dates = st.dates(min_value=date(1, 1, 1), max_value=date(2025, 12, 31))
+
+settings = st.builds(
+    Settings,
+    lines=tags.map(tuple),
+    veils=tags.map(tuple),
+    tone=short_text,
+    end_date=st.none() | in_world_dates,
+    real_days=st.none() | st.integers(1, 365),
+)
 
 entities = st.builds(
     Entity,
@@ -365,6 +380,44 @@ call_costs = st.builds(
     usd=st.floats(0, 100, allow_nan=False),
 )
 
+
+@st.composite
+def contests(draw: st.DrawFn) -> Contest:
+    kind = draw(st.sampled_from(list(ContestKind)))
+    n = 1 if kind is ContestKind.TRIAL else draw(st.integers(2, 4))
+    sides = tuple(draw(st.lists(entity_ids, min_size=n, max_size=n, unique=True)))
+    lo = 0 if kind is ContestKind.TRIAL else -100
+    decided = draw(st.booleans())
+    winner = draw(st.none() | st.sampled_from(sides)) if decided else None
+    return Contest(
+        contest_id=draw(contest_ids),
+        kind=kind,
+        name=draw(short_text),
+        prize=draw(short_text),
+        sides=sides,
+        track=draw(st.integers(lo, 100)),
+        momentum=draw(st.integers(-20, 20)),
+        countdown_days=draw(st.integers(0, 3650)),
+        decided=decided,
+        winner=winner,
+        scope=draw(scopes()),
+    )
+
+
+history_events = st.builds(
+    ScheduledEvent,
+    scheduled_id=scheduled_ids,
+    fire_at_tick=st.integers(0, 500),
+    name=short_text,
+    scope=scopes(),
+    source=st.just(ScheduleSource.HISTORY),
+    on_date=in_world_dates,
+    condition=st.none() | conditions,
+    weight=st.integers(1, 3),
+)
+
+any_scheduled_events = scheduled_events | history_events
+
 payloads = st.one_of(
     st.builds(ev.CampaignCreated, name=short_text, world=short_text),
     st.builds(ev.SettingsSet, settings=settings),
@@ -400,6 +453,19 @@ payloads = st.one_of(
     st.builds(ev.OperationOpened, intent_id=intent_ids, clock_id=clock_ids, seat_id=seat_ids),
     st.builds(ev.OperationResolved, intent_id=intent_ids, clock_id=clock_ids, seat_id=seat_ids),
     st.builds(ev.ScheduledEventFired, scheduled_id=scheduled_ids),
+    st.builds(ev.ContestCreated, contest=contests()),
+    st.builds(
+        ev.ContestMoved,
+        contest_id=contest_ids,
+        change=st.integers(-200, 200),
+        days=st.integers(0, 400),
+        cause=st.sampled_from(["momentum", "order"]),
+    ),
+    st.builds(ev.ContestDecided, contest_id=contest_ids, winner=st.none() | entity_ids),
+    st.builds(ev.ScheduledEventCreated, scheduled=any_scheduled_events),
+    st.builds(ev.ScheduledEventSkipped, scheduled_id=scheduled_ids),
+    st.builds(ev.DivergenceChanged, change=st.integers(-100, 100), reason=short_text),
+    st.builds(ev.DateAdvanced, to=in_world_dates),
     st.builds(
         ev.NarrationWritten,
         seat_id=seat_ids,
@@ -494,7 +560,8 @@ ALL_MODEL_STRATEGIES: dict[str, st.SearchStrategy[object]] = {
     "Meter": cast(st.SearchStrategy[object], meters),
     "Clock": cast(st.SearchStrategy[object], clocks),
     "Fact": cast(st.SearchStrategy[object], facts),
-    "ScheduledEvent": cast(st.SearchStrategy[object], scheduled_events),
+    "ScheduledEvent": cast(st.SearchStrategy[object], any_scheduled_events),
+    "Contest": cast(st.SearchStrategy[object], contests()),
     "Commitment": cast(st.SearchStrategy[object], commitments),
     "Seat": cast(st.SearchStrategy[object], seats),
     "Intent": cast(st.SearchStrategy[object], intents),

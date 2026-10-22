@@ -143,6 +143,8 @@ def _keyed(world: WorldFile) -> list[tuple[str, str]]:
     keyed += [("commitment", d.key) for d in world.commitments]
     keyed += [("seat", d.key) for d in world.seats]
     keyed += [("goal", d.key) for d in world.goals]
+    keyed += [("contest", d.key) for d in world.contests]
+    keyed += [("history", d.key) for d in world.schedule]
     return keyed
 
 
@@ -204,6 +206,7 @@ def _check(world: WorldFile, sections: Mapping[str, str], problems: list[str]) -
     _check_seats(world, sections, problems)
     _check_goals(world, sections, problems)
     _check_roster(world, sections, problems)
+    _check_v3(world, problems)
 
 
 ROSTER_MIN, ROSTER_MAX = 8, 12
@@ -249,6 +252,17 @@ def check_history(world: WorldFile) -> list[str]:
                     f"set its people's parent to {s.embodies}"
                 )
     return problems
+
+
+def _check_v3(world: WorldFile, problems: list[str]) -> None:
+    """Session Zero v3 sections parse and keep their keys, but compiling them is
+    Phase 2 work (core.contest, core.history). Refuse rather than drop them."""
+    if world.contests:
+        problems.append("contests: not compiled yet (Session Zero v3, Phase 2)")
+    if world.schedule:
+        problems.append("schedule: not compiled yet (Session Zero v3, Phase 2)")
+    if any(c.sides for c in world.roster):
+        problems.append("roster: sides not compiled yet (Session Zero v3, Phase 2)")
 
 
 def _check_roster(world: WorldFile, sections: Mapping[str, str], problems: list[str]) -> None:

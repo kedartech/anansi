@@ -7,7 +7,9 @@ State-mutating kinds (the fold in Layer 2 handles exactly these):
 ``CampaignCreated, SettingsSet, EntityCreated, AssetCreated, RelationshipSet,
 MeterCreated, ClockCreated, FactAsserted, CommitmentCreated, SeatCreated,
 AgentAssigned, SeatStatusSet, IntentFiled, IntentRejected, DeltaApplied,
-ScheduledEventFired, SessionZeroOpened, CharacterListed, CharacterClaimed,
+ScheduledEventFired, ContestCreated, ContestMoved, ContestDecided,
+ScheduledEventCreated, ScheduledEventSkipped, DivergenceChanged, DateAdvanced,
+SessionZeroOpened, CharacterListed, CharacterClaimed,
 SessionZeroClosed, SeasonEnded, GoalSet, GoalProgressed, GoalMet, GoalUndone,
 TickOpened, TickClosed``.
 
@@ -15,6 +17,7 @@ Every other kind is a record: it is replayable, searchable and shown by
 ``/why``, but changes no state.
 """
 
+from datetime import date
 from typing import Annotated, Literal
 
 from pydantic import ConfigDict, Field
@@ -25,6 +28,7 @@ from revisionist.core.goals import Goal, GoalKind, WinCondition
 from revisionist.core.ids import (
     CampaignId,
     ClockId,
+    ContestId,
     DeltaId,
     EntityId,
     EventId,
@@ -39,11 +43,13 @@ from revisionist.core.ontology import (
     Character,
     Clock,
     Commitment,
+    Contest,
     Entity,
     Fact,
     Meter,
     Persona,
     Relationship,
+    ScheduledEvent,
     Seat,
     SeatStatus,
 )
@@ -365,6 +371,61 @@ class GoalApproved(Model):
 # --- Tick lifecycle -----------------------------------------------------------
 
 
+# --- Contests and history's clock (spec §5.3-5.4) --------------------------
+
+
+class ContestCreated(Model):
+    kind: Literal["contest_created"] = "contest_created"
+    contest: Contest
+
+
+class ContestMoved(Model):
+    """A contest's track moved, by momentum or by a resolved order, and its
+    countdown ran down by the in-world days the tick covered."""
+
+    kind: Literal["contest_moved"] = "contest_moved"
+    contest_id: ContestId
+    change: int = Field(ge=-200, le=200)
+    days: int = Field(default=0, ge=0)
+    cause: Literal["momentum", "order"] = "momentum"
+
+
+class ContestDecided(Model):
+    """The countdown reached zero; the track decided it. ``winner`` None is a draw
+    or a failed trial. The world keeps running."""
+
+    kind: Literal["contest_decided"] = "contest_decided"
+    contest_id: ContestId
+    winner: EntityId | None = None
+
+
+class ScheduledEventCreated(Model):
+    """An item on history's clock, written by the world draft."""
+
+    kind: Literal["scheduled_event_created"] = "scheduled_event_created"
+    scheduled: ScheduledEvent
+
+
+class ScheduledEventSkipped(Model):
+    """A history event came due but its condition no longer held."""
+
+    kind: Literal["scheduled_event_skipped"] = "scheduled_event_skipped"
+    scheduled_id: ScheduledEventId
+
+
+class DivergenceChanged(Model):
+    kind: Literal["divergence_changed"] = "divergence_changed"
+    change: int = Field(ge=-100, le=100)
+    reason: str = Field(max_length=200)
+
+
+class DateAdvanced(Model):
+    """The calendar moved today's in-world date (spec §5.7)."""
+
+    kind: Literal["date_advanced"] = "date_advanced"
+    to: date
+
+
 class TickOpened(Model):
     kind: Literal["tick_opened"] = "tick_opened"
     intents_frozen: tuple[IntentId, ...]
@@ -464,6 +525,13 @@ Payload = Annotated[
     | OperationOpened
     | OperationResolved
     | ScheduledEventFired
+    | ContestCreated
+    | ContestMoved
+    | ContestDecided
+    | ScheduledEventCreated
+    | ScheduledEventSkipped
+    | DivergenceChanged
+    | DateAdvanced
     | NarrationWritten
     | StatementIssued
     | SessionZeroOpened
@@ -505,6 +573,13 @@ MUTATING_KINDS: frozenset[str] = frozenset(
         "intent_rejected",
         "delta_applied",
         "scheduled_event_fired",
+        "contest_created",
+        "contest_moved",
+        "contest_decided",
+        "scheduled_event_created",
+        "scheduled_event_skipped",
+        "divergence_changed",
+        "date_advanced",
         "session_zero_opened",
         "character_listed",
         "character_claimed",

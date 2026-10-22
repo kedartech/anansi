@@ -58,7 +58,21 @@ log = logging.getLogger(__name__)
 SESSION_ZERO_MODEL = RESOLVER_MODEL
 """Session Zero runs on the frontier model, like the resolver (spec §20)."""
 
-DRAFT_SCHEMA = WorldFile.model_json_schema()
+
+def _draft_schema() -> dict[str, Any]:
+    """The world file the draft may return. Session Zero v3 sections (contests,
+    history's clock, sides, start date) stay out until Phase 2 compiles them."""
+    schema = WorldFile.model_json_schema()
+    for name in ("start_date", "contests", "schedule"):
+        schema["properties"].pop(name, None)
+    defs = schema.get("$defs", {})
+    defs.get("CharacterDecl", {}).get("properties", {}).pop("sides", None)
+    for name in ("ContestDecl", "HistoryDecl", "SideDecl"):
+        defs.pop(name, None)
+    return schema
+
+
+DRAFT_SCHEMA = _draft_schema()
 PLACE_MAX = 80
 TRIES = 2
 """One draft and one retry with the compiler's problems fed back."""
@@ -77,7 +91,9 @@ def _slug(place: str) -> str:
     return "history-" + derived_id("establish", place).lower()[:10]
 
 
-def _request(place: str, settings: Settings, problems: Sequence[str]) -> Request:
+def _request(
+    place: str, settings: Settings, problems: Sequence[str], effort: int | None = None
+) -> Request:
     prompt = (
         f"## Place and date\n{place}\n\n"
         "## Settings (fixed by the table; for tone only)\n"
@@ -96,6 +112,7 @@ def _request(place: str, settings: Settings, problems: Sequence[str]) -> Request
         prompt=prompt,
         schema=DRAFT_SCHEMA,
         max_usd=2.0,
+        effort=effort,
     )
 
 
@@ -118,16 +135,19 @@ def _check(output: object, place: str, settings: Settings) -> tuple[WorldFile | 
 
 
 def draft_world(
-    place: str, settings: Settings, transport: Transport
+    place: str, settings: Settings, transport: Transport, effort: int | None = None
 ) -> tuple[WorldFile, list[CallCost]]:
-    """Ask for the world bible, check it, and retry once with the problems."""
+    """Ask for the world bible, check it, and retry once with the problems.
+
+    ``effort`` (1-4, low..max) is passed to the model; None keeps its default.
+    """
     place = place.strip()
     if not place or len(place) > PLACE_MAX:
         raise SessionZeroError([f"a place and date of 1-{PLACE_MAX} characters"], [])
     costs: list[CallCost] = []
     problems: list[str] = []
     for _ in range(TRIES):
-        reply = transport.call(_request(place, settings, problems))
+        reply = transport.call(_request(place, settings, problems, effort))
         costs.append(reply.cost("session_zero"))
         world, problems = _check(reply.output, place, settings)
         if world is not None:
@@ -136,11 +156,15 @@ def draft_world(
 
 
 def establish(
-    store: EventStore, place: str, settings: Settings, transport: Transport
+    store: EventStore,
+    place: str,
+    settings: Settings,
+    transport: Transport,
+    effort: int | None = None,
 ) -> CampaignId:
     """Draft, compile and open a new campaign at ``place``. Its first tick waits for
     the character, goal and brief steps."""
-    world, costs = draft_world(place, settings, transport)
+    world, costs = draft_world(place, settings, transport, effort)
     campaign_id = CampaignId(new_id())
     sealer: Sealer | None = getattr(store, "sealer", None)
     if sealer is not None:

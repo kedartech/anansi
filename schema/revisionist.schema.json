@@ -1328,6 +1328,189 @@
         "title": "CommitmentStatusSet",
         "type": "object"
       },
+      "Contest": {
+        "additionalProperties": false,
+        "description": "A pressure that keeps the world moving (spec \u00a75.3).\n\nA rivalry's track runs -100..100, positive favouring ``sides[0]``. A trial's\nruns 0..100, 100 = passed. ``momentum`` moves the track every turn whether or\nnot anyone acts. ``countdown_days`` is in-world days to the deciding point.",
+        "properties": {
+          "contest_id": {
+            "title": "Contest Id",
+            "type": "string"
+          },
+          "countdown_days": {
+            "minimum": 0,
+            "title": "Countdown Days",
+            "type": "integer"
+          },
+          "decided": {
+            "default": false,
+            "title": "Decided",
+            "type": "boolean"
+          },
+          "kind": {
+            "$ref": "#/$defs/ContestKind"
+          },
+          "momentum": {
+            "maximum": 20,
+            "minimum": -20,
+            "title": "Momentum",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "prize": {
+            "title": "Prize",
+            "type": "string"
+          },
+          "scope": {
+            "$ref": "#/$defs/Scope"
+          },
+          "sides": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 4,
+            "minItems": 1,
+            "title": "Sides",
+            "type": "array"
+          },
+          "track": {
+            "maximum": 100,
+            "minimum": -100,
+            "title": "Track",
+            "type": "integer"
+          },
+          "winner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Winner"
+          }
+        },
+        "required": [
+          "contest_id",
+          "kind",
+          "name",
+          "prize",
+          "sides",
+          "track",
+          "momentum",
+          "countdown_days",
+          "scope"
+        ],
+        "title": "Contest",
+        "type": "object"
+      },
+      "ContestCreated": {
+        "additionalProperties": false,
+        "properties": {
+          "contest": {
+            "$ref": "#/$defs/Contest"
+          },
+          "kind": {
+            "const": "contest_created",
+            "default": "contest_created",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contest"
+        ],
+        "title": "ContestCreated",
+        "type": "object"
+      },
+      "ContestDecided": {
+        "additionalProperties": false,
+        "description": "The countdown reached zero; the track decided it. ``winner`` None is a draw\nor a failed trial. The world keeps running.",
+        "properties": {
+          "contest_id": {
+            "title": "Contest Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "contest_decided",
+            "default": "contest_decided",
+            "title": "Kind",
+            "type": "string"
+          },
+          "winner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Winner"
+          }
+        },
+        "required": [
+          "contest_id"
+        ],
+        "title": "ContestDecided",
+        "type": "object"
+      },
+      "ContestKind": {
+        "enum": [
+          "rivalry",
+          "trial"
+        ],
+        "title": "ContestKind",
+        "type": "string"
+      },
+      "ContestMoved": {
+        "additionalProperties": false,
+        "description": "A contest's track moved, by momentum or by a resolved order, and its\ncountdown ran down by the in-world days the tick covered.",
+        "properties": {
+          "cause": {
+            "default": "momentum",
+            "enum": [
+              "momentum",
+              "order"
+            ],
+            "title": "Cause",
+            "type": "string"
+          },
+          "change": {
+            "maximum": 200,
+            "minimum": -200,
+            "title": "Change",
+            "type": "integer"
+          },
+          "contest_id": {
+            "title": "Contest Id",
+            "type": "string"
+          },
+          "days": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Days",
+            "type": "integer"
+          },
+          "kind": {
+            "const": "contest_moved",
+            "default": "contest_moved",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contest_id",
+          "change"
+        ],
+        "title": "ContestMoved",
+        "type": "object"
+      },
       "Controller": {
         "enum": [
           "human",
@@ -1401,6 +1584,28 @@
           "costs"
         ],
         "title": "CostLogged",
+        "type": "object"
+      },
+      "DateAdvanced": {
+        "additionalProperties": false,
+        "description": "The calendar moved today's in-world date (spec \u00a75.7).",
+        "properties": {
+          "kind": {
+            "const": "date_advanced",
+            "default": "date_advanced",
+            "title": "Kind",
+            "type": "string"
+          },
+          "to": {
+            "format": "date",
+            "title": "To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "to"
+        ],
+        "title": "DateAdvanced",
         "type": "object"
       },
       "DeltaApplied": {
@@ -1728,6 +1933,34 @@
           "change"
         ],
         "title": "DispositionDelta",
+        "type": "object"
+      },
+      "DivergenceChanged": {
+        "additionalProperties": false,
+        "properties": {
+          "change": {
+            "maximum": 100,
+            "minimum": -100,
+            "title": "Change",
+            "type": "integer"
+          },
+          "kind": {
+            "const": "divergence_changed",
+            "default": "divergence_changed",
+            "title": "Kind",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 200,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "change",
+          "reason"
+        ],
+        "title": "DivergenceChanged",
         "type": "object"
       },
       "Entity": {
@@ -3196,6 +3429,172 @@
         "title": "Rolled",
         "type": "object"
       },
+      "ScheduleSource": {
+        "enum": [
+          "play",
+          "history"
+        ],
+        "title": "ScheduleSource",
+        "type": "string"
+      },
+      "ScheduledEvent": {
+        "additionalProperties": false,
+        "description": "Something due to happen. Play events fire at a tick; history events fire on\nan in-world date if their condition still holds, and are skipped otherwise.",
+        "properties": {
+          "condition": {
+            "anyOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "all_of": "#/$defs/AllOf",
+                    "any_of": "#/$defs/AnyOf",
+                    "commitment_in_force": "#/$defs/CommitmentInForce",
+                    "controls_asset": "#/$defs/ControlsAsset",
+                    "disposition_at": "#/$defs/DispositionAt",
+                    "entity_is": "#/$defs/EntityIs",
+                    "holds_office": "#/$defs/HoldsOffice",
+                    "meter_at": "#/$defs/MeterAt"
+                  },
+                  "propertyName": "check"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/HoldsOffice"
+                  },
+                  {
+                    "$ref": "#/$defs/ControlsAsset"
+                  },
+                  {
+                    "$ref": "#/$defs/EntityIs"
+                  },
+                  {
+                    "$ref": "#/$defs/MeterAt"
+                  },
+                  {
+                    "$ref": "#/$defs/CommitmentInForce"
+                  },
+                  {
+                    "$ref": "#/$defs/DispositionAt"
+                  },
+                  {
+                    "$ref": "#/$defs/AllOf"
+                  },
+                  {
+                    "$ref": "#/$defs/AnyOf"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Condition"
+          },
+          "fire_at_tick": {
+            "minimum": 0,
+            "title": "Fire At Tick",
+            "type": "integer"
+          },
+          "fired": {
+            "default": false,
+            "title": "Fired",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "on_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "On Date"
+          },
+          "scheduled_id": {
+            "title": "Scheduled Id",
+            "type": "string"
+          },
+          "scope": {
+            "$ref": "#/$defs/Scope"
+          },
+          "skipped": {
+            "default": false,
+            "title": "Skipped",
+            "type": "boolean"
+          },
+          "source": {
+            "$ref": "#/$defs/ScheduleSource",
+            "default": "play"
+          },
+          "source_clock": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Source Clock"
+          },
+          "source_intent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Source Intent"
+          },
+          "weight": {
+            "default": 1,
+            "maximum": 3,
+            "minimum": 1,
+            "title": "Weight",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "scheduled_id",
+          "fire_at_tick",
+          "name",
+          "scope"
+        ],
+        "title": "ScheduledEvent",
+        "type": "object"
+      },
+      "ScheduledEventCreated": {
+        "additionalProperties": false,
+        "description": "An item on history's clock, written by the world draft.",
+        "properties": {
+          "kind": {
+            "const": "scheduled_event_created",
+            "default": "scheduled_event_created",
+            "title": "Kind",
+            "type": "string"
+          },
+          "scheduled": {
+            "$ref": "#/$defs/ScheduledEvent"
+          }
+        },
+        "required": [
+          "scheduled"
+        ],
+        "title": "ScheduledEventCreated",
+        "type": "object"
+      },
       "ScheduledEventFired": {
         "additionalProperties": false,
         "properties": {
@@ -3274,6 +3673,27 @@
           "scope"
         ],
         "title": "ScheduledEventQueue",
+        "type": "object"
+      },
+      "ScheduledEventSkipped": {
+        "additionalProperties": false,
+        "description": "A history event came due but its condition no longer held.",
+        "properties": {
+          "kind": {
+            "const": "scheduled_event_skipped",
+            "default": "scheduled_event_skipped",
+            "title": "Kind",
+            "type": "string"
+          },
+          "scheduled_id": {
+            "title": "Scheduled Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scheduled_id"
+        ],
+        "title": "ScheduledEventSkipped",
         "type": "object"
       },
       "Scope": {
@@ -3632,6 +4052,19 @@
             "title": "Elimination",
             "type": "boolean"
           },
+          "end_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "End Date"
+          },
           "inertia": {
             "$ref": "#/$defs/Inertia",
             "default": "tendencies"
@@ -3662,6 +4095,20 @@
           "plausibility": {
             "$ref": "#/$defs/Plausibility",
             "default": "plausible"
+          },
+          "real_days": {
+            "anyOf": [
+              {
+                "maximum": 365,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Real Days"
           },
           "slot_cap": {
             "default": 5,
@@ -3967,10 +4414,15 @@
             "clarification_asked": "#/$defs/ClarificationAsked",
             "clock_created": "#/$defs/ClockCreated",
             "commitment_created": "#/$defs/CommitmentCreated",
+            "contest_created": "#/$defs/ContestCreated",
+            "contest_decided": "#/$defs/ContestDecided",
+            "contest_moved": "#/$defs/ContestMoved",
             "cost_logged": "#/$defs/CostLogged",
+            "date_advanced": "#/$defs/DateAdvanced",
             "delta_applied": "#/$defs/DeltaApplied",
             "delta_proposed": "#/$defs/DeltaProposed",
             "delta_rejected": "#/$defs/DeltaRejected",
+            "divergence_changed": "#/$defs/DivergenceChanged",
             "entity_created": "#/$defs/EntityCreated",
             "fact_asserted": "#/$defs/FactAsserted",
             "feasibility_rated": "#/$defs/FeasibilityRated",
@@ -3989,7 +4441,9 @@
             "order_received": "#/$defs/OrderReceived",
             "relationship_set": "#/$defs/RelationshipSet",
             "rolled": "#/$defs/Rolled",
+            "scheduled_event_created": "#/$defs/ScheduledEventCreated",
             "scheduled_event_fired": "#/$defs/ScheduledEventFired",
+            "scheduled_event_skipped": "#/$defs/ScheduledEventSkipped",
             "sealed": "#/$defs/Sealed",
             "season_ended": "#/$defs/SeasonEnded",
             "seat_created": "#/$defs/SeatCreated",
@@ -4076,6 +4530,27 @@
           },
           {
             "$ref": "#/$defs/ScheduledEventFired"
+          },
+          {
+            "$ref": "#/$defs/ContestCreated"
+          },
+          {
+            "$ref": "#/$defs/ContestMoved"
+          },
+          {
+            "$ref": "#/$defs/ContestDecided"
+          },
+          {
+            "$ref": "#/$defs/ScheduledEventCreated"
+          },
+          {
+            "$ref": "#/$defs/ScheduledEventSkipped"
+          },
+          {
+            "$ref": "#/$defs/DivergenceChanged"
+          },
+          {
+            "$ref": "#/$defs/DateAdvanced"
           },
           {
             "$ref": "#/$defs/NarrationWritten"
@@ -4737,6 +5212,94 @@
         "title": "CommitmentStatus",
         "type": "string"
       },
+      "Contest": {
+        "additionalProperties": false,
+        "description": "A pressure that keeps the world moving (spec \u00a75.3).\n\nA rivalry's track runs -100..100, positive favouring ``sides[0]``. A trial's\nruns 0..100, 100 = passed. ``momentum`` moves the track every turn whether or\nnot anyone acts. ``countdown_days`` is in-world days to the deciding point.",
+        "properties": {
+          "contest_id": {
+            "title": "Contest Id",
+            "type": "string"
+          },
+          "countdown_days": {
+            "minimum": 0,
+            "title": "Countdown Days",
+            "type": "integer"
+          },
+          "decided": {
+            "default": false,
+            "title": "Decided",
+            "type": "boolean"
+          },
+          "kind": {
+            "$ref": "#/$defs/ContestKind"
+          },
+          "momentum": {
+            "maximum": 20,
+            "minimum": -20,
+            "title": "Momentum",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "prize": {
+            "title": "Prize",
+            "type": "string"
+          },
+          "scope": {
+            "$ref": "#/$defs/Scope"
+          },
+          "sides": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 4,
+            "minItems": 1,
+            "title": "Sides",
+            "type": "array"
+          },
+          "track": {
+            "maximum": 100,
+            "minimum": -100,
+            "title": "Track",
+            "type": "integer"
+          },
+          "winner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Winner"
+          }
+        },
+        "required": [
+          "contest_id",
+          "kind",
+          "name",
+          "prize",
+          "sides",
+          "track",
+          "momentum",
+          "countdown_days",
+          "scope"
+        ],
+        "title": "Contest",
+        "type": "object"
+      },
+      "ContestKind": {
+        "enum": [
+          "rivalry",
+          "trial"
+        ],
+        "title": "ContestKind",
+        "type": "string"
+      },
       "Controller": {
         "enum": [
           "human",
@@ -5451,9 +6014,68 @@
         "title": "Relationship",
         "type": "object"
       },
+      "ScheduleSource": {
+        "enum": [
+          "play",
+          "history"
+        ],
+        "title": "ScheduleSource",
+        "type": "string"
+      },
       "ScheduledEvent": {
         "additionalProperties": false,
+        "description": "Something due to happen. Play events fire at a tick; history events fire on\nan in-world date if their condition still holds, and are skipped otherwise.",
         "properties": {
+          "condition": {
+            "anyOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "all_of": "#/$defs/AllOf",
+                    "any_of": "#/$defs/AnyOf",
+                    "commitment_in_force": "#/$defs/CommitmentInForce",
+                    "controls_asset": "#/$defs/ControlsAsset",
+                    "disposition_at": "#/$defs/DispositionAt",
+                    "entity_is": "#/$defs/EntityIs",
+                    "holds_office": "#/$defs/HoldsOffice",
+                    "meter_at": "#/$defs/MeterAt"
+                  },
+                  "propertyName": "check"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/HoldsOffice"
+                  },
+                  {
+                    "$ref": "#/$defs/ControlsAsset"
+                  },
+                  {
+                    "$ref": "#/$defs/EntityIs"
+                  },
+                  {
+                    "$ref": "#/$defs/MeterAt"
+                  },
+                  {
+                    "$ref": "#/$defs/CommitmentInForce"
+                  },
+                  {
+                    "$ref": "#/$defs/DispositionAt"
+                  },
+                  {
+                    "$ref": "#/$defs/AllOf"
+                  },
+                  {
+                    "$ref": "#/$defs/AnyOf"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Condition"
+          },
           "fire_at_tick": {
             "minimum": 0,
             "title": "Fire At Tick",
@@ -5468,12 +6090,34 @@
             "title": "Name",
             "type": "string"
           },
+          "on_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "On Date"
+          },
           "scheduled_id": {
             "title": "Scheduled Id",
             "type": "string"
           },
           "scope": {
             "$ref": "#/$defs/Scope"
+          },
+          "skipped": {
+            "default": false,
+            "title": "Skipped",
+            "type": "boolean"
+          },
+          "source": {
+            "$ref": "#/$defs/ScheduleSource",
+            "default": "play"
           },
           "source_clock": {
             "anyOf": [
@@ -5498,6 +6142,13 @@
             ],
             "default": null,
             "title": "Source Intent"
+          },
+          "weight": {
+            "default": 1,
+            "maximum": 3,
+            "minimum": 1,
+            "title": "Weight",
+            "type": "integer"
           }
         },
         "required": [
@@ -5673,6 +6324,19 @@
             "title": "Elimination",
             "type": "boolean"
           },
+          "end_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "End Date"
+          },
           "inertia": {
             "$ref": "#/$defs/Inertia",
             "default": "tendencies"
@@ -5703,6 +6367,20 @@
           "plausibility": {
             "$ref": "#/$defs/Plausibility",
             "default": "plausible"
+          },
+          "real_days": {
+            "anyOf": [
+              {
+                "maximum": 365,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Real Days"
           },
           "slot_cap": {
             "default": 5,
@@ -5820,6 +6498,19 @@
         "title": "Commitments",
         "type": "object"
       },
+      "contests": {
+        "additionalProperties": {
+          "$ref": "#/$defs/Contest"
+        },
+        "title": "Contests",
+        "type": "object"
+      },
+      "divergence": {
+        "default": 0,
+        "minimum": 0,
+        "title": "Divergence",
+        "type": "integer"
+      },
       "entities": {
         "additionalProperties": {
           "$ref": "#/$defs/Entity"
@@ -5848,6 +6539,19 @@
         },
         "title": "Goals",
         "type": "object"
+      },
+      "in_world_date": {
+        "anyOf": [
+          {
+            "format": "date",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "In World Date"
       },
       "last_seq": {
         "default": -1,
@@ -6493,6 +7197,94 @@
         "title": "CommitmentStatus",
         "type": "string"
       },
+      "Contest": {
+        "additionalProperties": false,
+        "description": "A pressure that keeps the world moving (spec \u00a75.3).\n\nA rivalry's track runs -100..100, positive favouring ``sides[0]``. A trial's\nruns 0..100, 100 = passed. ``momentum`` moves the track every turn whether or\nnot anyone acts. ``countdown_days`` is in-world days to the deciding point.",
+        "properties": {
+          "contest_id": {
+            "title": "Contest Id",
+            "type": "string"
+          },
+          "countdown_days": {
+            "minimum": 0,
+            "title": "Countdown Days",
+            "type": "integer"
+          },
+          "decided": {
+            "default": false,
+            "title": "Decided",
+            "type": "boolean"
+          },
+          "kind": {
+            "$ref": "#/$defs/ContestKind"
+          },
+          "momentum": {
+            "maximum": 20,
+            "minimum": -20,
+            "title": "Momentum",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "prize": {
+            "title": "Prize",
+            "type": "string"
+          },
+          "scope": {
+            "$ref": "#/$defs/Scope"
+          },
+          "sides": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 4,
+            "minItems": 1,
+            "title": "Sides",
+            "type": "array"
+          },
+          "track": {
+            "maximum": 100,
+            "minimum": -100,
+            "title": "Track",
+            "type": "integer"
+          },
+          "winner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Winner"
+          }
+        },
+        "required": [
+          "contest_id",
+          "kind",
+          "name",
+          "prize",
+          "sides",
+          "track",
+          "momentum",
+          "countdown_days",
+          "scope"
+        ],
+        "title": "Contest",
+        "type": "object"
+      },
+      "ContestKind": {
+        "enum": [
+          "rivalry",
+          "trial"
+        ],
+        "title": "ContestKind",
+        "type": "string"
+      },
       "Controller": {
         "enum": [
           "human",
@@ -7207,9 +7999,68 @@
         "title": "Relationship",
         "type": "object"
       },
+      "ScheduleSource": {
+        "enum": [
+          "play",
+          "history"
+        ],
+        "title": "ScheduleSource",
+        "type": "string"
+      },
       "ScheduledEvent": {
         "additionalProperties": false,
+        "description": "Something due to happen. Play events fire at a tick; history events fire on\nan in-world date if their condition still holds, and are skipped otherwise.",
         "properties": {
+          "condition": {
+            "anyOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "all_of": "#/$defs/AllOf",
+                    "any_of": "#/$defs/AnyOf",
+                    "commitment_in_force": "#/$defs/CommitmentInForce",
+                    "controls_asset": "#/$defs/ControlsAsset",
+                    "disposition_at": "#/$defs/DispositionAt",
+                    "entity_is": "#/$defs/EntityIs",
+                    "holds_office": "#/$defs/HoldsOffice",
+                    "meter_at": "#/$defs/MeterAt"
+                  },
+                  "propertyName": "check"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/HoldsOffice"
+                  },
+                  {
+                    "$ref": "#/$defs/ControlsAsset"
+                  },
+                  {
+                    "$ref": "#/$defs/EntityIs"
+                  },
+                  {
+                    "$ref": "#/$defs/MeterAt"
+                  },
+                  {
+                    "$ref": "#/$defs/CommitmentInForce"
+                  },
+                  {
+                    "$ref": "#/$defs/DispositionAt"
+                  },
+                  {
+                    "$ref": "#/$defs/AllOf"
+                  },
+                  {
+                    "$ref": "#/$defs/AnyOf"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Condition"
+          },
           "fire_at_tick": {
             "minimum": 0,
             "title": "Fire At Tick",
@@ -7224,12 +8075,34 @@
             "title": "Name",
             "type": "string"
           },
+          "on_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "On Date"
+          },
           "scheduled_id": {
             "title": "Scheduled Id",
             "type": "string"
           },
           "scope": {
             "$ref": "#/$defs/Scope"
+          },
+          "skipped": {
+            "default": false,
+            "title": "Skipped",
+            "type": "boolean"
+          },
+          "source": {
+            "$ref": "#/$defs/ScheduleSource",
+            "default": "play"
           },
           "source_clock": {
             "anyOf": [
@@ -7254,6 +8127,13 @@
             ],
             "default": null,
             "title": "Source Intent"
+          },
+          "weight": {
+            "default": 1,
+            "maximum": 3,
+            "minimum": 1,
+            "title": "Weight",
+            "type": "integer"
           }
         },
         "required": [
@@ -7458,6 +8338,19 @@
             "title": "Elimination",
             "type": "boolean"
           },
+          "end_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "End Date"
+          },
           "inertia": {
             "$ref": "#/$defs/Inertia",
             "default": "tendencies"
@@ -7488,6 +8381,20 @@
           "plausibility": {
             "$ref": "#/$defs/Plausibility",
             "default": "plausible"
+          },
+          "real_days": {
+            "anyOf": [
+              {
+                "maximum": 365,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Real Days"
           },
           "slot_cap": {
             "default": 5,
@@ -7605,6 +8512,19 @@
         "title": "Commitments",
         "type": "object"
       },
+      "contests": {
+        "additionalProperties": {
+          "$ref": "#/$defs/Contest"
+        },
+        "title": "Contests",
+        "type": "object"
+      },
+      "divergence": {
+        "default": 0,
+        "minimum": 0,
+        "title": "Divergence",
+        "type": "integer"
+      },
       "entities": {
         "additionalProperties": {
           "$ref": "#/$defs/Entity"
@@ -7625,6 +8545,19 @@
         },
         "title": "Goals",
         "type": "object"
+      },
+      "in_world_date": {
+        "anyOf": [
+          {
+            "format": "date",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "In World Date"
       },
       "me": {
         "$ref": "#/$defs/Seat"

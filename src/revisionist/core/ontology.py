@@ -8,15 +8,18 @@ Nothing is ever deleted. Entities and assets change ``status``; the log is
 append-only and so is the ontology.
 """
 
+from datetime import date
 from enum import StrEnum
+from typing import TYPE_CHECKING, ClassVar
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from revisionist.core._base import Label, Model
 from revisionist.core.ids import (
     AssetId,
     ClockId,
     CommitmentId,
+    ContestId,
     EntityId,
     FactId,
     IntentId,
@@ -27,6 +30,9 @@ from revisionist.core.ids import (
 )
 from revisionist.core.intent import Verb
 from revisionist.core.visibility import Scope
+
+if TYPE_CHECKING:
+    from revisionist.core.goals import WinCondition
 
 Tier = int
 """0-5. Validated at the field."""
@@ -173,14 +179,100 @@ class Fact(Model):
     """Test-only unique marker scanned for in outbound text. Never set in play."""
 
 
+class ContestKind(StrEnum):
+    RIVALRY = "rivalry"
+    """Two or more sides over a prize: war, election, succession, a race."""
+    TRIAL = "trial"
+    """One power against a pressure with a deadline; no enemy needed."""
+
+
+TRACK_MIN, TRACK_MAX = -100, 100
+
+
+class Contest(Model):
+    """A pressure that keeps the world moving (spec §5.3).
+
+    A rivalry's track runs -100..100, positive favouring ``sides[0]``. A trial's
+    runs 0..100, 100 = passed. ``momentum`` moves the track every turn whether or
+    not anyone acts. ``countdown_days`` is in-world days to the deciding point.
+    """
+
+    contest_id: ContestId
+    kind: ContestKind
+    name: str
+    prize: str
+    sides: tuple[EntityId, ...] = Field(min_length=1, max_length=4)
+    """A rivalry's sides (2-4), or a trial's single power under trial."""
+    track: int = Field(ge=TRACK_MIN, le=TRACK_MAX)
+    momentum: int = Field(ge=-20, le=20)
+    countdown_days: int = Field(ge=0)
+    decided: bool = False
+    winner: EntityId | None = None
+    """None for a draw, an unfinished contest, or a failed trial."""
+    scope: Scope
+
+    @model_validator(mode="after")
+    def _shape(self) -> "Contest":
+        if len(set(self.sides)) != len(self.sides):
+            raise ValueError("a contest names each side once")
+        if self.kind is ContestKind.RIVALRY and len(self.sides) < 2:
+            raise ValueError("a rivalry has at least two sides")
+        if self.kind is ContestKind.TRIAL and len(self.sides) != 1:
+            raise ValueError("a trial has one power under trial")
+        if self.kind is ContestKind.TRIAL and self.track < 0:
+            raise ValueError("a trial's track runs 0..100")
+        if self.winner is not None and self.winner not in self.sides:
+            raise ValueError("the winner must be a side")
+        if self.winner is not None and not self.decided:
+            raise ValueError("only a decided contest has a winner")
+        return self
+
+    @property
+    def floor(self) -> int:
+        return 0 if self.kind is ContestKind.TRIAL else TRACK_MIN
+
+
+class ScheduleSource(StrEnum):
+    PLAY = "play"
+    """Queued by a resolved order or a clock."""
+    HISTORY = "history"
+    """On history's clock: what really followed the start date (spec §5.4)."""
+
+
 class ScheduledEvent(Model):
+    """Something due to happen. Play events fire at a tick; history events fire on
+    an in-world date if their condition still holds, and are skipped otherwise."""
+
     scheduled_id: ScheduledEventId
     fire_at_tick: int = Field(ge=0)
+    """For a history event, the tick the calendar first expects it (a hint only)."""
     name: str
     source_intent: IntentId | None = None
     source_clock: ClockId | None = None
     scope: Scope
     fired: bool = False
+    source: ScheduleSource = ScheduleSource.PLAY
+    on_date: date | None = None
+    """The in-world date it is due. Set exactly when ``source`` is history."""
+    condition: "WinCondition | None" = None
+    """What must still hold for it to fire as recorded. History events only."""
+    weight: int = Field(default=1, ge=1, le=3)
+    """How central it was: divergence rises by this much if it is skipped."""
+    skipped: bool = False
+
+    late_fields: ClassVar[frozenset[str]] = frozenset(
+        {"source", "on_date", "condition", "weight", "skipped"}
+    )
+
+    @model_validator(mode="after")
+    def _history_has_a_date(self) -> "ScheduledEvent":
+        if (self.source is ScheduleSource.HISTORY) != (self.on_date is not None):
+            raise ValueError("a history event has a date, and only a history event")
+        if self.condition is not None and self.source is not ScheduleSource.HISTORY:
+            raise ValueError("only a history event carries a condition")
+        if self.fired and self.skipped:
+            raise ValueError("an event either fired or was skipped")
+        return self
 
 
 class ClauseKind(StrEnum):
@@ -303,3 +395,9 @@ class Character(Model):
     composite: bool
     means: frozenset[AssetId] = frozenset()
     claimed_by: SeatId | None = None
+
+
+# ScheduledEvent.condition names a WinCondition, and goals imports this module.
+# A plain import works in either order; goals rebuilds ScheduledEvent once it
+# has defined WinCondition.
+import revisionist.core.goals  # noqa: E402, F401

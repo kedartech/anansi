@@ -152,6 +152,10 @@ def establish(
     betrayal: Annotated[Betrayal, typer.Option()] = Betrayal.CUTTHROAT,
     tone: Annotated[str, typer.Option(help="grounded, satirical, pulp, grim...")] = "grounded",
     tick_hours: Annotated[int, typer.Option(min=1, max=168)] = 24,
+    effort: Annotated[
+        int | None,
+        typer.Option(min=1, max=4, help="Model effort for the world draft, 1 (low) to 4 (max)"),
+    ] = None,
 ) -> None:
     """Session Zero: lock a point in history and draft its world bible from the record."""
     settings = Settings(
@@ -164,7 +168,7 @@ def establish(
     )
     store = cmp.open_store()
     try:
-        campaign_id = session_zero.establish(store, place, settings, transport_factory())
+        campaign_id = session_zero.establish(store, place, settings, transport_factory(), effort)
     except session_zero.SessionZeroError as exc:
         raise _fail(str(exc)) from exc
     except TransportError as exc:

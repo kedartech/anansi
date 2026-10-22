@@ -14,6 +14,7 @@ This module only defines the shapes. It is pure: no file reading, no YAML.
 ``revisionist.engine.worlds.load`` reads a file into a ``WorldFile``.
 """
 
+from datetime import date
 from typing import Annotated, Literal
 
 from pydantic import Field, StringConstraints
@@ -26,6 +27,7 @@ from revisionist.core.ontology import (
     ClauseKind,
     ClockKind,
     CommitmentStatus,
+    ContestKind,
     Controller,
     EntityKind,
     SeatKind,
@@ -164,6 +166,43 @@ class SeatDecl(Model):
     agent: AgentDecl | None = None
 
 
+class ContestDecl(Model):
+    """A contest (spec §5.3). ``sides`` names entity keys: a rivalry's 2-4 sides,
+    or a trial's one power under trial."""
+
+    key: Key
+    kind: ContestKind
+    name: Label
+    prize: str = Field(max_length=200)
+    sides: tuple[Key, ...] = Field(min_length=1, max_length=4)
+    track: int = Field(default=0, ge=-100, le=100)
+    momentum: int = Field(default=0, ge=-20, le=20)
+    countdown_days: int = Field(ge=1)
+    scope: ScopeSpec = "public"
+
+
+class HistoryDecl(Model):
+    """An item on history's clock (spec §5.4): what really followed the start date.
+
+    The condition names keys, like a goal's. ``weight`` is how central it was.
+    """
+
+    key: Key
+    name: str = Field(max_length=120)
+    on_date: date
+    condition: WinCondition
+    weight: int = Field(default=1, ge=1, le=3)
+    scope: ScopeSpec = "public"
+
+
+class SideDecl(Model):
+    """Where a roster character stands in one contest."""
+
+    contest: Key
+    side: Key
+    """An entity key: one of the contest's sides."""
+
+
 class GoalDecl(Model):
     """A player seat's secret goal. In a world file the condition names keys, not IDs.
 
@@ -191,6 +230,8 @@ class CharacterDecl(Model):
     composite: bool
     means: tuple[Key, ...] = ()
     """Asset keys the character controls at the start date."""
+    sides: tuple[SideDecl, ...] = ()
+    """The character's side in each contest they bear on. Public."""
 
 
 Slug = Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_-]*$", max_length=40)]
@@ -217,6 +258,11 @@ class WorldFile(Model):
     roster: tuple[CharacterDecl, ...] = ()
     notes: tuple[Annotated[str, StringConstraints(max_length=200)], ...] = ()
     """Readings the GM chose where the record is disputed or silent (spec §5)."""
+    start_date: date | None = None
+    """The in-world start date (Session Zero v3). Set, the draft needs contests."""
+    contests: tuple[ContestDecl, ...] = ()
+    schedule: tuple[HistoryDecl, ...] = ()
+    """History's clock: the key events that really followed ``start_date``."""
 
 
 __all__ = [
@@ -226,15 +272,18 @@ __all__ = [
     "ClauseDecl",
     "ClockDecl",
     "CommitmentDecl",
+    "ContestDecl",
     "EntityDecl",
     "FactDecl",
     "GoalDecl",
+    "HistoryDecl",
     "Key",
     "MeterDecl",
     "RelationshipDecl",
     "ScopeDecl",
     "ScopeSpec",
     "SeatDecl",
+    "SideDecl",
     "Slug",
     "WorldFile",
 ]

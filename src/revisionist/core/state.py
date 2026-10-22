@@ -9,6 +9,7 @@ Layer 2 provides ``apply``, ``replay`` and ``project``; this module only
 defines the shapes.
 """
 
+from datetime import date
 from typing import ClassVar
 
 from pydantic import Field
@@ -20,6 +21,7 @@ from revisionist.core.ids import (
     CampaignId,
     ClockId,
     CommitmentId,
+    ContestId,
     EntityId,
     FactId,
     GoalId,
@@ -35,6 +37,7 @@ from revisionist.core.ontology import (
     Character,
     Clock,
     Commitment,
+    Contest,
     Entity,
     Fact,
     Meter,
@@ -67,8 +70,16 @@ class _World(Model):
     """A campaign from a hand-written world is in play from tick 0."""
     roster: dict[EntityId, Character] = Field(default_factory=dict)
     """The characters Session Zero offers. Public."""
+    contests: dict[ContestId, Contest] = Field(default_factory=dict)
+    """The pressures that keep the world moving (spec §5.3)."""
+    divergence: int = Field(default=0, ge=0)
+    """How far the world has drifted from the record (spec §5.4). Public."""
+    in_world_date: date | None = None
+    """Today in the world. None for a campaign with no start date."""
 
-    late_fields: ClassVar[frozenset[str]] = frozenset({"goals", "phase", "roster"})
+    late_fields: ClassVar[frozenset[str]] = frozenset(
+        {"goals", "phase", "roster", "contests", "divergence", "in_world_date"}
+    )
 
 
 class SeatFace(Model):

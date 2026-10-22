@@ -1,6 +1,8 @@
 """Session Zero output that the engine reads (spec §5)."""
 
+from datetime import date
 from enum import StrEnum
+from typing import ClassVar
 
 from pydantic import Field, field_validator
 
@@ -59,6 +61,12 @@ class Settings(Model):
     """Topics that happen off screen only."""
     content_rating: str | None = None
     max_human_seats: int = Field(default=10, ge=1, le=10)
+    end_date: date | None = None
+    """The in-world end date the table picked (spec §5.7). None: fixed turns."""
+    real_days: int | None = Field(default=None, ge=1, le=365)
+    """The real-life length in days. With ``end_date``, sets the turn rate."""
+
+    late_fields: ClassVar[frozenset[str]] = frozenset({"end_date", "real_days"})
 
     @field_validator("lines", "veils", mode="before")
     @classmethod
