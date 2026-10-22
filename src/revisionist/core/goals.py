@@ -27,7 +27,13 @@ from revisionist.core.ids import (
     RelationshipId,
     SeatId,
 )
-from revisionist.core.ontology import AssetKind, AssetStatus, CommitmentStatus, EntityStatus
+from revisionist.core.ontology import (
+    AssetKind,
+    AssetStatus,
+    CommitmentStatus,
+    EntityStatus,
+    ScheduleSource,
+)
 from revisionist.core.visibility import Scope
 
 if TYPE_CHECKING:
@@ -397,7 +403,66 @@ def balance(state: State, seat: SeatId, c: WinCondition) -> Balance:
     return Balance(power=p, difficulty=diff)
 
 
+_UNTIED = (
+    "This goal ties to none of the world's contests or coming events. "
+    "You can keep it, but it may sit outside the main action."
+)
+
+
+def _touches(state: State, leaf: Leaf) -> tuple[set[EntityId], set[str]]:
+    """The entities a check stands on (its holder, controller, parties, ends), and
+    every object ID it names directly."""
+    people: set[EntityId] = set()
+    named: set[str] = set()
+    match leaf:
+        case HoldsOffice() | ControlsAsset():
+            ref = leaf.office if isinstance(leaf, HoldsOffice) else leaf.asset
+            people.add(leaf.holder)
+            named.update((leaf.holder, ref))
+            if (asset := state.assets.get(ref)) is not None:
+                people.add(asset.controller)
+        case EntityIs():
+            people.add(leaf.entity)
+            named.add(leaf.entity)
+        case MeterAt():
+            named.add(leaf.meter)
+            if (meter := state.meters.get(leaf.meter)) is not None:
+                people.add(meter.owner)
+        case CommitmentInForce():
+            named.add(leaf.commitment)
+            if (commitment := state.commitments.get(leaf.commitment)) is not None:
+                people |= commitment.parties
+        case DispositionAt():
+            named.add(leaf.relationship)
+            if (rel := state.relationships.get(leaf.relationship)) is not None:
+                people |= {rel.a, rel.b}
+    return people, named
+
+
 def pressure_warning(state: State, seat: SeatId, c: WinCondition) -> str | None:
     """A plain warning when ``c`` bears on no contest and no item on history's
     clock, or None. Warn only: the player may confirm anyway (spec §5.6)."""
-    raise NotImplementedError("Session Zero v3, Phase 2: goal rule")
+    from revisionist.core import contest  # contest imports state, which imports us
+
+    history = [s for s in state.scheduled.values() if s.source is ScheduleSource.HISTORY]
+    if not state.contests and not history:
+        return None
+
+    people: set[EntityId] = set()
+    named: set[str] = set()
+    for leaf in leaves(c):
+        leaf_people, leaf_named = _touches(state, leaf)
+        people |= leaf_people
+        named |= leaf_named
+    if any(contest.bearing(state, entity) for entity in people):
+        return None
+
+    coming: set[str] = set()
+    for event in history:
+        if event.fired or event.skipped or event.condition is None:
+            continue
+        for leaf in leaves(event.condition):
+            coming |= _touches(state, leaf)[1]
+    if named & coming:
+        return None
+    return _UNTIED

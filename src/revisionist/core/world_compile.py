@@ -8,6 +8,7 @@ before anything is emitted. The fold runs last, as a check on what was emitted.
 from collections.abc import Callable, Mapping, Sequence
 
 from revisionist.core import events as ev
+from revisionist.core import roster
 from revisionist.core.events import Event, Versions
 from revisionist.core.fold import FoldError, replay
 from revisionist.core.goals import (
@@ -121,6 +122,10 @@ def compile_world(world: WorldFile, campaign_id: CampaignId, versions: Versions)
     met = [f"goal {g.key}: already met at tick 0" for g in world.goals if _met(state, g, ids)]
     if met:
         raise WorldError(met)
+    if state.contests:
+        unfit = roster.problems(state)
+        if unfit:
+            raise WorldError(unfit)
     return [_started(e, state) for e in events]
 
 

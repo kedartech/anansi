@@ -513,3 +513,41 @@ def test_goal_canaries_are_unique_across_facts() -> None:
         }
     )
     assert problems == ("goal g: duplicate canary",)
+
+
+def _salt_strait_with_contest(roster: list[dict[str, object]]) -> WorldFile:
+    raw: dict[str, object] = yaml.safe_load(SALT_STRAIT.read_text())
+    raw["start_date"] = "1500-03-01"
+    raw["contests"] = [
+        {
+            "key": "war",
+            "kind": "rivalry",
+            "name": "War",
+            "prize": "the strait",
+            "sides": ["varda", "ostrel"],
+            "countdown_days": 30,
+        }
+    ]
+    raw["roster"] = roster
+    return WorldFile.model_validate(raw)
+
+
+def test_a_roster_character_who_fails_the_character_rule_is_refused() -> None:
+    world = _salt_strait_with_contest(
+        [{"entity": "mira", "pitch": "Chief of staff", "reach": "The court", "composite": False}]
+    )
+    with pytest.raises(WorldError) as info:
+        compile_world(world, fx.CAMPAIGN, fx.VERSIONS)
+    assert info.value.problems == (
+        "character Mira Toll: controls no force, office or network of tier 2+ in a contest",
+    )
+
+
+def test_salt_strait_with_a_contest_and_a_qualifying_character_compiles() -> None:
+    world = _salt_strait_with_contest(
+        [{"entity": "mira", "pitch": "p", "reach": "r", "composite": False, "means": ["guard"]}]
+    )
+    guard = AssetDecl(key="guard", kind=AssetKind.FORCE, name="Guard", tier=2, controller="mira")
+    world = world.model_copy(update={"assets": (*world.assets, guard)})
+    state = replay(compile_world(world, fx.CAMPAIGN, fx.VERSIONS))
+    assert len(state.roster) == 1

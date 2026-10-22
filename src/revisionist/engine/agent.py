@@ -16,20 +16,24 @@ from typing import Any
 from pydantic import TypeAdapter, ValidationError
 
 from revisionist.core import events as ev
+from revisionist.core import places
 from revisionist.core._base import Model
 from revisionist.core.events import CallCost, Versions
 from revisionist.core.ids import (
+    EntityId,
     IntentId,
     SeatId,
     derived_id,
 )
 from revisionist.core.intent import IRREVERSIBLE_VERBS, Intent, Verb
+from revisionist.core.ontology import EntityKind
 from revisionist.core.project import project
 from revisionist.core.referee import Rejection, holds, rate
-from revisionist.core.resolution import FeasibilityBand
+from revisionist.core.resolution import FeasibilityBand, RejectionReason
 from revisionist.core.state import State, View
 from revisionist.core.visibility import Scope, private_to
-from revisionist.engine.llm import Request, Transport, prompt_text
+from revisionist.engine.campaign import log_cost
+from revisionist.engine.llm import Request, Transport, TransportError, prompt_text
 from revisionist.engine.store import EventStore, load_state
 from revisionist.engine.tick import _Emitter, file_intent
 
@@ -97,6 +101,17 @@ BRIEF_SCHEMA: dict[str, Any] = {
     },
     "required": ["text", "dilemma", "moves"],
     "additionalProperties": False,
+}
+
+
+PLACE_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "real": {"type": "boolean"},
+        "name": {"type": "string"},
+        "polity": {"type": "string"},
+    },
+    "required": ["real", "name", "polity"],
 }
 
 
@@ -361,6 +376,63 @@ def _deputy_prompt(view: View) -> str:
 # --- filing player text -------------------------------------------------------
 
 
+def _place_check(
+    store: EventStore,
+    state: State,
+    seat: SeatId,
+    destination: str,
+    transport: Transport,
+    versions: Versions,
+) -> EntityId | None:
+    """Admit a real place the world lacks. None when the model cannot place it."""
+    polities = sorted(e.name for e in state.entities.values() if e.kind is EntityKind.POLITY)
+    when = state.in_world_date.isoformat() if state.in_world_date else "unknown"
+    prompt = (
+        f"## Place\n{destination}\n## In-world date\n{when}\n## Polities in the world\n"
+        + "\n".join(f"- {p}" for p in polities)
+    )
+    try:
+        reply = transport.call(
+            Request(
+                "place_check",
+                AGENT_MODEL,
+                prompt_text("place_check"),
+                prompt,
+                PLACE_SCHEMA,
+                max_usd=0.1,
+            )
+        )
+    except TransportError:
+        return None
+    log_cost(store, state.campaign_id, "place_check", [reply.cost("place_check")], seat)
+    output = reply.output if isinstance(reply.output, dict) else {}
+    if output.get("real") is not True:
+        return None
+    current = load_state(store, state.campaign_id)
+    name = str(output.get("name") or "").strip() or destination
+    try:
+        entity = places.admit(current, name, _polity_id(current, output.get("polity")))
+    except ValueError:
+        return None
+    em = _Emitter(store, current, versions)
+    em.commit([em.event(ev.EntityCreated(entity=entity))])
+    return entity.entity_id
+
+
+def _polity_id(state: State, name: Any) -> EntityId | None:
+    if not isinstance(name, str) or not name.strip():
+        return None
+    key = name.strip().casefold()
+    return next(
+        (
+            e.entity_id
+            for e in state.entities.values()
+            if e.kind is EntityKind.POLITY and e.name.casefold() == key
+        ),
+        None,
+    )
+
+
 def receive_order(
     store: EventStore,
     state: State,
@@ -391,6 +463,18 @@ def receive_order(
             {**result.outcome.model_dump(), "scope": scope or result.outcome.scope, "spin": spin}
         )
         result = result.model_copy(update={"outcome": chosen})
+        if chosen.destination and places.missing(state, (chosen.destination,)):
+            place = _place_check(store, state, seat, chosen.destination, transport, em.versions)
+            if place is None:
+                refused = Rejection(
+                    reason=RejectionReason.TARGET_UNKNOWN,
+                    detail=f"I could not place {chosen.destination} at this date.",
+                )
+                return result.model_copy(update={"rejection": refused})
+            chosen = chosen.model_copy(
+                update={"targets": (*chosen.targets, place), "destination": None}
+            )
+            result = result.model_copy(update={"outcome": chosen})
         rejection = file_intent(
             store,
             state.campaign_id,

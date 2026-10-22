@@ -7,12 +7,47 @@ named. Nothing is written to a campaign until the host confirms a start point.
 """
 
 from datetime import date
+from typing import Any
+
+from pydantic import Field, ValidationError
 
 from revisionist.core._base import Model
 from revisionist.core.events import CallCost
-from revisionist.engine.llm import Transport
+from revisionist.engine.llm import Request, Transport, prompt_text
 
 PITCH_MAX = 200
+PITCH_MODEL = "claude-haiku-5-5"
+
+_DATE = {"type": "string", "pattern": r"^\d{4}-\d{2}-\d{2}$"}
+_TEXT = {"type": "array", "items": {"type": "string"}}
+
+PITCH_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "reading": {"type": "string"},
+        "start_points": {
+            "type": "array",
+            "maxItems": 3,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "label": {"type": "string"},
+                    "start_date": _DATE,
+                    "contests": {**_TEXT, "minItems": 1, "maxItems": 3},
+                    "powers": _TEXT,
+                    "focus": {"type": "string"},
+                    "schedule": {**_TEXT, "minItems": 0, "maxItems": 12},
+                },
+                "required": ["label", "start_date", "contests", "powers", "focus", "schedule"],
+                "additionalProperties": False,
+            },
+        },
+        "named": _TEXT,
+        "refusal": {"type": "string"},
+    },
+    "required": ["reading", "start_points", "named", "refusal"],
+    "additionalProperties": False,
+}
 
 
 class StartPoint(Model):
@@ -41,8 +76,80 @@ class PitchError(ValueError):
         self.costs = costs or []
 
 
+LATEST_START = date(2025, 12, 31)
+
+
+class _RawStart(Model):
+    label: str
+    start_date: str
+    contests: tuple[str, ...] = Field(min_length=1, max_length=3)
+    powers: tuple[str, ...]
+    focus: str
+    schedule: tuple[str, ...] = Field(max_length=12)
+
+
+class _RawCard(Model):
+    reading: str
+    start_points: tuple[_RawStart, ...]
+    named: tuple[str, ...]
+    refusal: str
+
+
+def _real_date(text: str) -> date | None:
+    try:
+        when = date.fromisoformat(text)
+    except ValueError:
+        return None
+    return when if when <= LATEST_START else None
+
+
+def _card(output: Any, costs: list[CallCost]) -> SettingCard:
+    try:
+        raw = _RawCard.model_validate(output)
+    except ValidationError as err:
+        raise PitchError("The setting card came back malformed. Try again.", costs) from err
+    if raw.refusal.strip():
+        raise PitchError(raw.refusal.strip(), costs)
+    if not raw.start_points:
+        raise PitchError("That pitch names no period I can read.", costs)
+    points: list[StartPoint] = []
+    for point in raw.start_points:
+        when = _real_date(point.start_date)
+        if when is None:
+            continue
+        points.append(
+            StartPoint(
+                label=point.label,
+                start_date=when,
+                contests=point.contests,
+                powers=point.powers,
+                focus=point.focus,
+                schedule=point.schedule,
+            )
+        )
+    if not points:
+        raise PitchError("The start dates did not read as real dates.", costs)
+    return SettingCard(reading=raw.reading, start_points=tuple(points[:3]), named=raw.named)
+
+
 def read_pitch(
     pitch: str, transport: Transport, effort: int | None = None
 ) -> tuple[SettingCard, list[CallCost]]:
     """One model call; refuses an empty or over-long pitch before calling."""
-    raise NotImplementedError("Session Zero v3, Phase 2: pitch card")
+    text = pitch.strip()
+    if not text:
+        raise PitchError("Give a pitch: a war, a year, a person, a place.")
+    if len(text) > PITCH_MAX:
+        raise PitchError(f"A pitch is at most {PITCH_MAX} characters.")
+    request = Request(
+        call_class="pitch",
+        model=PITCH_MODEL,
+        system=prompt_text("pitch"),
+        prompt=f"## Pitch\n{text}",
+        schema=PITCH_SCHEMA,
+        max_usd=0.3,
+        effort=effort,
+    )
+    reply = transport.call(request)
+    costs = [reply.cost("pitch")]
+    return _card(reply.output, costs), costs
