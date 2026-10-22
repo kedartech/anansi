@@ -25,16 +25,22 @@ def _code(reply: str) -> str:
 def test_a_live_game_blocks_establish_until_it_is_retired(pg_db: PgDb, tmp_path: Path) -> None:
     gm = GM(draft("florence-1478.yaml"), draft("washington-1962.yaml"))
     game = Game(pg_db, gm, tmp_path)
-    opened = game.command("establish", HOST, place=FLORENCE)
+    opened = game.establish(HOST, FLORENCE)
     assert opened.startswith(HEADS_UP + "Session Zero is open at Florence")
     first = game.campaign()
 
-    refused = game.command("establish", HOST, place=WASHINGTON)
+    refused = game.establish(HOST, WASHINGTON)
     assert refused == (
         f"Florence, April 1478 ({first}) is still live: one game at a time. "
         f"End it with /season-end, or set it aside with /retire {first}."
     )
-    assert len(gm.requests) == 1  # refused before the draft: no model call, no cost
+    # the pitch and three draft stages; the refusal comes before the pitch is read
+    assert [r.call_class for r in gm.requests] == [
+        "pitch",
+        "draft_outline",
+        "draft_detail",
+        "draft_schedule",
+    ]
 
     assert game.command("retire", STRANGER) == HOST_ONLY
     assert game.command("retire", HOST) == (
@@ -55,7 +61,7 @@ def test_a_live_game_blocks_establish_until_it_is_retired(pg_db: PgDb, tmp_path:
         assert sch.live_campaigns(store, game.clock()) == []
     finally:
         store.close()
-    assert game.command("establish", HOST, place=WASHINGTON).startswith(
+    assert game.establish(HOST, WASHINGTON).startswith(
         DRAFTING.format(place=WASHINGTON) + "Session Zero is open at Washington"
     )
 
@@ -65,7 +71,7 @@ def test_the_host_invites_from_discord_and_a_retired_games_codes_die(
 ) -> None:
     game = Game(pg_db, GM(draft("florence-1478.yaml")), tmp_path)
     assert game.command("invite", HOST) != ""  # nothing live yet: no crash
-    game.command("establish", HOST, place=FLORENCE)
+    game.establish(HOST, FLORENCE)
     assert game.command("invite", STRANGER) == HOST_ONLY
 
     reply = game.command("invite", HOST)
@@ -79,7 +85,7 @@ def test_the_host_invites_from_discord_and_a_retired_games_codes_die(
 
 def test_channel_binds_where_it_is_run(pg_db: PgDb, tmp_path: Path) -> None:
     game = Game(pg_db, GM(draft("florence-1478.yaml")), tmp_path)
-    game.command("establish", HOST, place=FLORENCE)
+    game.establish(HOST, FLORENCE)
     assert game.command("channel", STRANGER) == HOST_ONLY
     assert game.command("channel", HOST).startswith("Public statements and the press")
     store = game.store()

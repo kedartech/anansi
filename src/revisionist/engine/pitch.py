@@ -132,6 +132,54 @@ def _card(output: Any, costs: list[CallCost]) -> SettingCard:
     return SettingCard(reading=raw.reading, start_points=tuple(points[:3]), named=raw.named)
 
 
+class PendingCard(Model):
+    """A setting card waiting for the host's confirm, with what reading the pitch cost.
+
+    Discord keeps one per host in memory; the CLI saves it to a file between the
+    two commands. ``costs`` go to ``session_zero.confirm(card_costs=...)``."""
+
+    pitch: str
+    card: SettingCard
+    costs: tuple[CallCost, ...] = ()
+
+
+def _day(when: date) -> str:
+    return f"{when.day} {when:%B} {when.year}"
+
+
+def card_lines(card: SettingCard) -> list[str]:
+    """The card as plain lines for the host: the reading, each start point by
+    number with its history numbered for strikes, and anyone the pitch named."""
+    lines = [card.reading.strip()]
+    for n, p in enumerate(card.start_points, 1):
+        lines.append(f"{n}. {p.label}, {_day(p.start_date)}. Focus: {p.focus}.")
+        lines.append("   Contests: " + "; ".join(p.contests) + ".")
+        if p.powers:
+            lines.append("   Powers: " + ", ".join(p.powers) + ".")
+        if p.schedule:
+            lines.append("   History from here (strike by number):")
+            lines += [f"   {i}) {item}" for i, item in enumerate(p.schedule, 1)]
+    if card.named:
+        lines.append("Named in the pitch: " + ", ".join(card.named) + ".")
+    return lines
+
+
+def strikes_from(text: str) -> tuple[int, ...]:
+    """``"2, 4"`` or ``"2 4"`` as schedule numbers. Raises ``PitchError``."""
+    parts = [p for p in text.replace(",", " ").split() if p]
+    if not all(p.isdigit() for p in parts):
+        raise PitchError("Strike history items by number, e.g. 2, 4.")
+    return tuple(sorted({int(p) for p in parts}))
+
+
+def end_from(text: str) -> date:
+    """An in-world end date as ``YYYY-MM-DD``. Raises ``PitchError``."""
+    try:
+        return date.fromisoformat(text.strip())
+    except ValueError as err:
+        raise PitchError("Give the end date as YYYY-MM-DD, e.g. 1945-05-08.") from err
+
+
 def read_pitch(
     pitch: str, transport: Transport, effort: int | None = None
 ) -> tuple[SettingCard, list[CallCost]]:

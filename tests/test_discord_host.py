@@ -172,7 +172,7 @@ def test_invites_list_what_the_host_issued(salt: Game) -> None:
 
 
 def test_link_in_session_zero_points_to_invite(zero: Game) -> None:
-    assert "Session Zero is open" in zero.command("establish", HOST, place=FLORENCE)
+    assert "Session Zero is open" in zero.establish(HOST, FLORENCE)
     assert _host(zero, "link", user=_user(STRANGER), seat="anyone") == (
         "In Session Zero, use /invite."
     )
@@ -184,7 +184,7 @@ def test_a_seat_in_an_ended_game_does_not_block_the_next_one(salt: Game) -> None
     ended = salt.campaign()
     salt.command("season-end", HOST)
     salt.transport = Table()  # a model that can draft a world
-    assert "Session Zero is open" in salt.command("establish", HOST, place=FLORENCE)
+    assert "Session Zero is open" in salt.establish(HOST, FLORENCE)
     reply = salt.command("invite", HOST)
     assert reply.startswith("Invite for a new player"), reply
     assert salt.command("join", HOST, code=reply.splitlines()[1]) != handlers.ALREADY_SEATED

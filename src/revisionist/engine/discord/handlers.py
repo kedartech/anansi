@@ -51,6 +51,7 @@ from revisionist.engine.discord.tables import (
 from revisionist.engine.ids import new_id
 from revisionist.engine.llm import Transport, TransportError
 from revisionist.engine.pg_store import PostgresEventStore
+from revisionist.engine.pitch import PendingCard
 from revisionist.engine.runner import DelivererFactory, Publishes
 from revisionist.engine.store import load_state
 
@@ -163,6 +164,8 @@ class Handlers:
         self.rest = rest
         """Sends the welcome DM after ``/join``; without it the join just links."""
         self.last_establish: EstablishOutcome | None = None
+        self.cards: dict[str, PendingCard] = {}
+        """Setting cards from ``/establish pitch`` awaiting ``/establish confirm``, by host user."""
         self.opened: set[CampaignId] = set()
         """Campaigns whose last ``/begin`` moved them into play; their dossiers are owed."""
         self.asked: dict[str, list[datetime]] = {}

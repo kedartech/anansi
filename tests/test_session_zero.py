@@ -27,6 +27,7 @@ from revisionist.engine.providers import RecordingDeliverer, ScriptedResolver, T
 from revisionist.engine.store import MemoryStore, load_state
 from revisionist.engine.tick import NotInPlayError, Providers, run_tick
 from tests.pg import PgDb
+from tests.studio import Drafts
 from tests.test_discord_bot import HOST, STRANGER, Game
 from tests.test_scheduler import Clock
 
@@ -41,15 +42,21 @@ def draft(name: str) -> dict[str, Any]:
 
 
 class GM:
-    """Replies to ``session_zero`` calls with the given drafts, in order."""
+    """Replies to ``session_zero`` calls with the given drafts, in order, and to the
+    v3 ``pitch`` and ``draft_*`` calls from the same drafts (``tests.studio``)."""
 
     def __init__(self, *replies: dict[str, Any]) -> None:
         self.replies = list(replies)
         self.requests: list[Request] = []
+        self.drafts = Drafts(*replies)
+        """The v3 path (pitch, then the staged draft) answers from the same drafts."""
 
     def call(self, request: Request) -> Reply:
-        assert request.call_class == "session_zero"
         self.requests.append(request)
+        staged = self.drafts.answer(request.call_class)
+        if staged is not None:
+            return Reply(staged, request.model, 1500, 2000, 0, 0.04)
+        assert request.call_class == "session_zero"
         return Reply(self.replies.pop(0), request.model, 4000, 6000, 0, 0.12)
 
 
@@ -189,7 +196,10 @@ def test_the_cli_establishes_and_refuses_a_tick(
     monkeypatch.setenv("REVISIONIST_DB", str(tmp_path / "game.db"))
     monkeypatch.setenv("REVISIONIST_BRIEFINGS_DIR", str(tmp_path / "briefings"))
     monkeypatch.setattr(cli, "transport_factory", lambda: GM(draft("washington-1962.yaml")))
-    result = runner.invoke(cli.app, ["establish", WASHINGTON, "--lethality", "soft"])
+    card = runner.invoke(cli.app, ["establish", "pitch", WASHINGTON])
+    assert card.exit_code == 0, card.output
+    assert "1. Washington, October 1962" in card.output
+    result = runner.invoke(cli.app, ["establish", "confirm", "1", "--lethality", "soft"])
     assert result.exit_code == 0, result.output
     assert "Session Zero at Washington, October 1962" in result.output
     assert "10 characters to choose from:" in result.output
@@ -206,7 +216,8 @@ def test_the_cli_reports_a_draft_that_never_compiled(
     bad = draft("florence-1478.yaml")
     bad["roster"] = []
     monkeypatch.setattr(cli, "transport_factory", lambda: GM(bad, bad))
-    result = runner.invoke(cli.app, ["establish", FLORENCE])
+    assert runner.invoke(cli.app, ["establish", "pitch", FLORENCE]).exit_code == 0
+    result = runner.invoke(cli.app, ["establish", "confirm", "1"])
     assert result.exit_code == cli.EXIT_ERROR
     assert "roster: 0 characters" in result.output
 
@@ -234,10 +245,10 @@ def test_discord_establish_is_the_hosts(pg_db: PgDb, tmp_path: Path) -> None:
     bad = draft("florence-1478.yaml")
     bad["roster"] = []
     game = Game(pg_db, GM(bad, bad, draft("florence-1478.yaml")), tmp_path)
-    assert game.command("establish", STRANGER, place=FLORENCE) == HOST_ONLY
+    assert game.establish(STRANGER, FLORENCE) == HOST_ONLY
     heads_up = DRAFTING.format(place=FLORENCE)
-    assert game.command("establish", HOST, place=FLORENCE) == heads_up + DRAFT_REFUSED
-    reply = game.command("establish", HOST, place=FLORENCE).removeprefix(heads_up)
+    assert game.establish(HOST, FLORENCE) == heads_up + DRAFT_REFUSED
+    reply = game.establish(HOST, FLORENCE).removeprefix(heads_up)
     assert reply.startswith("Session Zero is open at Florence, April 1478. 11 characters")
     assert "Lorenzo de' Medici" in reply and "Tommaso Vanni" in reply
     assert game.command("advance", HOST) == "waiting: session zero"

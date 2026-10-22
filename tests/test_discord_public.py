@@ -48,7 +48,7 @@ def _invite(game: Game) -> str:
 
 def _seated(game: Game) -> None:
     """Session Zero open, the host and a friend holding seats, nothing public yet."""
-    game.command("establish", HOST, place=FLORENCE)
+    game.establish(HOST, FLORENCE)
     for user in (HOST, FRIEND):
         game.command("join", user, code=_invite(game))
     game.public.clear()
@@ -75,17 +75,17 @@ def _canary(game: Game) -> str:
 
 
 def test_establish_is_announced_and_a_refusal_is_not(zero: Game) -> None:
-    opened = zero.command("establish", HOST, place=FLORENCE)
+    opened = zero.establish(HOST, FLORENCE)
     line = opened.removeprefix(DRAFTING.format(place=FLORENCE)).splitlines()[0]
     assert zero.public == [line]
     assert line.startswith(f"Session Zero is open at {FLORENCE}. ")
     assert zero.last_sent[-1] == (line, False)
-    assert "one game at a time" in zero.command("establish", HOST, place=FLORENCE)
+    assert "one game at a time" in zero.establish(HOST, FLORENCE)
     assert zero.public == [line]
 
 
 def test_join_is_announced_and_a_bad_code_is_not(zero: Game) -> None:
-    zero.command("establish", HOST, place=FLORENCE)
+    zero.establish(HOST, FLORENCE)
     zero.public.clear()
     assert zero.command("join", HOST, code="NOT-A-CODE") == BAD_CODE
     assert zero.public == []
@@ -170,7 +170,7 @@ def test_an_order_is_never_announced(salt: Game) -> None:
 
 
 def test_goals_and_invites_are_never_announced(zero: Game) -> None:
-    zero.command("establish", HOST, place=FLORENCE)
+    zero.establish(HOST, FLORENCE)
     zero.command("join", HOST, code=_invite(zero))
     zero.command("character", HOST, action="claim", text="Lorenzo de' Medici")
     zero.public.clear()

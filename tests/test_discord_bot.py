@@ -120,9 +120,31 @@ class Game:
         self.public: list[str] = []
         self.last_sent: list[tuple[str, bool]] = []
 
-    def command(self, name: str, user_id: str = PLAYER, **options: str) -> str:
+    def command(self, name: str, user_id: str = PLAYER, **options: Any) -> str:
         found = self.bot.tree.get_command(name, guild=self.bot.guild)
         assert isinstance(found, discord.app_commands.Command)
+        return self._run(found, user_id, options)
+
+    def sub(self, group: str, name: str, user_id: str = PLAYER, **options: Any) -> str:
+        """Runs ``/<group> <name>`` through the real command tree, as Discord would."""
+        found = self.bot.tree.get_command(group, guild=self.bot.guild)
+        assert isinstance(found, discord.app_commands.Group)
+        command = found.get_command(name)
+        assert isinstance(command, discord.app_commands.Command)
+        return self._run(command, user_id, options)
+
+    def establish(self, user_id: str, pitch: str, choice: int = 1, **confirm: Any) -> str:
+        """``/establish pitch``, then ``/establish confirm`` if a card came back.
+
+        Returns the confirm's private reply, or the pitch's when it was refused
+        (no card is waiting for ``user_id``). ``confirm`` takes ``strike``, ``end``
+        and ``days`` as Discord would pass them."""
+        card = self.sub("establish", "pitch", user_id, text=pitch)
+        if user_id not in self.handlers.cards:
+            return card
+        return self.sub("establish", "confirm", user_id, choice=choice, **confirm)
+
+    def _run(self, found: Any, user_id: str, options: dict[str, Any]) -> str:
         interaction = FakeInteraction(user_id)
         callback: Any = found.callback
         asyncio.run(callback(interaction, **options))

@@ -32,6 +32,7 @@ from revisionist.engine.store import EventStore, MemoryStore, SqliteStore, Store
 from revisionist.engine.tick import Providers, run_tick
 from tests import fixtures as fx
 from tests.pg import PgDb
+from tests.studio import V3_CALLS, Drafts
 from tests.test_discord_bot import GUILD, HOST, Game
 from tests.test_discord_duo import FRIEND
 from tests.test_draft import CARD, FEUD, _good
@@ -54,6 +55,7 @@ class Table:
 
     def __init__(self) -> None:
         self.calls: list[str] = []
+        self.drafts = Drafts(draft("florence-1478.yaml"))
 
     def call(self, request: Request) -> Reply:
         self.calls.append(request.call_class)
@@ -61,6 +63,10 @@ class Table:
         match request.call_class:
             case "session_zero":
                 out = draft("florence-1478.yaml")
+            case cc if cc in V3_CALLS:
+                staged = self.drafts.answer(cc)
+                assert staged is not None
+                out = staged
             case "character_search":
                 roster = _section(request.prompt, "Roster")
                 banks = [c["id"] for c in roster if "bank" in c["pitch"].lower()]
@@ -376,7 +382,8 @@ def test_the_cli_runs_session_zero_to_the_first_tick(
         assert result.exit_code == 0, result.output
         return result.output
 
-    ok("establish", FLORENCE)
+    ok("establish", "pitch", FLORENCE)
+    ok("establish", "confirm", "1")
     assert "Tommaso Vanni (composite)" in ok("character", "roster")
     assert "Lorenzo de' Medici" in ok("character", "search", "money")
     assert ok("character", "claim", "Lorenzo de' Medici").strip() == "you play Lorenzo de' Medici"
@@ -401,7 +408,7 @@ def test_discord_session_zero_for_two(
     monkeypatch.setenv("REVISIONIST_DB", pg_db.app_dsn)
     monkeypatch.setenv("REVISIONIST_DISCORD_GUILD_ID", GUILD)
     monkeypatch.setattr(cli, "clock", game.clock)
-    opened = game.command("establish", HOST, place=FLORENCE)
+    opened = game.establish(HOST, FLORENCE)
     assert opened.startswith(DRAFTING.format(place=FLORENCE) + "Session Zero is open")
 
     def invite() -> str:

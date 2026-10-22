@@ -66,7 +66,7 @@ class BrokenFollowup(FakeFollowup):
 def test_a_refused_draft_is_dmed_to_the_host(pg_db: PgDb, tmp_path: Path) -> None:
     bad = _bad_washington()
     game = Game(pg_db, GM(bad, copy.deepcopy(bad)), tmp_path / "briefings")
-    game.command("establish", HOST, place=WASHINGTON)
+    game.establish(HOST, WASHINGTON)
 
     assert any(DRAFT_REFUSED in text for text in _host_dms(game))
     status = game.command("status", HOST)
@@ -77,14 +77,14 @@ def test_a_refused_draft_is_dmed_to_the_host(pg_db: PgDb, tmp_path: Path) -> Non
 def test_a_compiled_draft_is_dmed_and_status_is_unchanged_for_a_stranger(
     bare: Game,
 ) -> None:
-    bare.command("establish", HOST, place=FLORENCE)
+    bare.establish(HOST, FLORENCE)
 
     assert any("Session Zero is open at" in text for text in _host_dms(bare))
     assert bare.command("status", STRANGER) == NOT_LINKED
 
 
 def test_a_slow_command_is_also_dmed(bare: Game, monkeypatch: pytest.MonkeyPatch) -> None:
-    bare.command("establish", HOST, place=FLORENCE)
+    bare.establish(HOST, FLORENCE)
     monkeypatch.setattr(bot, "LONG_REPLY_S", -1.0)
 
     reply = bare.command("status", HOST)
@@ -94,7 +94,7 @@ def test_a_slow_command_is_also_dmed(bare: Game, monkeypatch: pytest.MonkeyPatch
 
 
 def test_a_fast_command_is_not_dmed(bare: Game) -> None:
-    bare.command("establish", HOST, place=FLORENCE)
+    bare.establish(HOST, FLORENCE)
     before = len(_host_dms(bare))
 
     bare.command("status", HOST)
@@ -134,7 +134,7 @@ def test_a_closed_dm_returns_false_without_raising(bare: Game) -> None:
     bare.discord.closed_dms.add(HOST)
 
     assert bare.handlers.notify(HOST, "text", "key") is False
-    reply = bare.command("establish", HOST, place=FLORENCE)
+    reply = bare.establish(HOST, FLORENCE)
 
     assert reply.startswith("Drafting")
     assert _host_dms(bare) == []
@@ -147,7 +147,7 @@ def test_the_refused_draft_log_names_a_compile_problem(
     game = Game(pg_db, GM(bad, copy.deepcopy(bad)), tmp_path / "briefings")
     caplog.set_level(logging.WARNING)
 
-    game.command("establish", HOST, place=WASHINGTON)
+    game.establish(HOST, WASHINGTON)
 
     [record] = [r for r in caplog.records if "did not compile" in r.getMessage()]
     assert "roster: 3 characters, not 8-12" in record.getMessage()

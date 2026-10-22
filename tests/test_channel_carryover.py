@@ -30,7 +30,7 @@ class WithPermissions(FakeInteraction):
 def test_the_public_channel_carries_over_to_the_next_game(pg_db: PgDb, tmp_path: Path) -> None:
     gm = GM(draft("florence-1478.yaml"), draft("washington-1962.yaml"))
     game = Game(pg_db, gm, tmp_path)
-    game.command("establish", HOST, place=FLORENCE)
+    game.establish(HOST, FLORENCE)
     store = game.store()
     try:
         first = next(iter(store.campaign_ids()))
@@ -40,7 +40,7 @@ def test_the_public_channel_carries_over_to_the_next_game(pg_db: PgDb, tmp_path:
     game.command("retire", HOST, campaign=first)
     public = list(game.public)
 
-    reply = game.command("establish", HOST, place=WASHINGTON)
+    reply = game.establish(HOST, WASHINGTON)
 
     assert reply.startswith(
         DRAFTING.format(place=WASHINGTON) + "Session Zero is open at Washington"
@@ -59,14 +59,14 @@ def test_the_public_channel_carries_over_to_the_next_game(pg_db: PgDb, tmp_path:
 
 def test_without_a_channel_the_host_is_asked_for_one(pg_db: PgDb, tmp_path: Path) -> None:
     game = Game(pg_db, GM(draft("florence-1478.yaml")), tmp_path)
-    reply = game.command("establish", HOST, place=FLORENCE)
+    reply = game.establish(HOST, FLORENCE)
     assert reply.endswith("\nRun /channel in the channel where news should post.")
     assert not any(m.channel_id == CHANNEL for m in game.discord.messages)
 
 
 def test_channel_warns_when_the_bot_cannot_post_there(pg_db: PgDb, tmp_path: Path) -> None:
     game = Game(pg_db, GM(draft("florence-1478.yaml")), tmp_path)
-    game.command("establish", HOST, place=FLORENCE)
+    game.establish(HOST, FLORENCE)
 
     warned = game.handlers.channel(HOST, CHANNEL, True, can_post=False)
     assert warned.startswith("Public statements and the press")
@@ -77,7 +77,7 @@ def test_channel_warns_when_the_bot_cannot_post_there(pg_db: PgDb, tmp_path: Pat
 
 def test_the_channel_command_checks_the_bot_can_post(pg_db: PgDb, tmp_path: Path) -> None:
     game = Game(pg_db, GM(draft("florence-1478.yaml")), tmp_path)
-    game.command("establish", HOST, place=FLORENCE)
+    game.establish(HOST, FLORENCE)
     found = game.bot.tree.get_command("channel", guild=game.bot.guild)
     assert isinstance(found, discord.app_commands.Command)
     callback: Any = found.callback

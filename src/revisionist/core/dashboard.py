@@ -126,6 +126,9 @@ def season_report(before: State, revealed: int = 0) -> list[str]:
         if winners
         else "No one met their goal."
     )
+    if before.in_world_date is not None:
+        # A dated (v3) world keeps history's clock; its drift is the table's score (spec §5.4).
+        lines.append(f"Drift from history: {before.divergence}.")
     for g in sorted(before.goals.values(), key=lambda g: names[g.seat_id]):
         when = f"first met at tick {g.met_tick}" if g.met_tick is not None else "never met"
         end = "held at the end" if g.holding else "not held at the end"

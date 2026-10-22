@@ -59,6 +59,10 @@ class Playing(Table):
             "press",
         } or cc not in {
             "session_zero",
+            "pitch",
+            "draft_outline",
+            "draft_detail",
+            "draft_schedule",
             "character_search",
             "character_pick",
             "goal",
@@ -108,7 +112,7 @@ def test_full_season(pg_db: PgDb, monkeypatch: pytest.MonkeyPatch, tmp_path: Pat
         return [c for c, e in g.last_sent if not e]
 
     # --- 1. Session Zero
-    r = cmd("establish", place=FLORENCE)
+    r = str(step("/establish", lambda: g.establish(HOST, FLORENCE)))
     check(r.startswith(DRAFTING.format(place=FLORENCE)), f"establish private: {r[:120]}")
     check(any("characters to choose from" in p for p in pub()), f"establish public: {pub()}")
     codes = []
@@ -265,7 +269,7 @@ def test_robustness(pg_db: PgDb, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     monkeypatch.setenv("REVISIONIST_DB", pg_db.app_dsn)
     monkeypatch.setenv("REVISIONIST_DISCORD_GUILD_ID", GUILD)
     monkeypatch.setattr(cli, "clock", g.clock)
-    g.command("establish", HOST, place=FLORENCE)
+    g.establish(HOST, FLORENCE)
     code = g.command("invite", HOST).splitlines()[1].strip()
     g.command("join", HOST, code=code)
     g.command("character", HOST, action="claim", text="Lorenzo de' Medici")
@@ -295,7 +299,7 @@ def test_robustness(pg_db: PgDb, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 
 
 def _to_play(g: Game, table: Playing) -> None:
-    g.command("establish", HOST, place=FLORENCE)
+    g.establish(HOST, FLORENCE)
     for user, who in ((HOST, "Lorenzo de' Medici"), (FRIEND, "Giuliano de' Medici")):
         code = g.command("invite", HOST).splitlines()[1].strip()
         g.command("join", user, code=code)
