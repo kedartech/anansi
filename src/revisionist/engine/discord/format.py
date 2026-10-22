@@ -11,6 +11,8 @@ from revisionist.engine.session_zero import SUGGESTED
 HISTORY_LABELS = ("As recorded:", "The goal in history:", SUGGESTED, "Where the record is thin:")
 NAME_END = (" (", " [", ": ")
 OFFER = re.compile(r"([HCO]\d+)\. ")
+CARD_START = re.compile(r"(\d+)\. (.+), (\d{1,2} \w+ \d{4})\. (Focus: .*)")
+CARD_ITEM = re.compile(r"   (\d+)\) (.*)")
 
 
 def bullets(lines: Sequence[str]) -> str:
@@ -45,6 +47,20 @@ def history(text: str) -> str:
                 break
         paragraphs.append(para)
     return "\n\n".join(paragraphs)
+
+
+def card(lines: Sequence[str]) -> str:
+    """A setting card's ``card_lines``: each start point's label bold, its history numbered."""
+    out = []
+    for line in lines:
+        if start := CARD_START.match(line):
+            n, label, day, focus = start.groups()
+            out.append(f"{n}. **{label}**, {day}. {focus}")
+        elif item := CARD_ITEM.match(line):
+            out.append(f"   {item[1]}. {item[2]}")
+        else:
+            out.append(line)
+    return "\n".join(out)
 
 
 def dashboard(lines: Sequence[str]) -> str:

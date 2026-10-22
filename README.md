@@ -16,7 +16,7 @@ Think of a gamified Model UN run like a D&D campaign. The event log is the one r
 
 ## Features
 
-- **Historical Session Zero.** Lock a place and date with `/establish`, choose a real character, then a secret goal. A world bible is drafted from the historical record and validated before play begins.
+- **Historical Session Zero.** The host gives a pitch of up to 200 characters, as loose as "WWII" or as exact as a place, date and person. The reply is a private setting card with 2-3 start points, each with the history it would follow. The host confirms one, strikes history items, and sets an end date and a real-life length. Then each player chooses a real character and a secret goal. A world bible is drafted from the historical record and validated before play begins.
 - **Secret goals and a win state.** Goals are checked in code against the world, not by a model. Players can investigate or forge rivals' goal information. A season ends with a full reveal.
 - **Information opacity.** Each seat sees only a projection of the world. Leak tests (type-level, canary, counterfactual and human-boundary) run on every change.
 - **Deterministic core.** `revisionist.core` is pure: no I/O, clock, network or unseeded randomness. Replaying the log always rebuilds the same state.
@@ -48,7 +48,7 @@ uv run revisionist tick                # live tick: real model calls
 uv run revisionist why                 # trace an order through the roll, deltas and narration
 ```
 
-Run `uv run revisionist --help` for the full command list, including Session Zero (`establish`, `character`, `goal`, `begin`), `season`, `replay`, `cost`, `db`, `admin` and `scheduler`.
+Run `uv run revisionist --help` for the full command list, including Session Zero (`establish pitch`, `establish confirm`, `character`, `goal`, `begin`), `season`, `replay`, `cost`, `db`, `admin` and `scheduler`.
 
 ## Documentation
 

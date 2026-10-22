@@ -47,11 +47,13 @@ def _bad_washington() -> dict[str, Any]:
 
 
 def _invoke(
-    client: bot.RevisionistBot, name: str, user: str, followup: Any, **options: str
+    client: bot.RevisionistBot, group: str, name: str, user: str, followup: Any, **options: Any
 ) -> None:
-    found = client.tree.get_command(name, guild=client.guild)
-    assert isinstance(found, discord.app_commands.Command)
-    callback: Any = found.callback
+    found = client.tree.get_command(group, guild=client.guild)
+    assert isinstance(found, discord.app_commands.Group)
+    command = found.get_command(name)
+    assert isinstance(command, discord.app_commands.Command)
+    callback: Any = command.callback
     asyncio.run(callback(FakeInteraction(user, followup=followup), **options))
 
 
@@ -106,7 +108,8 @@ def test_a_fast_command_is_not_dmed(bare: Game) -> None:
 def test_a_failed_followup_does_not_stop_the_host_dm(pg_db: PgDb, tmp_path: Path) -> None:
     game = Game(pg_db, GM(draft("florence-1478.yaml")), tmp_path / "briefings")
 
-    _invoke(game.bot, "establish", HOST, BrokenFollowup(), place=FLORENCE)
+    _invoke(game.bot, "establish", "pitch", HOST, FakeFollowup(), text=FLORENCE)
+    _invoke(game.bot, "establish", "confirm", HOST, BrokenFollowup(), choice=1)
 
     assert any("Session Zero is open at" in text for text in _host_dms(game))
 
@@ -123,7 +126,8 @@ def test_no_rest_means_no_dm_and_no_error(pg_db: PgDb, tmp_path: Path) -> None:
     client = bot.RevisionistBot(h, int(GUILD))
     followup = FakeFollowup()
 
-    _invoke(client, "establish", HOST, followup, place=FLORENCE)
+    _invoke(client, "establish", "pitch", HOST, FakeFollowup(), text=FLORENCE)
+    _invoke(client, "establish", "confirm", HOST, followup, choice=1)
 
     assert followup.sent[0][0].startswith("Drafting")
     assert any("Session Zero is open at" in content for content, _ in followup.sent)

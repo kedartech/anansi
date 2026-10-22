@@ -257,10 +257,13 @@ No migration: Session Zero, goals and the season end live in the event log. Upda
 ```
 (
   set -a; . ~/.config/revisionist/revisionist.env; set +a
-  revisionist establish "Florence, April 1478" --lethality hard   # or /establish in the server
+  revisionist establish pitch "Florence, April 1478"              # or /establish pitch text:... in the server
+  revisionist establish confirm 1 --strike 2,4 --end 1478-12-31 --days 30 --lethality hard
   revisionist discord invite                                     # one per player, you included; no --seat in Session Zero
 )
 ```
+
+The host pitches first: a war, a year, a person or a place, up to 200 characters. The reply is a private setting card with 2-3 start points, each with the history it would follow. Confirm one: `--strike` drops history items by number, `--end` sets an in-world end date and `--days` the real-life length. In Discord, the card and the drafting progress go to the host by DM, and `/establish confirm choice:1 strike:2,4 end:1478-12-31 days:30` is the same step. The draft takes a few minutes; the opening line posts in the public channel.
 
 Each player redeems their code with `/join`, then works through Session Zero privately: `/character roster` (or `search <what you want>`, `claim <name>`, `pick <anyone from the record>`), `/goal history` or `could_have` or `own <words>`, then `/goal confirm <n>`, `/history` for the tick-0 brief, and `/agent` to design their aide. `revisionist goal flags` shows any goal the balance check flagged, by seat and score only; `revisionist goal approve "<seat>"` lets it stand. When everyone is ready, `/begin` (or `revisionist begin`) closes Session Zero and the scheduler starts ticking. Until then it reports `waiting: session zero`.
 

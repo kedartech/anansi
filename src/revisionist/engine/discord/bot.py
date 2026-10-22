@@ -155,27 +155,51 @@ def register(
         user = str(interaction.user.id)
         await answer(interaction, lambda: h.status(user), notify=dm(user))
 
-    @tree.command(name="establish", description="Host: lock a point in history", guild=guild)
-    @app_commands.describe(place='Place and date, e.g. "Florence, April 1478"')
-    async def establish(
-        interaction: discord.Interaction, place: app_commands.Range[str, 1, 80]
+    establish = app_commands.Group(name="establish", description="Host: lock a point in history")
+
+    @establish.command(name="pitch", description="Host: read a pitch into a setting card")
+    @app_commands.describe(text='A war, a year, a person, a place, e.g. "Florence, April 1478"')
+    async def establish_pitch(
+        interaction: discord.Interaction, text: app_commands.Range[str, 1, 200]
+    ) -> None:
+        user = str(interaction.user.id)
+        await answer(interaction, lambda: h.establish_pitch(user, text))
+
+    @establish.command(name="confirm", description="Host: open the chosen start point")
+    @app_commands.describe(
+        choice="The start point on your card, 1 to 3",
+        strike="History items to drop, by number, e.g. 2, 4",
+        end="In-world end date, YYYY-MM-DD",
+        days="Real-life length of the game, 1 to 365 days",
+    )
+    async def establish_confirm(
+        interaction: discord.Interaction,
+        choice: app_commands.Range[int, 1, 3],
+        strike: app_commands.Range[str, 1, 80] | None = None,
+        end: app_commands.Range[str, 1, 20] | None = None,
+        days: app_commands.Range[int, 1, 365] | None = None,
     ) -> None:
         user = str(interaction.user.id)
         await interaction.response.defer(ephemeral=True, thinking=True)
-        refused = await _run(lambda: h.establish_refusal(user))
+        refused = await _run(lambda: h.establish_check(user, choice, strike or "", end or "", days))
         if refused:
             await _reply(interaction, refused)
             return
+        place = h.establish_place(user, choice)
         # The draft is one long model call; say so before it starts.
-        await _send(interaction, DRAFTING.format(place=place.strip()), ephemeral=True)
-        result = await _run(lambda: h.establish(user, place))
+        await _send(interaction, DRAFTING.format(place=place), ephemeral=True)
+        result = await _run(
+            lambda: h.establish_confirm(user, choice, strike or "", end or "", days)
+        )
         await _reply(interaction, result)
         await asyncio.to_thread(
             h.notify,
             user,
-            f"Your /establish for {place.strip()}:\n{result!s}",
+            f"Your /establish for {place}:\n{result!s}",
             f"establish:{user}:{secrets.token_hex(6)}",
         )
+
+    tree.add_command(establish, guild=guild)
 
     @tree.command(name="retire", description="Host: set a game aside, no reveal", guild=guild)
     @app_commands.describe(campaign="The game's ID or name; leave empty to list live games")

@@ -32,6 +32,7 @@ from revisionist.engine import scheduler as sch
 from revisionist.engine.ids import new_id
 from revisionist.engine.llm import Transport, TransportError
 from revisionist.engine.maintenance import copy_campaign
+from revisionist.engine.pitch import PendingCard, PitchError, card_lines, end_from, strikes_from
 from revisionist.engine.runner import DelivererFactory, Publishes, file_deliverer, play_tick
 from revisionist.engine.store import EventStore, Sealer, StoreError, load_state
 from revisionist.engine.tick import NotInPlayError
@@ -143,9 +144,51 @@ def new(world: Annotated[str, typer.Argument(help="World name or path to a YAML 
         typer.echo(f"human seats: {names}; {factions} AI factions")
 
 
-@app.command()
-def establish(
-    place: Annotated[str, typer.Argument(help='A point in history, e.g. "Florence, April 1478"')],
+establish_app = typer.Typer(no_args_is_help=True, help="Host: set up a new game from a pitch.")
+app.add_typer(establish_app, name="establish")
+
+
+def _card_file() -> Path:
+    """The setting card waiting for confirm. It sits beside the briefings, so it
+    follows the campaign's database rather than the working directory."""
+    return cmp.briefings_dir().parent / "revisionist-card.json"
+
+
+@establish_app.command("pitch")
+def establish_pitch(
+    text: Annotated[str, typer.Argument(help='A pitch, e.g. "WWII" or "Florence, April 1478"')],
+    effort: Annotated[
+        int | None,
+        typer.Option(min=1, max=4, help="Model effort for the pitch, 1 (low) to 4 (max)"),
+    ] = None,
+) -> None:
+    """Read a pitch into a setting card: 2-3 start points, each with the history it would follow."""
+    try:
+        card, costs = session_zero.propose(text, transport_factory(), effort)
+    except PitchError as exc:
+        raise _fail(exc.reason, EXIT_REFUSED) from exc
+    except TransportError as exc:
+        raise _fail(f"the GM could not be reached: {exc}") from exc
+    pending = PendingCard(pitch=text, card=card, costs=tuple(costs))
+    _card_file().write_text(pending.model_dump_json())
+    for line in card_lines(card):
+        typer.echo(line)
+    typer.echo(
+        "Confirm with: revisionist establish confirm <n> "
+        "[--strike 2,4] [--end YYYY-MM-DD] [--days N]"
+    )
+
+
+@establish_app.command("confirm")
+def establish_confirm(
+    choice: Annotated[int, typer.Argument(help="The start point's number on the card")],
+    strike: Annotated[
+        str | None, typer.Option(help="History items to leave out, by number, e.g. 2,4")
+    ] = None,
+    end: Annotated[str | None, typer.Option(help="In-world end date, YYYY-MM-DD")] = None,
+    days: Annotated[
+        int | None, typer.Option(min=1, max=365, help="Real-life length of the game, in days")
+    ] = None,
     plausibility: Annotated[Plausibility, typer.Option()] = Plausibility.PLAUSIBLE,
     inertia: Annotated[Inertia, typer.Option()] = Inertia.TENDENCIES,
     lethality: Annotated[Lethality, typer.Option()] = Lethality.HARD,
@@ -157,7 +200,16 @@ def establish(
         typer.Option(min=1, max=4, help="Model effort for the world draft, 1 (low) to 4 (max)"),
     ] = None,
 ) -> None:
-    """Session Zero: lock a point in history and draft its world bible from the record."""
+    """Open the game from the waiting setting card at start point N."""
+    path = _card_file()
+    if not path.exists():
+        raise _fail("No setting card waiting: run revisionist establish pitch first.", EXIT_REFUSED)
+    pending = PendingCard.model_validate_json(path.read_text())
+    try:
+        strikes = strikes_from(strike or "")
+        end_date = end_from(end) if end else None
+    except PitchError as exc:
+        raise _fail(exc.reason, EXIT_REFUSED) from exc
     settings = Settings(
         plausibility=plausibility,
         inertia=inertia,
@@ -168,13 +220,29 @@ def establish(
     )
     store = cmp.open_store()
     try:
-        campaign_id = session_zero.establish(store, place, settings, transport_factory(), effort)
+        campaign_id = session_zero.confirm(
+            store,
+            pending.card,
+            choice,
+            settings,
+            transport_factory(),
+            strikes=strikes,
+            end_date=end_date,
+            real_days=days,
+            effort=effort,
+            progress=typer.echo,
+            card_costs=pending.costs,
+        )
+    except session_zero.StepRefusedError as exc:
+        raise _fail(str(exc), EXIT_REFUSED) from exc
     except session_zero.SessionZeroError as exc:
         raise _fail(str(exc)) from exc
     except TransportError as exc:
         raise _fail(f"the GM could not be reached: {exc}") from exc
+    path.unlink()
     state = load_state(store, campaign_id)
-    typer.echo(f"campaign {campaign_id}: Session Zero at {place.strip()}")
+    start = pending.card.start_points[choice - 1]
+    typer.echo(f"campaign {campaign_id}: Session Zero at {start.label}")
     typer.echo(f"{len(state.roster)} characters to choose from:")
     for ch in sorted(state.roster.values(), key=lambda c: state.entities[c.entity_id].name):
         label = " (composite)" if ch.composite else ""

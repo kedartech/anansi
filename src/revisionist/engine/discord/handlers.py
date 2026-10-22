@@ -51,7 +51,7 @@ from revisionist.engine.discord.tables import (
 from revisionist.engine.ids import new_id
 from revisionist.engine.llm import Transport, TransportError
 from revisionist.engine.pg_store import PostgresEventStore
-from revisionist.engine.pitch import PendingCard
+from revisionist.engine.pitch import PendingCard, PitchError, card_lines, end_from, strikes_from
 from revisionist.engine.runner import DelivererFactory, Publishes
 from revisionist.engine.store import load_state
 
@@ -110,6 +110,11 @@ NO_DISPATCH = "No briefing yet. One arrives after each tick."
 ZERO_LINK = "In Session Zero, use /invite."
 NO_LIVE = "No live game to schedule."
 NO_GAME = "No game yet. Start one with /establish."
+NO_CARD = "No setting card waiting. Start with /establish pitch."
+CARD_HINT = (
+    "Confirm with /establish confirm choice:<n>. Optional: strike:2, 4 (history items to drop), "
+    "end:YYYY-MM-DD (in-world end date), days:<n> (real-life length)."
+)
 DRAFTING = (
     "Drafting {place} from the record. This takes about five minutes; "
     "I'll post here when Session Zero is open."
@@ -356,33 +361,98 @@ class Handlers:
 
     # --- host commands ------------------------------------------------------
 
-    def establish_refusal(self, user_id: str) -> str:
-        """Why ``/establish`` cannot start now, or ``""``. Checked before the slow draft."""
-
-        def work(store: PostgresEventStore) -> str:
-            return self._one_game(store)
-
-        return self._host_store(user_id, "establish", work)
-
     def _one_game(self, store: PostgresEventStore) -> str:
         live = sch.live_campaigns(store, self.clock())
         if not live:
             return ""
         return ONE_GAME.format(name=sch.campaign_name(store, live[-1]), campaign=live[-1])
 
-    def establish(self, user_id: str, place: str) -> str:
-        """Host: lock a point in history and draft its world (spec §5 step 2).
-
-        Host only until co-GM votes exist (Layer 10 item 7); spec §5 has it pass
-        by the table's vote at three or more humans.
-        """
+    def establish_pitch(self, user_id: str, text: str) -> str:
+        """Host: read a pitch into a setting card for the host to confirm (spec §5.2 steps
+        1-2). Logs nothing: a card is not a campaign until it is confirmed."""
 
         def work(store: PostgresEventStore) -> str:
             if refused := self._one_game(store):
                 return refused
             try:
-                campaign_id = session_zero.establish(
-                    store, place, Settings(), self.transport_factory()
+                card, costs = session_zero.propose(text, self.transport_factory())
+            except PitchError as exc:
+                return exc.reason
+            self.cards[user_id] = PendingCard(pitch=text.strip(), card=card, costs=tuple(costs))
+            reply = fmt.card(card_lines(card)) + "\n" + CARD_HINT
+            self.notify(user_id, reply, f"card:{user_id}:{new_id()}")
+            return reply
+
+        return self._host_store(user_id, "establish", work)
+
+    def establish_check(
+        self, user_id: str, choice: int, strike: str, end: str, days: int | None
+    ) -> str:
+        """Why ``/establish confirm`` cannot run, or ``""``. Checked before the heads-up
+        and the slow draft, so a refusal costs no model call."""
+
+        def work(store: PostgresEventStore) -> str:
+            if refused := self._one_game(store):
+                return refused
+            pending = self.cards.get(user_id)
+            if pending is None:
+                return NO_CARD
+            points = pending.card.start_points
+            if not 1 <= choice <= len(points):
+                return f"Pick a start point from 1 to {len(points)}."
+            start = points[choice - 1]
+            try:
+                strikes = strikes_from(strike)
+                when = end_from(end) if end else None
+            except PitchError as exc:
+                return exc.reason
+            if any(not 1 <= n <= len(start.schedule) for n in strikes):
+                return (
+                    f"Strike items from 1 to {len(start.schedule)} of that start point's schedule."
+                )
+            if when is not None and when <= start.start_date:
+                return f"The end date must come after the start, {start.start_date.isoformat()}."
+            if days is not None and not 1 <= days <= 365:
+                return "The real-life length is 1 to 365 days."
+            return ""
+
+        return self._host_store(user_id, "establish", work)
+
+    def establish_place(self, user_id: str, choice: int) -> str:
+        """The label of start point ``choice`` on this host's card, for the heads-up."""
+        return self.cards[user_id].card.start_points[choice - 1].label
+
+    def establish_confirm(
+        self, user_id: str, choice: int, strike: str, end: str, days: int | None
+    ) -> str:
+        """Host: draft the chosen start point and open Session Zero (spec §5.2 steps 3-4).
+
+        A draft that does not compile keeps the card; one that does drops it. Progress
+        lines go to the host by DM, never to the channel.
+        """
+
+        def progress(line: str) -> None:
+            self.notify(user_id, line, f"progress:{user_id}:{new_id()}")
+
+        def work(store: PostgresEventStore) -> str:
+            if refused := self._one_game(store):
+                return refused
+            pending = self.cards.get(user_id)
+            if pending is None:
+                return NO_CARD
+            place = pending.card.start_points[choice - 1].label
+            try:
+                campaign_id = session_zero.confirm(
+                    store,
+                    pending.card,
+                    choice,
+                    Settings(),
+                    self.transport_factory(),
+                    strikes=strikes_from(strike),
+                    end_date=end_from(end) if end else None,
+                    real_days=days,
+                    progress=progress,
+                    card_costs=pending.costs,
                 )
             except session_zero.SessionZeroError as exc:
                 log.warning(
@@ -390,15 +460,14 @@ class Handlers:
                     place,
                     "; ".join(exc.problems[:3]),
                 )
-                self.last_establish = EstablishOutcome(
-                    place.strip(), False, DRAFT_REFUSED, self.clock()
-                )
+                self.last_establish = EstablishOutcome(place, False, DRAFT_REFUSED, self.clock())
                 return DRAFT_REFUSED
+            del self.cards[user_id]
             sch.register(store, self.clock())
             state = load_state(store, campaign_id)
             names = sorted(state.entities[c].name for c in state.roster)
-            text = ESTABLISHED.format(place=place.strip(), n=len(names), names=", ".join(names))
-            self.last_establish = EstablishOutcome(place.strip(), True, text, self.clock())
+            text = ESTABLISHED.format(place=place, n=len(names), names=", ".join(names))
+            self.last_establish = EstablishOutcome(place, True, text, self.clock())
             carried = Channels(store.conn).latest_public(self.config.guild_id)
             if not carried:
                 hint = "\nRun /channel in the channel where news should post."
@@ -932,6 +1001,7 @@ __all__ = [
     "MODEL_DOWN",
     "NOT_LINKED",
     "NOT_YET",
+    "NO_CARD",
     "NO_DISPATCH",
     "ONE_GAME",
     "WELCOME",
