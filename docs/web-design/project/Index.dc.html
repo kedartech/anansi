@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Revisionist screen index</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&amp;family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&amp;display=swap">
+<style>
+body{margin:0;background:#000}
+a:hover{text-decoration:underline}
+</style>
+</helmet>
+<div style="width: 1440px; min-height: 1500px; box-sizing: border-box; background: #000000; padding: 0 8px 8px; display: flex; flex-direction: column; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; color: #1F1B16">
+  <header style="height: 64px; display: flex; align-items: center; gap: 16px; padding: 0 16px; border-bottom: 1px solid #4A2F16">
+    <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><path d="M27 3C19 4.5 13.5 10 12.5 17.5L15 20C22.5 19 27.5 12 27 3Z" fill="#B87333"></path><path d="M26 4.5L13.8 18.8" stroke="#000000" stroke-width="1.2"></path><path d="M13 19.5L15 21.5L4 30Z" fill="#B87333"></path><path d="M10.6 18.6L15.6 23.6" stroke="#B87333" stroke-width="2"></path></svg>
+    <span style="font-size: 13px; font-weight: 600; letter-spacing: 0.32em; color: #B87333">REVISIONIST</span>
+    <span style="font-size: 14px; color: #A89A86">Screen index · Rounds 1 to 3 · {{total}} frames</span>
+  </header>
+  <main style="flex: 1; background: #D8CFBA; padding: 36px 40px 48px; display: flex; flex-direction: column; gap: 28px">
+    <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 20px">
+      <h1 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 36px">Every screen</h1>
+      <span style="font-size: 14px; color: #4D463B">Press Play, then pick a screen to jump to it. Letters match the titles on the canvas.</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; align-items: start">
+      <sc-for list="{{rounds}}" as="r" hint-placeholder-count="3">
+        <section aria-label="{{r.name}}" style="display: flex; flex-direction: column; gap: 18px">
+          <h2 style="margin: 0; padding-bottom: 6px; border-bottom: 2px solid #1F1B16; font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase">{{r.name}}</h2>
+          <sc-for list="{{r.groups}}" as="g" hint-placeholder-count="4">
+            <div style="display: flex; flex-direction: column; gap: 2px">
+              <h3 style="margin: 0 0 4px; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 19px">{{g.title}}</h3>
+              <sc-for list="{{g.items}}" as="i" hint-placeholder-count="3">
+                <a href="{{i.file}}" style="display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 8px; padding: 5px 8px; background: #F2ECDF; border-bottom: 1px solid #D8CFBA; text-decoration: none; color: #1F1B16; font-size: 13px; line-height: 18px">
+                  <span style="font-weight: 600; font-feature-settings: 'tnum'">{{i.code}}</span><span>{{i.label}}</span>
+                </a>
+              </sc-for>
+            </div>
+          </sc-for>
+        </section>
+      </sc-for>
+    </div>
+    <section aria-label="Shared components" style="background: #F2ECDF; border: 1px solid #1F1B16; padding: 16px 20px; display: flex; flex-direction: column; gap: 8px">
+      <h2 style="margin: 0; font-size: 15px; font-weight: 600">Built once, reused</h2>
+      <span style="font-size: 13px; line-height: 20px; color: #4D463B">Many frames are the same component with one setting changed. Change the component and every frame that uses it follows.</span>
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 20px; font-size: 13px; line-height: 19px">
+        <sc-for list="{{shared}}" as="s" hint-placeholder-count="7">
+          <span><strong style="font-weight: 600">{{s.name}}</strong> · {{s.prop}}</span>
+        </sc-for>
+      </div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var g = function (title, items) { return { title: title, items: items.map(function (i) { return { code: i[0], label: i[1], file: i[2] + '.dc.html' }; }) }; };
+    var rounds = [
+      { name: 'Round 1', groups: [
+        g('A · Design system', [['A', 'Tokens, type, controls, game components', 'Main'], ['A2', 'Round 2 additions: actions, map, mandates, counsel', 'System-R2']]),
+        g('B · Accounts', [['B1', 'Sign up', 'SignUp'], ['B2', 'Recovery codes', 'RecoveryCodes'], ['B3', 'Sign in', 'SignIn'], ['B4a', 'Recover: enter a code', 'Recover-Code'], ['B4b', 'Recover: new password and codes', 'Recover-Reset']]),
+        g('C · Campaigns', [['C1', 'Campaign list', 'Campaigns'], ['C2', 'New account, no seats', 'Campaigns-Empty']]),
+        g('D · War room', [['D1', 'Default, returning player', 'WarRoom'], ['D2', 'Model call in progress', 'WarRoom-Thinking'], ['D3', 'Season over', 'WarRoom-SeasonOver'], ['D4', 'Error', 'WarRoom-Error'], ['D5', 'At 1280 × 800', 'WarRoom-1280'], ['D6', 'At 1920 × 1080', 'WarRoom-1920']])
+      ] },
+      { name: 'Round 2', groups: [
+        g('E · Order flow', [['E1', 'Player writes the order', 'OrderFlow'], ['E2', 'Clarifying question', 'OrderFlow-2'], ['E3', 'Order card to confirm', 'OrderFlow-3'], ['E4', 'Filed, odds shown', 'OrderFlow-4'], ['E5', 'Refused in-world', 'OrderFlow-5'], ['E6', 'Before and after the cutoff', 'OrderFlow-6'], ['E7', 'Results, success and exposed', 'OrderFlow-7']]),
+        g('F · Map', [['F1', 'Theatre level', 'Brooke'], ['F2', 'Flanders sector', 'Brooke-Sector'], ['F3', 'Places on demand', 'MapPlaces'], ['F4', 'Map as a list', 'Brooke-List']]),
+        g('G · Counsel', [['G1', 'Individual room, waiting', 'Counsel'], ['G2', 'War Cabinet, minuted', 'Counsel-Cabinet']]),
+        g('H · Mandates', [['H1', 'All four kinds', 'Mandates'], ['H2', 'Two live, one expiring', 'WarRoom-Mandates'], ['H3', 'Quiet tick', 'WarRoom-Quiet']]),
+        g('I, J · Intelligence and ledger', [['I1', 'Intelligence panel, Menzies', 'Menzies'], ['J1', 'Economic ledger, Churchill', 'WarRoom-Ledger']]),
+        g('K · Seat workspaces', [['K0', 'How a workspace assembles', 'Workspaces'], ['K1', 'Churchill', 'Seat-Churchill'], ['K2', 'Brooke', 'Seat-Brooke'], ['K3', 'Menzies', 'Seat-Menzies']])
+      ] },
+      { name: 'Round 3', groups: [
+        g('L · Session Zero', [['L1', 'Host: pitch', 'SessionZero'], ['L2', 'Host: setting card', 'SessionZero-2'], ['L3', 'Host: confirm and lock', 'SessionZero-3'], ['L4', 'Host: building the world', 'SessionZero-4'], ['L5', 'Join with a code', 'SessionZero-5'], ['L6', 'Choose a character', 'SessionZero-6'], ['L7', 'Secret goal', 'SessionZero-7'], ['L8', 'Historical brief', 'SessionZero-8'], ['L9', 'Design your agent', 'SessionZero-9'], ['L10', 'Waiting for the host', 'SessionZero-10']]),
+        g('M · Host console', [['M1', 'Overview', 'HostConsole'], ['M2', 'Why trace, replay, lifecycle', 'HostConsole-Why']]),
+        g('N · Special states', [['N1', 'Blinded seat', 'Blinded'], ['N2', 'Succession', 'Succession'], ['N3a', 'Declare leave', 'Leave'], ['N3b', 'Return: catch-up', 'Return'], ['N4', 'The Reveal almanac', 'Reveal'], ['N5', 'Share card', 'ShareCard']]),
+        g('O · Settings', [['O1', 'Account, recovery, Discord, sessions', 'Settings'], ['O2', 'Agent, delete account', 'Settings-Agent']])
+      ] }
+    ];
+    var total = 0;
+    rounds.forEach(function (r) { r.groups.forEach(function (gr) { total += gr.items.length; }); });
+    var shared = [
+      { name: 'WarRoom', prop: 'mode, tab' }, { name: 'OrderFlow', prop: 'step 1–7' }, { name: 'Brooke', prop: 'view' }, { name: 'Counsel', prop: 'room' },
+      { name: 'SessionZero', prop: 'step 1–10' }, { name: 'HostConsole', prop: 'page' }, { name: 'Settings', prop: 'section' }
+    ];
+    return { rounds: rounds, total: total, shared: shared };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Succession</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&amp;family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&amp;family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&amp;display=swap">
+<style>
+body{margin:0;background:#000}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; background: #000000; padding: 0 6px 6px; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; color: #1F1B16">
+<header style="min-height: 56px; display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 6px 12px; border-bottom: 1px solid #4A2F16; color: #EDE3D1">
+  <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><path d="M27 3C19 4.5 13.5 10 12.5 17.5L15 20C22.5 19 27.5 12 27 3Z" fill="#B87333"></path><path d="M26 4.5L13.8 18.8" stroke="#000000" stroke-width="1.2"></path><path d="M13 19.5L15 21.5L4 30Z" fill="#B87333"></path><path d="M10.6 18.6L15.6 23.6" stroke="#B87333" stroke-width="2"></path></svg>
+  <span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 16px">Their Finest Hour</span>
+  <span aria-hidden="true" style="width: 1px; height: 32px; background: #4A2F16"></span>
+  <span style="font-size: 14px; font-weight: 600">14 June 1940 · Tick 7</span>
+  <span style="margin-left: auto; font-size: 13px; color: #A89A86">Your seat continues. You are not out of the game.</span>
+</header>
+<div aria-hidden="true" style="height: 4px; background: #234A8A"></div>
+<main style="flex: 1; background: #D8CFBA; padding: 32px 24px 40px">
+  <div style="max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px">
+
+    <!-- notice -->
+    <article aria-label="Notice of death" style="background: #FAF7F0; border: 6px double #1F1B16; padding: 26px 32px; display: flex; flex-direction: column; gap: 12px; align-items: center; text-align: center">
+      <span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase">10 Downing Street · 14 June 1940</span>
+      <h1 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 40px; line-height: 46px">The Prime Minister is dead</h1>
+      <p style="margin: 0; max-width: 64ch; font-family: 'Courier Prime', 'Courier New', monospace; font-size: 16px; line-height: 25px">Mr Churchill's aircraft was lost over the Channel last night, returning from Tours. The escort saw it go down off Dieppe. There were no survivors. The King has sent for Lord Halifax.</p>
+      <span style="font-family: 'Courier Prime', 'Courier New', monospace; font-size: 15px">— Hartley</span>
+    </article>
+
+    <!-- handover -->
+    <section aria-label="Handover" style="display: grid; grid-template-columns: minmax(0, 1fr) 80px minmax(0, 1fr); gap: 0; align-items: center; background: #F2ECDF; border: 1px solid #1F1B16; padding: 20px 24px">
+      <div style="display: flex; align-items: center; gap: 16px; opacity: 0.85">
+        <div aria-hidden="true" style="width: 64px; height: 80px; border: 1px solid #1F1B16; outline: 1px solid #1F1B16; outline-offset: 3px; background: #E4DCCB; display: flex; align-items: center; justify-content: center; font-family: 'Libre Caslon Text', Georgia, serif; font-size: 22px">WC</div>
+        <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 22px">Winston Churchill</span><span style="font-size: 13px; color: #4D463B">Prime Minister · 1874–1940</span></div>
+      </div>
+      <svg width="60" height="24" viewBox="0 0 60 24" aria-hidden="true" style="justify-self: center"><path d="M4 12H52M44 4l8 8-8 8" fill="none" stroke="#1F1B16" stroke-width="2.5"></path></svg>
+      <div style="display: flex; align-items: center; gap: 16px">
+        <div aria-hidden="true" style="width: 64px; height: 80px; border: 2px solid #234A8A; outline: 1px solid #1F1B16; outline-offset: 3px; background: #E4DCCB; display: flex; align-items: center; justify-content: center; font-family: 'Libre Caslon Text', Georgia, serif; font-size: 22px">H</div>
+        <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">You now play</span><span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 22px">Lord Halifax</span><span style="font-size: 13px; color: #4D463B">Prime Minister · lawful successor</span></div>
+      </div>
+    </section>
+
+    <!-- carried / lapsed / changed -->
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start">
+      <section aria-label="Carried over" style="background: #FAF7F0; border: 1px solid #1F1B16; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px">
+        <h2 style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1F1B16" stroke-width="2.4" aria-hidden="true"><path d="m4 12 5 5L20 6"></path></svg>Carried over</h2>
+        <span style="font-size: 12px; color: #4D463B">Tied to the office</span>
+        <ul style="margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; line-height: 19px">
+          <li>Order 6·1 · four squadrons to France (trigger still armed)</li>
+          <li>Order 5·2 · the Purchasing Commission's orders</li>
+          <li>Operation 5·3 · SIS deception</li>
+          <li>All four means: Home Fleet, Fighter Command, Treasury, SIS</li>
+          <li>The Commons mandate: a statement is now due from you</li>
+          <li>Your secret goal. It's yours, not his.</li>
+          <li>Hartley, your agent</li>
+        </ul>
+      </section>
+      <section aria-label="Lapsed" style="background: #FAF7F0; border: 1px solid #1F1B16; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px">
+        <h2 style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9B2C22" stroke-width="2.4" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>Lapsed</h2>
+        <span style="font-size: 12px; color: #4D463B">Tied to the man</span>
+        <ul style="margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; line-height: 19px">
+          <li>Order 6·3 · broadcast to the nation in his own voice</li>
+          <li>His private correspondence with President Roosevelt</li>
+          <li>His long quarrel with the India lobby</li>
+        </ul>
+      </section>
+      <section aria-label="Changed" style="background: #FAF7F0; border: 1px solid #1F1B16; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px">
+        <h2 style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1F1B16" stroke-width="2.2" aria-hidden="true"><path d="M4 8h14l-3.5-3.5M20 16H6l3.5 3.5"></path></svg>Changed</h2>
+        <span style="font-size: 12px; color: #4D463B">Halifax brings his own ties</span>
+        <ul style="margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; line-height: 19px">
+          <li>Commons confidence 6 → 5</li>
+          <li>Cabinet: Chamberlain warmer; Attlee and Greenwood cooler</li>
+          <li>Rome: an old acquaintance with the Italian ambassador</li>
+          <li>Washington: no personal channel yet</li>
+        </ul>
+      </section>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 14px 18px; background: #F2ECDF; border: 1px solid #1F1B16">
+      <span style="flex: 1 1 360px; font-size: 14px; line-height: 21px">Your workspace has been rebuilt from Lord Halifax's holdings. Other players see only the public news: a new Prime Minister.</span>
+      <a href="WarRoom.dc.html" style="height: 40px; padding: 0 20px; display: inline-flex; align-items: center; background: #1F1B16; color: #F2ECDF; text-decoration: none; font-size: 15px; font-weight: 500">Take up the office</a>
+      <a href="#" style="font-size: 14px; color: #2A3D66">Read Halifax's brief first</a>
+    </div>
+  </div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

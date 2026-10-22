@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Counsel</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&amp;family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&amp;family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&amp;display=swap">
+<style>
+body{margin:0;background:#000}
+</style>
+</helmet>
+<div style="height: 100vh; min-height: 720px; box-sizing: border-box; display: flex; flex-direction: column; background: #000000; padding: 0 6px 6px; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; color: #1F1B16; overflow: hidden">
+
+<header style="min-height: 56px; display: flex; flex-wrap: wrap; align-items: center; column-gap: 14px; row-gap: 6px; padding: 6px 10px; border-bottom: 1px solid #4A2F16; color: #EDE3D1">
+  <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><path d="M27 3C19 4.5 13.5 10 12.5 17.5L15 20C22.5 19 27.5 12 27 3Z" fill="#B87333"></path><path d="M26 4.5L13.8 18.8" stroke="#000000" stroke-width="1.2"></path><path d="M13 19.5L15 21.5L4 30Z" fill="#B87333"></path><path d="M10.6 18.6L15.6 23.6" stroke="#B87333" stroke-width="2"></path></svg>
+  <span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 16px; white-space: nowrap">Their Finest Hour</span>
+  <span aria-hidden="true" style="width: 1px; height: 32px; background: #4A2F16"></span>
+  <svg width="20" height="24" viewBox="0 0 22 26" role="img" aria-label="Seat colour: azure"><path d="M1 1h20v11c0 7-5 11.5-10 13C6 23.5 1 19 1 12Z" fill="#234A8A" stroke="#B87333" stroke-width="1.2"></path></svg>
+  <div style="display: flex; flex-direction: column"><span style="font-size: 14px; line-height: 18px; font-weight: 600">Winston Churchill</span><span style="font-size: 12px; line-height: 16px; color: #A89A86">Prime Minister</span></div>
+  <span aria-hidden="true" style="width: 1px; height: 32px; background: #4A2F16"></span>
+  <div style="display: flex; flex-direction: column"><span style="font-size: 14px; line-height: 18px; font-weight: 600">4 June 1940</span><span style="font-size: 12px; line-height: 16px; color: #A89A86">Tick 6 · this turn 4–11 June</span></div>
+  <div style="margin-left: auto; display: flex; align-items: center; gap: 12px">
+    <div style="display: flex; flex-direction: column; align-items: flex-end"><span style="font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #A89A86">Next tick in</span><span style="font-size: 20px; line-height: 24px; font-weight: 600; color: #D08A49; font-feature-settings: 'tnum'">13 h 50 m</span></div>
+    <a href="#" style="display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; background: #9B2C22; color: #F2ECDF; text-decoration: none; font-size: 13px; font-weight: 600">1 needs an answer</a>
+    <div style="display: flex; flex-direction: column; align-items: flex-end; padding-left: 12px; border-left: 1px solid #4A2F16"><span style="font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #A89A86">Divergence</span><span style="font-size: 20px; line-height: 24px; font-weight: 600">12</span></div>
+    <button type="button" aria-label="Report a bug" style="width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid #85705A; color: #EDE3D1"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8.5 7a3.5 3.5 0 0 1 7 0"></path><rect x="7" y="8" width="10" height="12" rx="5"></rect><path d="M12 12v8M3 13h4M17 13h4M4 8l3 2M20 8l-3 2M4 20l3-2.5M20 20l-3-2.5"></path></svg></button>
+    <button type="button" style="height: 36px; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px; background: transparent; border: 1px solid #B87333; color: #B87333; font: 600 13px 'IBM Plex Sans', Arial, sans-serif; white-space: nowrap"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M9 5v14M15 5v14"></path></svg>Pause · Add a line</button>
+  </div>
+</header>
+<div aria-hidden="true" style="height: 4px; background: #234A8A; flex: none"></div>
+
+<div style="flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(260px, 21%) minmax(0, 1fr) minmax(280px, 22%); background: #D8CFBA">
+
+  <!-- ROSTER -->
+  <nav aria-label="Counsel" style="min-height: 0; overflow-y: auto; border-right: 1px solid #1F1B16; padding: 14px 12px 20px; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; align-items: center; padding: 0 4px"><h2 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 20px">Counsel</h2><button type="button" style="margin-left: auto; height: 30px; padding: 0 10px; background: transparent; border: 1px solid #1F1B16; border-radius: 2px; font: 500 12px 'IBM Plex Sans', Arial, sans-serif">New room</button></div>
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <span style="padding: 0 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Rooms</span>
+      <a href="Counsel-Cabinet.dc.html" style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; padding: 8px; text-decoration: none; color: #1F1B16; background: {{bgCabinet}}; border: 1px solid {{bdCabinet}}">
+        <span style="font-size: 14px; font-weight: 600">War Cabinet</span><span style="font-size: 11px; font-weight: 600; padding: 0 5px; background: #1F1B16; color: #F2ECDF; align-self: center">2 new</span>
+        <span style="font-size: 12px; color: #4D463B; grid-column: 1 / -1">Restricted · minuted · 5 members</span>
+      </a>
+      <a href="#" style="display: grid; gap: 2px; padding: 8px; text-decoration: none; color: #1F1B16; border: 1px solid transparent">
+        <span style="font-size: 14px; font-weight: 600">Chiefs of Staff</span>
+        <span style="font-size: 12px; color: #4D463B">Ad hoc · restricted · 3 members</span>
+      </a>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <span style="padding: 0 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">One to one</span>
+      <a href="Counsel.dc.html" style="display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 0 10px; align-items: center; padding: 8px; text-decoration: none; color: #1F1B16; background: {{bgDowding}}; border: 1px solid {{bdDowding}}">
+        <span aria-hidden="true" style="grid-row: span 2; width: 30px; height: 36px; border: 1px solid #1F1B16; background: #E4DCCB; display: flex; align-items: center; justify-content: center; font-family: 'Libre Caslon Text', Georgia, serif; font-size: 12px">HD</span>
+        <span style="font-size: 14px; font-weight: 600">Sir Hugh Dowding</span>
+        <span style="font-size: 12px; color: #4D463B">Fighter Command · waiting for reply</span>
+      </a>
+      <a href="#" style="display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 0 10px; align-items: center; padding: 8px; text-decoration: none; color: #1F1B16; border: 1px solid transparent">
+        <span aria-hidden="true" style="grid-row: span 2; width: 30px; height: 36px; border: 1px solid #1F1B16; background: #E4DCCB; display: flex; align-items: center; justify-content: center; font-family: 'Libre Caslon Text', Georgia, serif; font-size: 12px">H</span>
+        <span style="font-size: 14px; font-weight: 600">Lord Halifax</span>
+        <span style="display: flex; align-items: center; gap: 6px; font-size: 12px"><span style="font-weight: 600; padding: 0 5px; border: 1px solid #1F1B16">Requested</span><span style="color: #4D463B">asks for a word</span></span>
+      </a>
+      <a href="#" style="display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 0 10px; align-items: center; padding: 8px; text-decoration: none; color: #1F1B16; border: 1px solid transparent">
+        <span aria-hidden="true" style="grid-row: span 2; width: 30px; height: 36px; border: 1px solid #1F1B16; background: #E4DCCB; display: flex; align-items: center; justify-content: center; font-family: 'Libre Caslon Text', Georgia, serif; font-size: 12px">B</span>
+        <span style="font-size: 14px; font-weight: 600">Lord Beaverbrook</span>
+        <span style="font-size: 12px; color: #4D463B">Aircraft Production</span>
+      </a>
+      <a href="#" style="display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 0 10px; align-items: center; padding: 8px; text-decoration: none; color: #1F1B16; border: 1px solid transparent">
+        <span aria-hidden="true" style="grid-row: span 2; width: 30px; height: 36px; border: 1px solid #1F1B16; background: #E4DCCB; display: flex; align-items: center; justify-content: center; font-family: 'Libre Caslon Text', Georgia, serif; font-size: 12px">KW</span>
+        <span style="font-size: 14px; font-weight: 600">Sir Kingsley Wood</span>
+        <span style="font-size: 12px; color: #4D463B">Chancellor of the Exchequer</span>
+      </a>
+    </div>
+    <div style="margin-top: auto; display: flex; flex-direction: column; gap: 8px; padding: 12px 4px 0; border-top: 1px solid #B5AA93; font-size: 12px; line-height: 17px; color: #4D463B">
+      <span>Counsel is free. Lobbying, pressing or bribing someone is an order.</span>
+      <span style="display: flex; align-items: center; gap: 6px"><span style="font-weight: 600; color: #1F1B16">Advisor labels:</span>off · set by the table</span>
+    </div>
+  </nav>
+
+  <!-- ROOM -->
+  <main style="min-height: 0; display: flex; flex-direction: column; background: #F2ECDF">
+
+    <!-- individual header -->
+    <sc-if value="{{isIndividual}}" hint-placeholder-val="{{true}}">
+      <div style="flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 14px 24px; border-bottom: 1px solid #1F1B16">
+        <div aria-hidden="true" style="width: 48px; height: 60px; border: 1px solid #1F1B16; outline: 1px solid #1F1B16; outline-offset: 3px; background: #E4DCCB; display: flex; align-items: center; justify-content: center; font-family: 'Libre Caslon Text', Georgia, serif; font-size: 19px">HD</div>
+        <div style="display: flex; flex-direction: column; gap: 2px">
+          <h1 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 22px">Air Chief Marshal Sir Hugh Dowding</h1>
+          <span style="font-size: 13px; color: #4D463B">Air Officer Commanding-in-Chief, Fighter Command</span>
+        </div>
+        <span style="margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border: 2px solid #1F1B16; font: 700 12px 'Courier Prime', monospace; letter-spacing: 0.12em"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="1"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>PRIVATE</span>
+        <span style="flex-basis: 100%; font-size: 13px; color: #4D463B">Just the two of you. Not minuted.</span>
+      </div>
+      <div role="log" aria-label="Conversation with Sir Hugh Dowding" style="flex: 1; min-height: 0; overflow-y: auto; padding: 18px 24px; display: flex; flex-direction: column; gap: 12px">
+        <div style="max-width: 760px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 12px">
+          <span style="align-self: center; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Yesterday · tick 5</span>
+          <div style="align-self: flex-end; max-width: 80%; display: flex; flex-direction: column; align-items: flex-end; gap: 3px"><span style="font-size: 12px; color: #4D463B">You</span><div style="background: #FAF7F0; border: 1px solid #7A705F; padding: 9px 12px; font-size: 14px; line-height: 21px">How many squadrons can France have without breaking you?</div></div>
+          <div style="align-self: flex-start; max-width: 86%; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 12px; color: #4D463B">Sir Hugh Dowding</span><div style="background: #E4DCCB; border: 1px solid #B5AA93; padding: 10px 12px; font-family: 'Courier Prime', 'Courier New', monospace; font-size: 15px; line-height: 23px">None, if you want my honest view, Prime Minister. I put it in writing on the 16th. If you must send some, take them from 12 Group and have them back the moment France goes.</div></div>
+          <span style="align-self: center; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Today</span>
+          <div style="align-self: flex-end; max-width: 80%; display: flex; flex-direction: column; align-items: flex-end; gap: 3px"><span style="font-size: 12px; color: #4D463B">You · 09:12</span><div style="background: #FAF7F0; border: 1px solid #7A705F; padding: 9px 12px; font-size: 14px; line-height: 21px">Four from 12 Group, then. And if Paris holds, can I keep them there?</div></div>
+          <div role="status" style="align-self: flex-start; display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #F2ECDF; border: 1px dashed #1F1B16; font-size: 13px; line-height: 19px">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1F1B16" stroke-width="1.8" aria-hidden="true"><path d="M7 3h10M7 21h10M8 3c0 5 8 6 8 9s-8 4-8 9M16 3c0 5-8 6-8 9"></path></svg>
+            <span>Waiting for Sir Hugh's reply. Replies can take until the next tick.</span>
+          </div>
+        </div>
+      </div>
+      <form aria-label="Write to Sir Hugh" style="flex: none; display: flex; gap: 10px; padding: 12px 24px; border-top: 1px solid #1F1B16; background: #E4DCCB">
+        <label for="cs-msg" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Write to Sir Hugh</label>
+        <input id="cs-msg" type="text" placeholder="Write to Sir Hugh" style="flex: 1; min-width: 0; height: 38px; padding: 0 12px; background: #FAF7F0; border: 1px solid #7A705F; font: 400 14px 'IBM Plex Sans', Arial, sans-serif">
+        <button type="submit" style="height: 38px; padding: 0 16px; background: #1F1B16; color: #F2ECDF; border: 0; border-radius: 2px; font: 500 14px 'IBM Plex Sans', Arial, sans-serif">Send</button>
+      </form>
+    </sc-if>
+
+    <!-- cabinet -->
+    <sc-if value="{{isCabinet}}" hint-placeholder-val="{{false}}">
+      <div style="flex: none; display: flex; flex-direction: column; gap: 10px; padding: 14px 24px; border-bottom: 1px solid #1F1B16">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px">
+          <h1 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 24px">War Cabinet</h1>
+          <span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border: 2px solid #1F1B16; font: 700 12px 'Courier Prime', monospace; letter-spacing: 0.12em"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><path d="M3.5 19a5.5 5.5 0 0 1 11 0"></path><circle cx="17" cy="9" r="2.5"></circle><path d="M16 14.1a4.6 4.6 0 0 1 5 4.4"></path></svg>RESTRICTED</span>
+          <div style="margin-left: auto; display: flex; gap: 6px" aria-label="Members">
+            <span title="You" style="width: 30px; height: 36px; border: 2px solid #234A8A; background: #E4DCCB; display: flex; align-items: center; justify-content: center; font-family: 'Libre Caslon Text', Georgia, serif; font-size: 12px">WC</span>
+            <span title="Neville Chamberlain" style="width: 30px; height: 36px; border: 1px solid #1F1B16; background: #E4DCCB; display: flex; align-items: center; justify-content: center; font-family: 'Libre Caslon Text', Georgia, serif; font-size: 12px">NC</span>
+            <span title="Lord Halifax" style="width: 30px; height: 36px; border: 1px solid #1F1B16; background: #E4DCCB; display: flex; align-items: center; justify-content: center; font-family: 'Libre Caslon Text', Georgia, serif; font-size: 12px">H</span>
+            <span title="Clement Attlee" style="width: 30px; height: 36px; border: 1px solid #1F1B16; background: #E4DCCB; display: flex; align-items: center; justify-content: center; font-family: 'Libre Caslon Text', Georgia, serif; font-size: 12px">CA</span>
+            <span title="Arthur Greenwood" style="width: 30px; height: 36px; border: 1px solid #1F1B16; background: #E4DCCB; display: flex; align-items: center; justify-content: center; font-family: 'Libre Caslon Text', Georgia, serif; font-size: 12px">AG</span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: flex-start; gap: 10px; padding: 8px 12px; border: 2px solid #1F1B16; background: #FAF7F0; font-size: 13px; line-height: 19px">
+          <span style="font: 700 12px 'Courier Prime', monospace; letter-spacing: 0.12em; padding-top: 1px; white-space: nowrap">MINUTED</span>
+          <span>The Cabinet Secretary keeps minutes of this room. What is said here can leak.</span>
+        </div>
+      </div>
+      <div role="log" aria-label="War Cabinet discussion" style="flex: 1; min-height: 0; overflow-y: auto; padding: 18px 24px">
+        <div style="max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; font-family: 'Courier Prime', 'Courier New', monospace; font-size: 15px; line-height: 24px">
+          <span style="font-family: 'IBM Plex Sans', Arial, sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Item 1 · The French request for fighter squadrons</span>
+          <p style="margin: 0"><strong style="letter-spacing: 0.06em">THE PRIME MINISTER</strong> proposed that four squadrons of 12 Group be sent, and no more.</p>
+          <p style="margin: 0"><strong style="letter-spacing: 0.06em">LORD HALIFAX</strong> said the French would read four as a refusal. Better to send six and say nothing about limits.</p>
+          <p style="margin: 0"><strong style="letter-spacing: 0.06em">MR CHAMBERLAIN</strong> agreed with the Prime Minister. The Air Staff figures were not in doubt.</p>
+          <p style="margin: 0"><strong style="letter-spacing: 0.06em">THE PRIME MINISTER</strong> asked the Lord Privy Seal for his view.</p>
+          <div role="status" style="align-self: flex-start; display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #F2ECDF; border: 1px dashed #1F1B16; font-family: 'IBM Plex Sans', Arial, sans-serif; font-size: 13px; line-height: 19px">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1F1B16" stroke-width="1.8" aria-hidden="true"><path d="M7 3h10M7 21h10M8 3c0 5 8 6 8 9s-8 4-8 9M16 3c0 5-8 6-8 9"></path></svg>
+            <span>Waiting for Mr Attlee's reply. Replies can take until the next tick.</span>
+          </div>
+        </div>
+      </div>
+      <form aria-label="Speak to the War Cabinet" style="flex: none; display: flex; flex-direction: column; gap: 6px; padding: 12px 24px; border-top: 1px solid #1F1B16; background: #E4DCCB">
+        <div style="display: flex; gap: 10px">
+          <label for="cs-cab" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Speak to the War Cabinet</label>
+          <input id="cs-cab" type="text" placeholder="Speak to the room" style="flex: 1; min-width: 0; height: 38px; padding: 0 12px; background: #FAF7F0; border: 1px solid #7A705F; font: 400 14px 'IBM Plex Sans', Arial, sans-serif">
+          <button type="submit" style="height: 38px; padding: 0 16px; background: #1F1B16; color: #F2ECDF; border: 0; border-radius: 2px; font: 500 14px 'IBM Plex Sans', Arial, sans-serif">Speak</button>
+        </div>
+        <span style="font-size: 12px; color: #4D463B">Everything you say here goes into the minutes.</span>
+      </form>
+    </sc-if>
+  </main>
+
+  <!-- ROOM INFO -->
+  <aside aria-label="About this room" style="min-height: 0; overflow-y: auto; border-left: 1px solid #1F1B16; padding: 14px 16px 20px; display: flex; flex-direction: column; gap: 14px">
+    <h2 style="margin: 0; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase">About this room</h2>
+    <dl style="margin: 0; display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 6px 10px; font-size: 13px; line-height: 19px">
+      <dt style="color: #4D463B">Form</dt><dd style="margin: 0; font-weight: 600">{{form}}</dd>
+      <dt style="color: #4D463B">Visibility</dt><dd style="margin: 0; font-weight: 600">{{vis}}</dd>
+      <dt style="color: #4D463B">Record</dt><dd style="margin: 0">{{record}}</dd>
+    </dl>
+    <div style="display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 1px solid #B5AA93">
+      <h3 style="margin: 0; font-size: 12px; font-weight: 600">Members</h3>
+      <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 18px">
+        <sc-for list="{{members}}" as="m" hint-placeholder-count="2">
+          <li style="display: flex; flex-direction: column"><span style="font-weight: 600">{{m.name}}</span><span style="color: #4D463B">{{m.office}}</span></li>
+        </sc-for>
+      </ul>
+    </div>
+    <p style="margin: 0; padding-top: 12px; border-top: 1px solid #B5AA93; font-size: 12px; line-height: 18px; color: #4D463B">{{lane}}</p>
+    <div style="display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid #B5AA93">
+      <button type="button" style="align-self: flex-start; height: 32px; padding: 0 12px; background: transparent; border: 1px solid #1F1B16; border-radius: 2px; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">Turn this into an order</button>
+      <span style="font-size: 12px; line-height: 17px; color: #4D463B">Opens the order box with this conversation as context.</span>
+    </div>
+  </aside>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"room":{"editor":"enum","options":["individual","cabinet"],"default":"individual"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var cab = (this.props.room ?? 'individual') === 'cabinet';
+    return {
+      isCabinet: cab, isIndividual: !cab,
+      bgCabinet: cab ? '#F2ECDF' : 'transparent', bdCabinet: cab ? '#1F1B16' : 'transparent',
+      bgDowding: cab ? 'transparent' : '#F2ECDF', bdDowding: cab ? 'transparent' : '#1F1B16',
+      form: cab ? 'Corporate' : 'Individual',
+      vis: cab ? 'Restricted' : 'Private',
+      record: cab ? 'Minuted by the Cabinet Secretary. Can leak.' : 'Not minuted.',
+      members: cab ? [
+        { name: 'You', office: 'Prime Minister' },
+        { name: 'Neville Chamberlain', office: 'Lord President of the Council' },
+        { name: 'Lord Halifax', office: 'Foreign Secretary' },
+        { name: 'Clement Attlee', office: 'Lord Privy Seal' },
+        { name: 'Arthur Greenwood', office: 'Minister without Portfolio' }
+      ] : [
+        { name: 'You', office: 'Prime Minister' },
+        { name: 'Sir Hugh Dowding', office: 'Fighter Command' }
+      ],
+      lane: cab ? 'Each member speaks from their own office. Advice is a view, never an order.' : "Sir Hugh speaks for Fighter Command: aircraft, pilots, airfields. Advice is a view, never an order."
+    };
+  }
+}
+</script>
+</body>
+</html>

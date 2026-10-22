@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Set a new password</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#000}
+a{color:#B87333}a:hover{color:#D08A49}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; background: #000000; display: flex; flex-direction: column; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; color: #EDE3D1">
+  <header style="height: 64px; flex: none; display: flex; align-items: center; gap: 14px; padding: 0 24px; border-bottom: 1px solid #4A2F16">
+    <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><path d="M27 3C19 4.5 13.5 10 12.5 17.5L15 20C22.5 19 27.5 12 27 3Z" fill="#B87333"></path><path d="M26 4.5L13.8 18.8" stroke="#000000" stroke-width="1.2"></path><path d="M13 19.5L15 21.5L4 30Z" fill="#B87333"></path><path d="M10.6 18.6L15.6 23.6" stroke="#B87333" stroke-width="2"></path></svg>
+    <span style="font-size: 13px; font-weight: 600; letter-spacing: 0.32em; color: #B87333">REVISIONIST</span>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 16px">
+      <button type="button" style="height: 32px; padding: 0 12px; background: transparent; border: 1px solid #85705A; color: #EDE3D1; font: 500 13px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer">Report a bug</button>
+    </div>
+  </header>
+
+  <main style="flex: 1; display: flex; justify-content: center; align-items: center; padding: 48px 16px">
+    <div style="width: 100%; max-width: 980px; display: flex; flex-direction: column; gap: 26px">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #A89A86">Recover · step 2 of 2</span>
+        <h1 style="margin: 0; font-size: 28px; line-height: 34px; font-weight: 600">Set a new password</h1>
+        <div role="status" style="align-self: flex-start; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid #85705A; background: #120F0C; font-size: 14px; line-height: 20px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D08A49" stroke-width="2.4" aria-hidden="true"><path d="m4 12 5 5L20 6"></path></svg>
+          <span>Code accepted. All your old recovery codes have stopped working.</span>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start">
+        <form aria-labelledby="rr-pass" style="flex: 1 1 340px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+          <h2 id="rr-pass" style="margin: 0; font-size: 15px; font-weight: 600">1 · New password</h2>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label for="rr-new" style="font-size: 14px; font-weight: 600">New password</label>
+            <div style="display: flex">
+              <input id="rr-new" type="password" value="wewillneversurrender" autocomplete="new-password" aria-describedby="rr-new-help" style="flex: 1; min-width: 0; height: 44px; padding: 0 12px; background: #120F0C; border: 1px solid #85705A; border-right: 0; border-radius: 0; color: #EDE3D1; font: 400 15px 'IBM Plex Sans', Arial, sans-serif">
+              <button type="button" aria-label="Show password" style="width: 64px; height: 44px; background: #120F0C; border: 1px solid #85705A; color: #EDE3D1; font: 500 13px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer">Show</button>
+            </div>
+            <span id="rr-new-help" style="font-size: 13px; line-height: 19px; color: #A89A86">At least 12 characters.</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 14px">
+            <button type="submit" style="height: 44px; padding: 0 20px; background: #B87333; color: #000000; border: 0; font: 600 15px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer">Save password</button>
+            <span role="status" style="display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: #D08A49"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m4 12 5 5L20 6"></path></svg>Saved</span>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 19px; color: #A89A86">You've been signed out everywhere else.</p>
+        </form>
+
+        <section aria-labelledby="rr-codes" style="flex: 1 1 480px; min-width: 0; background: #120F0C; border: 1px solid #85705A; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <h2 id="rr-codes" style="margin: 0; font-size: 15px; font-weight: 600">2 · Your new recovery codes</h2>
+            <p style="margin: 0; font-size: 14px; line-height: 21px; color: #A89A86">Each works once. This is the only time we'll show them. Without a recovery method, a lost password means a lost account.</p>
+          </div>
+          <ol style="margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 24px">
+            <sc-for list="{{codes}}" as="c" hint-placeholder-count="10">
+              <li style="display: flex; gap: 12px; align-items: baseline; padding: 7px 0; border-bottom: 1px solid #4A2F16">
+                <span style="width: 20px; font-size: 12px; color: #A89A86; text-align: right; font-feature-settings: 'tnum'">{{c.n}}</span>
+                <code style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace; font-size: 17px; font-weight: 500; letter-spacing: 0.06em; color: #EDE3D1">{{c.code}}</code>
+              </li>
+            </sc-for>
+          </ol>
+          <div style="display: flex; flex-wrap: wrap; gap: 12px">
+            <button type="button" style="height: 40px; padding: 0 16px; display: inline-flex; align-items: center; gap: 8px; background: transparent; border: 1px solid #B87333; color: #B87333; font: 500 14px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="8" y="8" width="12" height="12"></rect><path d="M16 8V4H4v12h4"></path></svg>Copy all</button>
+            <button type="button" style="height: 40px; padding: 0 16px; display: inline-flex; align-items: center; gap: 8px; background: transparent; border: 1px solid #B87333; color: #B87333; font: 500 14px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"></path></svg>Download as .txt</button>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px 20px; padding-top: 14px; border-top: 1px solid #4A2F16">
+            <div style="display: flex; align-items: center; gap: 12px">
+              <input id="rr-saved" type="checkbox" style="width: 20px; height: 20px; margin: 0; accent-color: #B87333">
+              <label for="rr-saved" style="font-size: 15px">I've saved them somewhere safe</label>
+            </div>
+            <button type="button" disabled="" aria-disabled="true" style="margin-left: auto; height: 44px; padding: 0 20px; background: #2A2219; color: #A89A86; border: 1px solid #4A2F16; font: 600 15px 'IBM Plex Sans', Arial, sans-serif">Go to my campaigns</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var list = ['K4TNX-9WQ2R', 'P7HDM-3LZ8C', 'V2RBK-6XJ4N', 'C9WQF-T5MH7', 'L3XZP-8KDR2', 'N6JCV-4TWB9', 'D8QHR-2PXL5', 'Z5MKT-7CJW3', 'G2BXN-9RQD6', 'J4WLC-5HZT8'];
+    return { codes: list.map(function (c, i) { return { n: i + 1, code: c }; }) };
+  }
+}
+</script>
+</body>
+</html>

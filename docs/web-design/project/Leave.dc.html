@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Declare leave</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&amp;family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&amp;family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&amp;display=swap">
+<style>
+body{margin:0;background:#000}
+</style>
+</helmet>
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; color: #1F1B16">
+  <dc-import name="WarRoom" mode="default" hint-size="1440px,900px"></dc-import>
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(0, 0, 0, 0.62)"></div>
+  <div role="dialog" aria-modal="true" aria-labelledby="lv-title" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 640px; max-width: calc(100% - 32px); background: #F2ECDF; border: 2px solid #1F1B16; display: flex; flex-direction: column">
+    <div style="display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid #1F1B16">
+      <h1 id="lv-title" style="margin: 0; font-size: 20px; font-weight: 600">Going away</h1>
+      <button type="button" aria-label="Close" style="margin-left: auto; width: 32px; height: 32px; background: transparent; border: 1px solid #7A705F; font: 500 16px 'IBM Plex Sans', Arial, sans-serif">×</button>
+    </div>
+    <div style="padding: 18px 20px; display: flex; flex-direction: column; gap: 16px">
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+        <div style="display: flex; flex-direction: column; gap: 4px"><label for="lv-from" style="font-size: 13px; font-weight: 600">From</label><input id="lv-from" type="text" value="Now" style="height: 38px; padding: 0 10px; background: #FAF7F0; border: 1px solid #7A705F; font: 400 14px 'IBM Plex Sans', Arial, sans-serif"></div>
+        <div style="display: flex; flex-direction: column; gap: 4px"><label for="lv-to" style="font-size: 13px; font-weight: 600">Back by</label><input id="lv-to" type="text" value="Monday 27 October" style="height: 38px; padding: 0 10px; background: #FAF7F0; border: 1px solid #7A705F; font: 400 14px 'IBM Plex Sans', Arial, sans-serif"><span style="font-size: 12px; color: #4D463B">About 4 ticks</span></div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; font-size: 13px; line-height: 19px">
+        <div style="display: flex; flex-direction: column; gap: 6px; padding: 12px; background: #FAF7F0; border: 1px solid #DDD4C2">
+          <span style="font-weight: 600">Hartley will</span>
+          <span>Play defence on your standing orders</span><span>Keep running operations going</span><span>Answer mandates the cautious way</span><span>Keep notes for your return</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px; padding: 12px; background: #FAF7F0; border: 1px solid #DDD4C2">
+          <span style="font-weight: 600">Hartley won't</span>
+          <span>Declare, sign or dismiss anything</span><span>Commit means that can't come back</span><span>Start covert work</span><span>Stalled decisions wait for you</span>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <label for="lv-standing" style="font-size: 13px; font-weight: 600">Standing orders <span style="font-weight: 400; color: #4D463B">(optional)</span></label>
+        <textarea id="lv-standing" rows="3" value="Keep every fighter at home unless Paris is still holding. Be civil to Washington, and ask for nothing new." style="padding: 10px 12px; background: #FAF7F0; border: 1px solid #7A705F; font: 400 15px/23px 'Courier Prime', 'Courier New', monospace; resize: vertical"></textarea>
+      </div>
+      <span style="font-size: 13px; line-height: 19px; color: #4D463B">Other players aren't told you're away. To them, your seat carries on as Winston Churchill.</span>
+    </div>
+    <div style="display: flex; gap: 10px; padding: 14px 20px; border-top: 1px solid #1F1B16; background: #E4DCCB">
+      <button type="button" style="height: 38px; padding: 0 18px; background: #1F1B16; color: #F2ECDF; border: 0; border-radius: 2px; font: 500 14px 'IBM Plex Sans', Arial, sans-serif">Go on leave</button>
+      <button type="button" style="height: 38px; padding: 0 16px; background: transparent; border: 1px solid #1F1B16; border-radius: 2px; font: 500 14px 'IBM Plex Sans', Arial, sans-serif">Cancel</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Order flow</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&amp;family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&amp;family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&amp;display=swap">
+<style>
+body{margin:0;background:#000}
+@keyframes rev-drafting{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
+@media (prefers-reduced-motion: reduce){.rev-anim{animation:none !important;transform:none !important}}
+</style>
+</helmet>
+<div style="height: 100vh; min-height: 720px; box-sizing: border-box; display: flex; flex-direction: column; background: #000000; padding: 0 6px 6px; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; color: #1F1B16; overflow: hidden">
+
+<header style="min-height: 56px; display: flex; flex-wrap: wrap; align-items: center; column-gap: 14px; row-gap: 6px; padding: 6px 10px; border-bottom: 1px solid #4A2F16; color: #EDE3D1">
+  <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><path d="M27 3C19 4.5 13.5 10 12.5 17.5L15 20C22.5 19 27.5 12 27 3Z" fill="#B87333"></path><path d="M26 4.5L13.8 18.8" stroke="#000000" stroke-width="1.2"></path><path d="M13 19.5L15 21.5L4 30Z" fill="#B87333"></path><path d="M10.6 18.6L15.6 23.6" stroke="#B87333" stroke-width="2"></path></svg>
+  <span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 16px; white-space: nowrap">Their Finest Hour</span>
+  <span aria-hidden="true" style="width: 1px; height: 32px; background: #4A2F16"></span>
+  <svg width="20" height="24" viewBox="0 0 22 26" role="img" aria-label="Seat colour: azure"><path d="M1 1h20v11c0 7-5 11.5-10 13C6 23.5 1 19 1 12Z" fill="#234A8A" stroke="#B87333" stroke-width="1.2"></path></svg>
+  <div style="display: flex; flex-direction: column"><span style="font-size: 14px; line-height: 18px; font-weight: 600; white-space: nowrap">Winston Churchill</span><span style="font-size: 12px; line-height: 16px; color: #A89A86">Prime Minister</span></div>
+  <span aria-hidden="true" style="width: 1px; height: 32px; background: #4A2F16"></span>
+  <div style="display: flex; flex-direction: column"><span style="font-size: 14px; line-height: 18px; font-weight: 600; white-space: nowrap">{{dateMain}}</span><span style="font-size: 12px; line-height: 16px; color: #A89A86; white-space: nowrap">{{dateSub}}</span></div>
+  <div style="margin-left: auto; display: flex; align-items: center; gap: 12px">
+    <div style="display: flex; flex-direction: column; align-items: flex-end"><span style="font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #A89A86">Next tick in</span><span style="font-size: 20px; line-height: 24px; font-weight: 600; color: #D08A49; font-feature-settings: 'tnum'">{{countdown}}</span></div>
+    <div style="display: flex; flex-direction: column; align-items: flex-end; padding-left: 12px; border-left: 1px solid #4A2F16"><span style="font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #A89A86">Divergence</span><span style="font-size: 20px; line-height: 24px; font-weight: 600">12</span></div>
+    <button type="button" aria-label="Report a bug" style="width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid #85705A; color: #EDE3D1"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8.5 7a3.5 3.5 0 0 1 7 0"></path><rect x="7" y="8" width="10" height="12" rx="5"></rect><path d="M12 12v8M3 13h4M17 13h4M4 8l3 2M20 8l-3 2M4 20l3-2.5M20 20l-3-2.5"></path></svg></button>
+    <button type="button" style="height: 36px; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px; background: transparent; border: 1px solid #B87333; color: #B87333; font: 600 13px 'IBM Plex Sans', Arial, sans-serif; white-space: nowrap"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M9 5v14M15 5v14"></path></svg>Pause · Add a line</button>
+  </div>
+</header>
+<div aria-hidden="true" style="height: 4px; background: #234A8A; flex: none"></div>
+
+<div style="flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(280px, 24%) minmax(0, 1fr); background: #D8CFBA">
+
+  <!-- operations column -->
+  <aside aria-label="Operations" style="min-height: 0; overflow-y: auto; border-right: 1px solid #1F1B16; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <h2 style="margin: 0; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase">Operations</h2>
+      <div role="img" aria-label="{{slotLabel}}" style="margin-left: auto; display: flex; gap: 3px">
+        <sc-for list="{{slots}}" as="s" hint-placeholder-count="3"><span style="width: 16px; height: 12px; background: {{s.bg}}; border: 1px solid #1F1B16"></span></sc-for>
+      </div>
+      <span style="font-size: 12px; font-weight: 600">{{slotLabel}}</span>
+    </div>
+    <sc-for list="{{ops}}" as="o" hint-placeholder-count="2">
+      <article style="background: {{o.bg}}; border: 1px solid #1F1B16; padding: 10px 12px; display: flex; flex-direction: column; gap: 5px">
+        <div style="display: flex; align-items: baseline; gap: 8px"><span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em">{{o.action}}</span><span style="margin-left: auto; font-size: 12px; color: #2A3D66">{{o.id}}</span></div>
+        <span style="font-size: 13px; line-height: 18px; font-weight: 600">{{o.title}}</span>
+        <span style="font-size: 12px; color: #4D463B">{{o.meta}}</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px">
+          <sc-if value="{{o.hasOdds}}" hint-placeholder-val="{{true}}">
+            <span style="display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 7px; border: 1px solid #1F1B16; background: #FAF7F0; font-size: 12px; font-weight: 600">
+              <span aria-hidden="true" style="display: inline-flex; gap: 2px; align-items: flex-end"><sc-for list="{{o.notches}}" as="n" hint-placeholder-count="4"><span style="width: 4px; height: {{n.h}}; background: {{n.bg}}; border: 1px solid #1F1B16"></span></sc-for></span>{{o.odds}}
+            </span>
+          </sc-if>
+          <sc-if value="{{o.hasChip}}" hint-placeholder-val="{{false}}">
+            <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 7px; border: 1px solid {{o.chipColor}}; color: {{o.chipColor}}; font-size: 12px; font-weight: 600">{{o.chip}}</span>
+          </sc-if>
+        </div>
+      </article>
+    </sc-for>
+    <p style="margin: 4px 0 0; font-size: 12px; line-height: 17px; color: #4D463B">{{queueNote}}</p>
+  </aside>
+
+  <!-- order desk -->
+  <main style="min-height: 0; overflow-y: auto; background: #F2ECDF; padding: 20px 28px 32px">
+    <div style="max-width: 880px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px">
+      <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; padding-bottom: 10px; border-bottom: 1px solid #1F1B16">
+        <h1 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 22px">Orders</h1>
+        <span style="font-size: 13px; color: #4D463B">{{lockLine}}</span>
+      </div>
+
+      <!-- ===== STEP 1: composer ===== -->
+      <sc-if value="{{s1}}" hint-placeholder-val="{{true}}">
+        <p style="margin: 0; font-size: 14px; line-height: 21px; color: #4D463B; max-width: 640px">Write the order in your own words. Hartley may ask a question, then drafts an order card. Nothing is filed until you confirm the card.</p>
+        <form aria-label="New order" style="background: #E4DCCB; border: 1px solid #1F1B16; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">
+          <label for="of-order" style="font-size: 13px; font-weight: 600">Order to Hartley</label>
+          <textarea id="of-order" rows="3" value="Send four fighter squadrons to France, and tell Reynaud it is the last." style="padding: 10px 12px; background: #FAF7F0; border: 2px solid #2A3D66; border-radius: 2px; font: 400 16px/25px 'Courier Prime', 'Courier New', monospace; color: #1F1B16; resize: vertical"></textarea>
+          <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 16px">
+            <fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 4px">
+              <legend style="padding: 0; margin-bottom: 4px; font-size: 12px; font-weight: 600">Visibility <span style="font-weight: 400; color: #4D463B">(Hartley proposes one if you skip this)</span></legend>
+              <div role="radiogroup" aria-label="Visibility" style="display: inline-flex; border: 1px solid #1F1B16">
+                <button type="button" role="radio" aria-checked="false" style="height: 32px; padding: 0 10px; background: #FAF7F0; border: 0; border-right: 1px solid #1F1B16; font: 500 12px 'IBM Plex Sans', Arial, sans-serif">Public</button>
+                <button type="button" role="radio" aria-checked="true" style="height: 32px; padding: 0 10px; background: #1F1B16; color: #F2ECDF; border: 0; border-right: 1px solid #1F1B16; font: 600 12px 'IBM Plex Sans', Arial, sans-serif">Restricted</button>
+                <button type="button" role="radio" aria-checked="false" style="height: 32px; padding: 0 10px; background: #FAF7F0; border: 0; border-right: 1px solid #1F1B16; font: 500 12px 'IBM Plex Sans', Arial, sans-serif">Private</button>
+                <button type="button" role="radio" aria-checked="false" style="height: 32px; padding: 0 10px; background: #FAF7F0; border: 0; font: 500 12px 'IBM Plex Sans', Arial, sans-serif">Covert</button>
+              </div>
+            </fieldset>
+            <div style="flex: 1 1 220px; display: flex; flex-direction: column; gap: 4px; min-width: 0">
+              <div style="display: flex; align-items: baseline"><label for="of-spin" style="font-size: 12px; font-weight: 600">Public spin line <span style="font-weight: 400; color: #4D463B">(optional)</span></label><span style="margin-left: auto; font-size: 12px; color: #4D463B">0 / 280</span></div>
+              <input id="of-spin" type="text" maxlength="280" placeholder="What you'll say in public about it" style="height: 34px; padding: 0 10px; background: #FAF7F0; border: 1px solid #7A705F; font: 400 13px 'IBM Plex Sans', Arial, sans-serif; min-width: 0">
+            </div>
+            <button type="submit" style="height: 36px; padding: 0 18px; background: #1F1B16; color: #F2ECDF; border: 0; border-radius: 2px; font: 500 14px 'IBM Plex Sans', Arial, sans-serif; white-space: nowrap">Send to Hartley</button>
+          </div>
+        </form>
+      </sc-if>
+
+      <!-- sent order (steps 2-4, 6-7 compact) -->
+      <sc-if value="{{showSent}}" hint-placeholder-val="{{false}}">
+        <div style="align-self: flex-end; max-width: 78%; display: flex; flex-direction: column; gap: 4px; align-items: flex-end">
+          <span style="font-size: 12px; color: #4D463B">You · 21:14 · Restricted</span>
+          <div style="background: #FAF7F0; border: 1px solid #7A705F; padding: 10px 12px; font-family: 'Courier Prime', 'Courier New', monospace; font-size: 15px; line-height: 23px">Send four fighter squadrons to France, and tell Reynaud it is the last.</div>
+        </div>
+      </sc-if>
+
+      <!-- ===== STEP 2+: clarifying question ===== -->
+      <sc-if value="{{showQ}}" hint-placeholder-val="{{false}}">
+        <div style="align-self: flex-start; max-width: 82%; display: flex; flex-direction: column; gap: 4px">
+          <span style="font-size: 12px; color: #4D463B">Hartley · a question before he drafts</span>
+          <div style="background: #E4DCCB; border: 1px solid #B5AA93; padding: 10px 12px; font-family: 'Courier Prime', 'Courier New', monospace; font-size: 15px; line-height: 23px">From 11 Group or 12 Group, Prime Minister? 11 Group covers London and the south-east; Dowding will want it kept whole.</div>
+        </div>
+        <sc-if value="{{s2}}" hint-placeholder-val="{{false}}">
+          <div role="group" aria-label="Quick answers" style="display: flex; flex-wrap: wrap; gap: 8px">
+            <button type="button" style="height: 32px; padding: 0 12px; background: #FAF7F0; border: 1px solid #1F1B16; border-radius: 2px; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">11 Group</button>
+            <button type="button" aria-pressed="true" style="height: 32px; padding: 0 12px; background: #1F1B16; color: #F2ECDF; border: 1px solid #1F1B16; border-radius: 2px; font: 600 13px 'IBM Plex Sans', Arial, sans-serif">12 Group</button>
+            <button type="button" style="height: 32px; padding: 0 12px; background: #FAF7F0; border: 1px solid #1F1B16; border-radius: 2px; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">Let Dowding choose</button>
+            <span style="align-self: center; font-size: 12px; color: #4D463B">or answer in your own words</span>
+          </div>
+        </sc-if>
+        <div style="align-self: flex-end; max-width: 78%; display: flex; flex-direction: column; gap: 4px; align-items: flex-end">
+          <span style="font-size: 12px; color: #4D463B">You · 21:16</span>
+          <div style="background: #FAF7F0; border: 1px solid #7A705F; padding: 10px 12px; font-family: 'Courier Prime', 'Courier New', monospace; font-size: 15px; line-height: 23px">12 Group. Keep 11 Group whole.</div>
+        </div>
+        <sc-if value="{{s2}}" hint-placeholder-val="{{false}}">
+          <div role="status" aria-live="polite" style="display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; background: #E4DCCB; border: 1px dashed #1F1B16">
+            <div aria-hidden="true" style="position: relative; height: 4px; background: #C9BFA8; overflow: hidden"><span class="rev-anim" style="position: absolute; left: 0; top: 0; bottom: 0; width: 40%; background: #1F1B16; animation: rev-drafting 1.6s linear infinite"></span></div>
+            <span style="font-size: 13px"><strong style="font-weight: 600">Hartley is drafting the order card.</strong> Usually 10 to 30 seconds.</span>
+          </div>
+        </sc-if>
+      </sc-if>
+
+      <!-- ===== STEP 3: order card for confirmation ===== -->
+      <sc-if value="{{s3}}" hint-placeholder-val="{{false}}">
+        <article aria-label="Order card for confirmation" style="background: #FAF7F0; border: 2px solid #1F1B16; display: flex; flex-direction: column">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 14px 18px; border-bottom: 1px solid #1F1B16">
+            <span style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; border: 1px solid #1F1B16; background: #F2ECDF; font-size: 12px; font-weight: 600; letter-spacing: 0.06em"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><ellipse cx="12" cy="6" rx="7" ry="2.5"></ellipse><path d="M5 6v6c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V6M5 12v6c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-6"></path></svg>MEANS · TRANSFER</span>
+            <h2 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 20px; line-height: 26px">Four squadrons of 12 Group to France</h2>
+            <span style="margin-left: auto; padding: 2px 8px; border: 2px dashed #1F1B16; font: 700 12px 'Courier Prime', monospace; letter-spacing: 0.14em">DRAFT · NOT FILED</span>
+          </div>
+          <dl style="margin: 0; display: grid; grid-template-columns: 170px minmax(0, 1fr); font-size: 14px; line-height: 21px">
+            <dt style="padding: 10px 18px; border-bottom: 1px solid #DDD4C2; font-weight: 600">Action</dt>
+            <dd style="margin: 0; padding: 10px 18px; border-bottom: 1px solid #DDD4C2">Transfer <span style="color: #4D463B">· classified by Hartley from your words</span></dd>
+            <dt style="padding: 10px 18px; border-bottom: 1px solid #DDD4C2; font-weight: 600">Target</dt>
+            <dd style="margin: 0; padding: 10px 18px; border-bottom: 1px solid #DDD4C2">Armée de l'Air, Northern Zone, for M. Reynaud's government</dd>
+            <dt style="padding: 10px 18px; border-bottom: 1px solid #DDD4C2; font-weight: 600">Means committed</dt>
+            <dd style="margin: 0; padding: 10px 18px; border-bottom: 1px solid #DDD4C2; display: flex; flex-direction: column; gap: 2px"><span>RAF Fighter Command · 4 squadrons from 12 Group</span><span style="font-size: 13px; color: #4D463B">Fighter Command stays tier 3, still degraded. 11 Group untouched.</span></dd>
+            <dt style="padding: 10px 18px; border-bottom: 1px solid #DDD4C2; font-weight: 600">Visibility</dt>
+            <dd style="margin: 0; padding: 10px 18px; border-bottom: 1px solid #DDD4C2; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px"><span style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><path d="M3.5 19a5.5 5.5 0 0 1 11 0"></path><circle cx="17" cy="9" r="2.5"></circle><path d="M16 14.1a4.6 4.6 0 0 1 5 4.4"></path></svg>Restricted</span><span style="color: #4D463B">Seen by: the War Cabinet, the French government</span><button type="button" style="margin-left: auto; height: 28px; padding: 0 10px; background: transparent; border: 1px solid #7A705F; font: 500 12px 'IBM Plex Sans', Arial, sans-serif">Change</button></dd>
+            <dt style="padding: 10px 18px; border-bottom: 1px solid #DDD4C2; font-weight: 600">Duration</dt>
+            <dd style="margin: 0; padding: 10px 18px; border-bottom: 1px solid #DDD4C2">Fly to France by 6 June; stay until recalled. Runs over this turn and beyond.</dd>
+            <dt style="padding: 10px 18px; border-bottom: 1px solid #DDD4C2; font-weight: 600"><label for="of-card-spin">Public spin line</label><br><span style="font-weight: 400; font-size: 12px; color: #4D463B">optional</span></dt>
+            <dd style="margin: 0; padding: 10px 18px; border-bottom: 1px solid #DDD4C2; display: flex; flex-direction: column; gap: 4px"><input id="of-card-spin" type="text" value="Britain stands with France in the air." style="height: 34px; padding: 0 10px; background: #FFFFFF; border: 1px solid #7A705F; font: 400 14px 'IBM Plex Sans', Arial, sans-serif; color: #1F1B16"><span style="font-size: 12px; color: #4D463B; align-self: flex-end">38 / 280</span></dd>
+            <dt style="padding: 10px 18px; border-bottom: 1px solid #DDD4C2; font-weight: 600">Trigger<br><span style="font-weight: 400; font-size: 12px; color: #4D463B">optional</span></dt>
+            <dd style="margin: 0; padding: 10px 18px; border-bottom: 1px solid #DDD4C2; display: flex; flex-direction: column; gap: 4px"><span><strong style="font-weight: 600">If</strong> Paris falls, <strong style="font-weight: 600">then</strong> recall the squadrons to 12 Group.</span><span style="font-size: 12px; color: #4D463B">A trigger can only name an event you'd see. <a href="#" style="color: #2A3D66">Remove trigger</a></span></dd>
+            <dt style="padding: 10px 18px; font-weight: 600">Goes with it</dt>
+            <dd style="margin: 0; padding: 10px 18px; display: flex; flex-direction: column; gap: 2px"><span>A message to M. Reynaud: these are the last squadrons Britain can send.</span><span style="font-size: 13px; color: #4D463B">That's talk, so it holds no slot.</span></dd>
+          </dl>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 14px 18px; border-top: 1px solid #1F1B16; background: #F2ECDF">
+            <button type="button" style="height: 40px; padding: 0 20px; background: #1F1B16; color: #F2ECDF; border: 0; border-radius: 2px; font: 500 15px 'IBM Plex Sans', Arial, sans-serif">Confirm and file</button>
+            <button type="button" style="height: 40px; padding: 0 18px; background: transparent; color: #1F1B16; border: 1px solid #1F1B16; border-radius: 2px; font: 500 15px 'IBM Plex Sans', Arial, sans-serif">Edit</button>
+            <button type="button" style="height: 40px; padding: 0 6px; background: none; border: 0; color: #2A3D66; text-decoration: underline; font: 500 14px 'IBM Plex Sans', Arial, sans-serif">Discard</button>
+            <span style="margin-left: auto; font-size: 13px; color: #4D463B">Takes slot 3 of 3. Odds appear once it's filed.</span>
+          </div>
+        </article>
+      </sc-if>
+
+      <!-- ===== STEP 4: filed ===== -->
+      <sc-if value="{{s4}}" hint-placeholder-val="{{false}}">
+        <article aria-label="Filed order" style="background: #FAF7F0; border: 2px solid #1F1B16; display: flex; flex-direction: column">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 14px 18px; border-bottom: 1px solid #1F1B16">
+            <span style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; border: 1px solid #1F1B16; background: #F2ECDF; font-size: 12px; font-weight: 600; letter-spacing: 0.06em"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><ellipse cx="12" cy="6" rx="7" ry="2.5"></ellipse><path d="M5 6v6c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V6M5 12v6c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-6"></path></svg>MEANS · TRANSFER</span>
+            <h2 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 20px; line-height: 26px">Four squadrons of 12 Group to France</h2>
+            <span style="margin-left: auto; padding: 2px 8px; border: 2px solid #1F1B16; font: 700 12px 'Courier Prime', monospace; letter-spacing: 0.14em">FILED · ORDER 6·1</span>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 16px 18px; background: #F2ECDF; border-bottom: 1px solid #DDD4C2">
+            <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Perceived odds</span>
+            <span style="display: inline-flex; align-items: center; gap: 10px; height: 36px; padding: 0 14px; border: 2px solid #1F1B16; background: #FAF7F0">
+              <span aria-hidden="true" style="display: inline-flex; gap: 3px; align-items: flex-end"><span style="width: 6px; height: 8px; background: #1F1B16; border: 1px solid #1F1B16"></span><span style="width: 6px; height: 12px; background: #1F1B16; border: 1px solid #1F1B16"></span><span style="width: 6px; height: 16px; background: #FAF7F0; border: 1px solid #1F1B16"></span><span style="width: 6px; height: 20px; background: #FAF7F0; border: 1px solid #1F1B16"></span></span>
+              <span style="font-size: 18px; font-weight: 600">Contested</span>
+            </span>
+            <span style="font-family: 'Courier Prime', 'Courier New', monospace; font-size: 14px; line-height: 21px; flex: 1 1 280px">As this office sees it: the squadrons will get there; whether they matter in France is another question.</span>
+          </div>
+          <dl style="margin: 0; display: grid; grid-template-columns: 170px minmax(0, 1fr); font-size: 14px; line-height: 21px">
+            <dt style="padding: 8px 18px; font-weight: 600">Means</dt><dd style="margin: 0; padding: 8px 18px">RAF Fighter Command · 4 squadrons, 12 Group</dd>
+            <dt style="padding: 8px 18px; font-weight: 600">Visibility</dt><dd style="margin: 0; padding: 8px 18px">Restricted · War Cabinet, French government</dd>
+            <dt style="padding: 8px 18px; font-weight: 600">Trigger</dt><dd style="margin: 0; padding: 8px 18px">If Paris falls, recall to 12 Group</dd>
+            <dt style="padding: 8px 18px; font-weight: 600">Spin line</dt><dd style="margin: 0; padding: 8px 18px">"Britain stands with France in the air."</dd>
+          </dl>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 12px 18px; border-top: 1px solid #1F1B16; background: #F2ECDF">
+            <button type="button" style="height: 36px; padding: 0 16px; background: transparent; color: #1F1B16; border: 1px solid #1F1B16; border-radius: 2px; font: 500 14px 'IBM Plex Sans', Arial, sans-serif">Edit</button>
+            <button type="button" style="height: 36px; padding: 0 16px; background: transparent; color: #1F1B16; border: 1px solid #1F1B16; border-radius: 2px; font: 500 14px 'IBM Plex Sans', Arial, sans-serif">Withdraw</button>
+            <span style="margin-left: auto; font-size: 13px; color: #4D463B">Locks at the tick, in 14 h 18 m. Finishes about tick 8.</span>
+          </div>
+        </article>
+      </sc-if>
+
+      <!-- ===== STEP 5: refused ===== -->
+      <sc-if value="{{s5}}" hint-placeholder-val="{{false}}">
+        <div style="align-self: flex-end; max-width: 78%; display: flex; flex-direction: column; gap: 4px; align-items: flex-end">
+          <span style="font-size: 12px; color: #4D463B">You · 21:31 · Private</span>
+          <div style="background: #FAF7F0; border: 1px solid #7A705F; padding: 10px 12px; font-family: 'Courier Prime', 'Courier New', monospace; font-size: 15px; line-height: 23px">Send two squadrons of Bomber Command against the Somme bridges at Abbeville tonight.</div>
+        </div>
+        <article aria-label="Order not filed" style="background: #FAF7F0; border: 2px solid #9B2C22; display: flex; flex-direction: column">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 14px 18px; border-bottom: 1px solid #DDD4C2">
+            <span style="padding: 2px 8px; border: 2px solid #9B2C22; color: #9B2C22; font: 700 12px 'Courier Prime', monospace; letter-spacing: 0.14em">RETURNED · NOT FILED</span>
+            <span style="font-size: 13px; color: #4D463B">From Hartley</span>
+          </div>
+          <div style="padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; font-family: 'Courier Prime', 'Courier New', monospace; font-size: 15px; line-height: 24px; max-width: 70ch">
+            <p style="margin: 0">I can't file this one, Prime Minister. It commits Bomber Command, and Bomber Command isn't among the means this office holds; the Air Ministry answers for it.</p>
+            <p style="margin: 0">You could put it to the Secretary of State for Air, or ask me what Fighter Command could do against the bridges instead.</p>
+          </div>
+          <div style="display: flex; align-items: flex-start; gap: 10px; margin: 0 18px 14px; padding: 10px 12px; background: #F2ECDF; border: 1px solid #DDD4C2; font-size: 13px; line-height: 19px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9B2C22" stroke-width="2.2" aria-hidden="true" style="flex: none; margin-top: 1px"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v6M12 16v.5"></path></svg>
+            <span>Not filed: the order uses means your seat doesn't hold (Bomber Command). Nothing was spent and no slot was used.</span>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 10px; padding: 12px 18px; border-top: 1px solid #DDD4C2; background: #F2ECDF">
+            <button type="button" style="height: 36px; padding: 0 16px; background: #1F1B16; color: #F2ECDF; border: 0; border-radius: 2px; font: 500 14px 'IBM Plex Sans', Arial, sans-serif">Rewrite the order</button>
+            <button type="button" style="height: 36px; padding: 0 16px; background: transparent; color: #1F1B16; border: 1px solid #1F1B16; border-radius: 2px; font: 500 14px 'IBM Plex Sans', Arial, sans-serif">Consult the Secretary of State for Air</button>
+          </div>
+        </article>
+      </sc-if>
+
+      <!-- ===== STEP 6: before / after cutoff ===== -->
+      <sc-if value="{{s6}}" hint-placeholder-val="{{false}}">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr)); gap: 16px; align-items: start">
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Before the cutoff · 2 h 05 m left</span>
+            <article style="background: #FAF7F0; border: 2px solid #1F1B16; display: flex; flex-direction: column">
+              <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid #DDD4C2">
+                <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em">MEANS · TRANSFER</span>
+                <span style="margin-left: auto; font: 700 11px 'Courier Prime', monospace; letter-spacing: 0.12em; padding: 1px 6px; border: 2px solid #1F1B16">FILED · 6·1</span>
+                <span style="flex-basis: 100%; font-family: 'Libre Caslon Text', Georgia, serif; font-size: 17px">Four squadrons of 12 Group to France</span>
+              </div>
+              <div style="padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 19px">
+                <span style="display: inline-flex; align-items: center; gap: 8px"><span style="font-weight: 600">Contested</span><span style="color: #4D463B">perceived odds</span></span>
+                <span style="color: #4D463B">Edited 19:40: trigger now "if Paris falls or the French ask for an armistice".</span>
+              </div>
+              <div style="display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 14px; border-top: 1px solid #DDD4C2; background: #F2ECDF">
+                <button type="button" style="height: 32px; padding: 0 12px; background: transparent; border: 1px solid #1F1B16; border-radius: 2px; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">Edit</button>
+                <button type="button" style="height: 32px; padding: 0 12px; background: transparent; border: 1px solid #1F1B16; border-radius: 2px; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">Withdraw</button>
+              </div>
+              <div role="alertdialog" aria-label="Confirm withdraw" style="display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-top: 2px solid #1F1B16; background: #E4DCCB; font-size: 13px; line-height: 19px">
+                <span><strong style="font-weight: 600">Withdraw order 6·1?</strong> Nothing has happened yet, so nothing is spent. The slot frees at once.</span>
+                <div style="display: flex; gap: 8px">
+                  <button type="button" style="height: 32px; padding: 0 12px; background: #1F1B16; color: #F2ECDF; border: 0; border-radius: 2px; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">Withdraw order</button>
+                  <button type="button" style="height: 32px; padding: 0 12px; background: transparent; border: 1px solid #1F1B16; border-radius: 2px; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">Keep it</button>
+                </div>
+              </div>
+            </article>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">After the cutoff</span>
+            <article style="background: #EDE6D6; border: 2px solid #1F1B16; display: flex; flex-direction: column">
+              <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid #C9BFA8">
+                <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em">MEANS · TRANSFER</span>
+                <span style="margin-left: auto; display: inline-flex; align-items: center; gap: 4px; font: 700 11px 'Courier Prime', monospace; letter-spacing: 0.12em; padding: 1px 6px; border: 2px solid #1F1B16"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="1"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>LOCKED · 6·1</span>
+                <span style="flex-basis: 100%; font-family: 'Libre Caslon Text', Georgia, serif; font-size: 17px">Four squadrons of 12 Group to France</span>
+              </div>
+              <div style="padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 19px">
+                <span style="display: inline-flex; align-items: center; gap: 8px"><span style="font-weight: 600">Contested</span><span style="color: #4D463B">perceived odds</span></span>
+                <span>Locked at the tick 6 cutoff and now resolving. Changes from here roll into tick 7.</span>
+              </div>
+              <div style="display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 14px; border-top: 1px solid #C9BFA8">
+                <button type="button" style="height: 32px; padding: 0 12px; background: transparent; border: 1px solid #1F1B16; border-radius: 2px; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">Write a follow-up order</button>
+              </div>
+            </article>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== STEP 7: results ===== -->
+      <sc-if value="{{s7}}" hint-placeholder-val="{{false}}">
+        <p style="margin: 0; font-size: 14px; color: #4D463B">Tick 6 resolved overnight. Results for your orders, linked from tomorrow's briefing too.</p>
+        <article aria-label="Result of order 6·1" style="background: #FAF7F0; border: 1px solid #1F1B16; display: flex; flex-direction: column">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 18px; border-bottom: 1px solid #DDD4C2">
+            <span style="display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px; border: 1px solid #7A4E0C; color: #7A4E0C; font-size: 13px; font-weight: 600"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M12 4v16"></path></svg>Partial</span>
+            <a href="#" style="font-weight: 600; color: #2A3D66">Order 6·1 · Four squadrons of 12 Group to France</a>
+            <span style="margin-left: auto; font-size: 12px; color: #4D463B">Restricted</span>
+          </div>
+          <div style="padding: 12px 18px; display: flex; flex-direction: column; gap: 8px">
+            <p style="margin: 0; font-family: 'Courier Prime', 'Courier New', monospace; font-size: 15px; line-height: 24px; max-width: 70ch">Three squadrons reached Rouen on the 6th. The fourth was held at Wittering by weather and goes tomorrow. M. Reynaud thanks you, and asks for more.</p>
+            <span style="font-size: 13px; color: #4D463B">Fighter Command: tier 3, degraded, unchanged · Trigger still armed: if Paris falls, recall</span>
+          </div>
+        </article>
+        <article aria-label="Result of operation 5·3" style="background: #FAF7F0; border: 1px solid #1F1B16; display: flex; flex-direction: column">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 18px; border-bottom: 1px solid #DDD4C2">
+            <span style="display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px; border: 1px solid #2E5A3C; color: #2E5A3C; font-size: 13px; font-weight: 600"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m4 12 5 5L20 6"></path></svg>Success</span>
+            <span style="font-size: 13px; color: #4D463B">and</span>
+            <span style="display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px; background: #9B2C22; color: #F2ECDF; font-size: 13px; font-weight: 600"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"></path><circle cx="12" cy="12" r="2.8"></circle></svg>Exposed</span>
+            <a href="#" style="font-weight: 600; color: #2A3D66">Operation 5·3 · SIS: feed the Abwehr a false order of battle</a>
+            <span style="margin-left: auto; font-size: 12px; color: #9B2C22; font-weight: 600">Covert</span>
+          </div>
+          <div style="padding: 12px 18px; display: flex; flex-direction: column; gap: 8px">
+            <p style="margin: 0; font-family: 'Courier Prime', 'Courier New', monospace; font-size: 15px; line-height: 24px; max-width: 70ch">The false order of battle reached Berlin and is being believed. That is the good news. The bad: a courier was taken in Lisbon, and the Abwehr now knows SIS sent it.</p>
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; font-size: 13px">
+              <span role="img" aria-label="Exposure 5 of 5" style="display: inline-flex; gap: 2px"><span style="width: 9px; height: 9px; background: #9B2C22; border: 1px solid #9B2C22"></span><span style="width: 9px; height: 9px; background: #9B2C22; border: 1px solid #9B2C22"></span><span style="width: 9px; height: 9px; background: #9B2C22; border: 1px solid #9B2C22"></span><span style="width: 9px; height: 9px; background: #9B2C22; border: 1px solid #9B2C22"></span><span style="width: 9px; height: 9px; background: #9B2C22; border: 1px solid #9B2C22"></span></span>
+              <span style="font-weight: 600; color: #9B2C22">Exposure 1 → 5: exposed</span>
+              <span style="color: #4D463B">Exposure can come back as blowback.</span>
+            </div>
+          </div>
+        </article>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 6px; font-size: 12px">
+          <span style="color: #4D463B; margin-right: 4px">The four tiers:</span>
+          <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 7px; border: 1px solid #9B2C22; color: #9B2C22; font-weight: 600">Fail with a complication</span>
+          <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 7px; border: 1px solid #7A4E0C; color: #7A4E0C; font-weight: 600">Partial</span>
+          <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 7px; border: 1px solid #2E5A3C; color: #2E5A3C; font-weight: 600">Success</span>
+          <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 7px; border: 1px solid #2E5A3C; color: #2E5A3C; font-weight: 600">Success with an opportunity</span>
+        </div>
+      </sc-if>
+    </div>
+  </main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"step":{"editor":"enum","options":["1","2","3","4","5","6","7"],"default":"1"},"$preview":{"width":1280,"height":900}}'>
+function notches(rank) { var a = []; for (var j = 0; j < 4; j++) { a.push({ h: (5 + j * 2) + 'px', bg: j < rank ? '#1F1B16' : '#FAF7F0' }); } return a; }
+class Component extends DCLogic {
+  renderVals() {
+    var step = parseInt(this.props.step ?? '1', 10) || 1;
+    var ink = '#1F1B16', paper = '#F2ECDF';
+    var opA = { id: 'Order 5·2', action: 'FUND', title: "Fund the Purchasing Commission's orders for American aircraft", meta: 'Restricted · 2 of 6 · finishes tick 8', hasOdds: true, odds: 'Likely', notches: notches(3), hasChip: false, bg: paper };
+    var opB = { id: 'Op 5·3', action: 'FORGE', title: 'SIS: feed the Abwehr a false order of battle', meta: 'Covert · 3 of 8 · exposure 1 of 5', hasOdds: true, odds: 'Contested', notches: notches(2), hasChip: false, bg: paper };
+    var opNew = { id: 'Order 6·1', action: 'TRANSFER', title: 'Four squadrons of 12 Group to France', meta: 'Restricted · 0 of 4 · finishes about tick 8', hasOdds: true, odds: 'Contested', notches: notches(2), hasChip: false, bg: '#FAF7F0' };
+    var ops = [opA, opB];
+    var used = 2;
+    if (step === 4 || step === 6) { ops = [opA, opB, opNew]; used = 3; }
+    if (step === 6) { opNew = Object.assign({}, opNew, { hasChip: true, chip: 'Edited 19:40', chipColor: ink }); ops = [opA, opB, opNew]; }
+    if (step === 7) {
+      opA = Object.assign({}, opA, { meta: 'Restricted · 4 of 6 · finishes tick 8' });
+      ops = [opA,
+        Object.assign({}, opNew, { meta: 'Restricted · 2 of 4 · fourth squadron goes tomorrow', hasChip: true, chip: 'Partial so far', chipColor: '#7A4E0C' }),
+        Object.assign({}, opB, { meta: 'Covert · finished', hasOdds: false, hasChip: true, chip: 'Success · Exposed', chipColor: '#9B2C22' })];
+      used = 2;
+    }
+    var slots = []; for (var i = 0; i < 3; i++) { slots.push({ bg: i < used ? ink : paper }); }
+    return {
+      s1: step === 1, s2: step === 2, s3: step === 3, s4: step === 4, s5: step === 5, s6: step === 6, s7: step === 7,
+      showSent: step >= 2 && step !== 5 && step !== 6 && step !== 7,
+      showQ: step === 2 || step === 3,
+      ops: ops, slots: slots, slotLabel: used + ' of 3 slots',
+      queueNote: used === 3 ? 'All slots in use. A new order would wait in the queue.' : 'One slot free. Talk and negotiation never take a slot.',
+      dateMain: step === 7 ? '11 June 1940' : '4 June 1940',
+      dateSub: step === 7 ? 'Tick 7 · this turn 11–18 June' : 'Tick 6 · this turn 4–11 June',
+      countdown: step === 7 ? '23 h 40 m' : (step === 6 ? '2 h 05 m' : '14 h 18 m'),
+      lockLine: step === 7 ? 'Tick 6 resolved. New orders lock at the next tick.' : 'Orders lock at the tick. Until then you can edit or withdraw them.'
+    };
+  }
+}
+</script>
+</body>
+</html>

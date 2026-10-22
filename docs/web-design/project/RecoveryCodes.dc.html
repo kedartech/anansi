@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Save your recovery codes</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#000}
+a{color:#B87333}a:hover{color:#D08A49}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; background: #000000; display: flex; flex-direction: column; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; color: #EDE3D1">
+  <header style="height: 64px; flex: none; display: flex; align-items: center; gap: 14px; padding: 0 24px; border-bottom: 1px solid #4A2F16">
+    <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><path d="M27 3C19 4.5 13.5 10 12.5 17.5L15 20C22.5 19 27.5 12 27 3Z" fill="#B87333"></path><path d="M26 4.5L13.8 18.8" stroke="#000000" stroke-width="1.2"></path><path d="M13 19.5L15 21.5L4 30Z" fill="#B87333"></path><path d="M10.6 18.6L15.6 23.6" stroke="#B87333" stroke-width="2"></path></svg>
+    <span style="font-size: 13px; font-weight: 600; letter-spacing: 0.32em; color: #B87333">REVISIONIST</span>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 16px">
+      <span style="font-size: 14px; color: #A89A86">Signed in as bulldog_40</span>
+      <button type="button" style="height: 32px; padding: 0 12px; background: transparent; border: 1px solid #85705A; color: #EDE3D1; font: 500 13px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer">Report a bug</button>
+    </div>
+  </header>
+
+  <main style="flex: 1; display: flex; justify-content: center; align-items: center; padding: 48px 16px">
+    <div style="width: 100%; max-width: 980px; display: flex; flex-direction: column; gap: 28px">
+      <div style="display: flex; flex-direction: column; gap: 10px; max-width: 640px">
+        <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #A89A86">Step 2 of 2 · Recovery</span>
+        <h1 style="margin: 0; font-size: 28px; line-height: 34px; font-weight: 600">Save your recovery codes</h1>
+        <p style="margin: 0; font-size: 16px; line-height: 24px; color: #EDE3D1">Without a recovery method, a lost password means a lost account.</p>
+        <p style="margin: 0; font-size: 14px; line-height: 21px; color: #A89A86">Each code works once. This is the only time we'll show them.</p>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start">
+        <section aria-labelledby="rc-codes" style="flex: 1 1 440px; min-width: 0; background: #120F0C; border: 1px solid #85705A; padding: 24px; display: flex; flex-direction: column; gap: 18px">
+          <h2 id="rc-codes" style="margin: 0; font-size: 15px; font-weight: 600">Your ten codes</h2>
+          <ol style="margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 24px">
+            <sc-for list="{{codes}}" as="c" hint-placeholder-count="10">
+              <li style="display: flex; gap: 12px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid #4A2F16">
+                <span style="width: 20px; font-size: 12px; color: #A89A86; text-align: right; font-feature-settings: 'tnum'">{{c.n}}</span>
+                <code style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace; font-size: 17px; font-weight: 500; letter-spacing: 0.06em; color: #EDE3D1">{{c.code}}</code>
+              </li>
+            </sc-for>
+          </ol>
+          <div style="display: flex; flex-wrap: wrap; gap: 12px">
+            <button type="button" style="height: 40px; padding: 0 16px; display: inline-flex; align-items: center; gap: 8px; background: transparent; border: 1px solid #B87333; color: #B87333; font: 500 14px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="8" y="8" width="12" height="12"></rect><path d="M16 8V4H4v12h4"></path></svg>Copy all</button>
+            <button type="button" style="height: 40px; padding: 0 16px; display: inline-flex; align-items: center; gap: 8px; background: transparent; border: 1px solid #B87333; color: #B87333; font: 500 14px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"></path></svg>Download as .txt</button>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 14px; padding-top: 16px; border-top: 1px solid #4A2F16">
+            <div style="display: flex; align-items: center; gap: 12px">
+              <input id="rc-saved" type="checkbox" checked="" style="width: 20px; height: 20px; margin: 0; accent-color: #B87333">
+              <label for="rc-saved" style="font-size: 15px">I've saved them somewhere safe</label>
+            </div>
+            <a href="Campaigns-Empty.dc.html" style="align-self: flex-start; height: 44px; padding: 0 24px; display: inline-flex; align-items: center; background: #B87333; color: #000000; text-decoration: none; font: 600 15px 'IBM Plex Sans', Arial, sans-serif">Continue</a>
+          </div>
+        </section>
+
+        <section aria-labelledby="rc-extra" style="flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 14px; padding-top: 4px">
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <h2 id="rc-extra" style="margin: 0; font-size: 15px; font-weight: 600">Optional: another way back in</h2>
+            <p style="margin: 0; font-size: 14px; line-height: 21px; color: #A89A86">You don't need either of these. You can add one now, later in Settings, or never.</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px; padding: 16px 0; border-top: 1px solid #4A2F16">
+            <div style="display: flex; align-items: baseline; gap: 10px"><span style="font-size: 15px; font-weight: 600">Email address</span><span style="font-size: 12px; color: #A89A86">Optional</span></div>
+            <p style="margin: 0; font-size: 13px; line-height: 19px; color: #A89A86">Used only to send a recovery link. Never shown to anyone, never used for news.</p>
+            <button type="button" style="align-self: flex-start; height: 36px; padding: 0 14px; background: transparent; border: 1px solid #85705A; color: #EDE3D1; font: 500 13px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer">Add an email</button>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px; padding: 16px 0; border-top: 1px solid #4A2F16">
+            <div style="display: flex; align-items: baseline; gap: 10px"><span style="font-size: 15px; font-weight: 600">Discord account</span><span style="font-size: 12px; color: #A89A86">Optional</span></div>
+            <p style="margin: 0; font-size: 13px; line-height: 19px; color: #A89A86">Lets you recover through Discord and keeps your seats the same in both clients. Linking shares your Discord user ID with the game, nothing else.</p>
+            <button type="button" style="align-self: flex-start; height: 36px; padding: 0 14px; background: transparent; border: 1px solid #85705A; color: #EDE3D1; font: 500 13px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer">Link Discord</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var list = ['7KQ2M-PX4RW', 'H9T3C-LV6ND', 'R2WFX-8QJ5K', 'M4ZP7-TC9HB', 'X6NDL-2RKQ3', 'B8VJH-5MW7T', 'Q3CRT-K9ZP4', 'F5LWN-X2HC8', 'T7PKB-6QDV2', 'W9HMZ-3JRX5'];
+    return { codes: list.map(function (c, i) { return { n: i + 1, code: c }; }) };
+  }
+}
+</script>
+</body>
+</html>
