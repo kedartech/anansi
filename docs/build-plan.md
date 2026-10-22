@@ -364,6 +364,10 @@ In the order spec §22 step 5 gives, each as its own small PR with its tests. Th
 13. **Budget governor degrade ladder.** Meter from Layer 5 drives: fewer persona calls, merged press, agents on standing orders, longer tick.
 14. **Safety classifiers.** Input and output classifiers replacing the Layer 4 keyword hook; abstraction clocks for the dangerous-capability list; real-person rules (spec §19).
 15. **Data notice and admin tooling.** Session Zero notice, `/why`, erasure by key deletion, retention job.
+16. **Session Zero v3** (spec §5, decisions D1-D7 of 2026-10-21; plan: cherith-labs `personal-projects/revisionist/2026-10-21-session-zero-v3-build-plan`). Replaces item 1c's place-and-date `/establish`.
+   - **Contract (by hand, first).** `Contest`, `ContestKind`, `ContestId`; `ScheduledEvent.on_date`, `.condition` (a `WinCondition`), `.source`; `WorldFile.start_date`, `.contests`, `.schedule`, `CharacterDecl.sides`; `Settings.end_date`, `.real_days`; events `ContestCreated`, `ContestMoved`, `ContestDecided`, `ScheduledEventSkipped`, `DivergenceChanged`; `State.contests`, `.divergence`, `.in_world_date`; `Request.effort` and `--effort`. Stubs: `core/contest.py`, `core/history.py`, `core/roster.py`, `core/calendar.py`, `core/places.py`, `engine/pitch.py`, `engine/draft.py`. Schema 10.
+   - **Units (swarm).** Pitch card; contests and the odds edge; history's clock and divergence; the character rule; the calendar; the staged draft with partial retry; places on demand (#29); the Session Zero engine (propose, confirm); referee edge and the warn-only goal rule; Discord (`/establish <pitch>`, `/establish confirm <n>`, progress DMs); CLI and docs.
+   - **Done when:** three live pitches ("WWII", "WWII, Philippines, Douglas MacArthur", "Washington, 1789") each produce a card and a compiled world with 1-3 contests, a schedule and an all-qualified roster; a build under 2 minutes; an old campaign replays unchanged; leak tests green.
 
 **Playtest gate (spec §22 step 6):** leak tests (type-level, canary, counterfactual, human-boundary) green on the current build; safety classifiers in place; data notice shown; Josh holds a seat.
 

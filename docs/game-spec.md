@@ -1,6 +1,6 @@
 # Revisionist
 
-An AI-run multiplayer statecraft game. Game parameters, v2 (2026-10-19).
+An AI-run multiplayer statecraft game. Game parameters, v2 (2026-10-19); Session Zero v3 (2026-10-21).
 
 v2 folds in the decisions from an independent pressure test of the v1 parameters (2026-10-19; sections A-G and addendum H1-H20, cited below as "H" numbers). The pressure-test document itself is in the git history before this commit.
 
@@ -10,7 +10,7 @@ Status legend: **[decided]** = Josh's call. **[proposed]** = Vera's design, not 
 
 ## 1. Pitch
 
-Revisionist is an AI-run multiplayer statecraft game. Think of an expanded, gamified Model UN run like a D&D campaign. Players pick a moment in history. An AI game master builds that world from the record and runs everything nobody is playing. Each player takes on a real person from that moment, judged by their agency rather than their fame: a head of state, a general, a banker, a spymaster, an assassin. Each one has a secret goal, which can be the one history gave them or one it never did. They can sit in the same government or in rival ones, and whoever has met their goal when the season ends wins. Players act in their own words, any time, through a personal in-world agent. The world reacts, keeps secrets, and keeps moving whether they are online or not.
+Revisionist is an AI-run multiplayer statecraft game. Think of an expanded, gamified Model UN run like a D&D campaign. Players pick a moment in history. An AI game master builds that world from the record and runs everything nobody is playing. Every world runs on pressure: a war, a succession, a race or a trial with a deadline, and history's own clock moving toward the events that really followed. Each player takes on a real person from that moment who has something to move, judged by their agency rather than their fame: a head of state, a minister, a general, a colonel with a regiment, a spymaster with a network. Each one has a secret goal, which can be the one history gave them or one it never did. They can sit in the same government or in rival ones, and whoever has met their goal when the season ends wins. Players act in their own words, any time, through a personal in-world agent. The world reacts, keeps secrets, and keeps moving whether they are online or not.
 
 **Name.** The event log is the one record nobody in the game can rewrite. Everything else is up for revision: what happened, who did it and what it meant, fought over through spin, leaks, forgeries and the reveals at chapter breaks. See §19 before any public release.
 
@@ -42,8 +42,8 @@ Not the reference: Studio 14b's scripted "President Simulator" on Steam (Early A
 |---|---|---|
 | 1 | AI backend | Yes. Free-text actions with AI-generated reactions. |
 | 2 | Headline mode | Multiplayer campaigns. Players enrol and choose a seat, in the same government or a different one. |
-| 3 | Formats | Several formats on one engine. Military strategy is one seat or scenario type, not the whole game. |
-| 4 | World creation | v1: **history only.** Any real period or event the table can build a world around, from antiquity to the recent past, agreed at Session Zero. Fictional scenarios and invented worlds come in a later version. (Revised 2026-10-20.) |
+| 3 | Formats | Several formats on one engine. Military strategy is one seat or scenario type, not the whole game. **Revised in part 2026-10-21:** the game is pitched as statecraft under pressure. Every world has at least one contest (rivalry or trial), and many contests are wars; contests can also be political, economic or a trial with no enemy (§5.3). |
+| 4 | World creation | v1: **history only.** Any real period or event the table can build a world around, from antiquity to the recent past, agreed at Session Zero. Fictional scenarios and invented worlds come in a later version. (Revised 2026-10-20.) There is no replay-or-reinvent setting: the world follows the record until players disrupt it, and divergence is the score (2026-10-21, §5.4). |
 | 5 | Timing | Asynchronous, not strictly turn-based. The world responds to differences in activity between players. |
 | 6 | Formal sessions | Hearings, votes, summits and similar procedure exist in the fiction and act as sync points. |
 | 7 | Audience | Friends and family first, with a path to wider distribution. |
@@ -62,7 +62,7 @@ Not the reference: Studio 14b's scripted "President Simulator" on Steam (Early A
 | 20 | Player agent | Players never talk to the GM directly. Each player has a personal in-world agent that structures orders, briefs, advises, and runs the seat as deputy when the player is away. Players design the agent's persona; its function is fixed. |
 | 21 | Agent harm | The world can act on a player's agent: kidnap, turn or kill it. Losing it blinds the seat until a replacement is found in the fiction. |
 | 22 | AI-generated events | The GM's director layer generates events (tragedies, disasters, exposures, assassinations, scandals). Some can cause permanent harm to a player. |
-| 23 | Goals | Each player picks one goal for their character after choosing the character: from a suggested list (what really happened, or what could have), or their own, grounded in the known world. Goals mode ships first. Open mode (sandbox, no set ending) comes after the first working game. (Revised 2026-10-20.) |
+| 23 | Goals | Each player picks one goal for their character after choosing the character: from a suggested list (what really happened, or what could have), or their own, grounded in the known world. Goals mode ships first. Open mode (sandbox, no set ending) comes after the first working game. (Revised 2026-10-20.) One goal per player; a goal that bears on no contest or scheduled event gets a warning, not a refusal (2026-10-21, §5.6). |
 | 24 | Betrayal and elimination | Set at Session Zero. Default: cutthroat, lethality Hard, elimination on. An eliminated player returns as a new character they design. |
 | 25 | Operation slots | 3 per seat to start, cap 5, earned or lost in the fiction. Talk and diplomacy never use a slot. |
 | 26 | Seats per human | One human, one seat (solo players may switch at chapter breaks). |
@@ -74,47 +74,128 @@ Not the reference: Studio 14b's scripted "President Simulator" on Steam (Early A
 | 32 | Budget | Provisional: $10/month solo, $30/week at 10 players (alert at $20), $150/month backstop on the key. Reset after the first build measures cost per tick. |
 | 33 | Bug reports | In-game `/bug` snapshots state and log with a notes field. |
 | 34 | Engine language | Python. Pydantic models are the schema; the deterministic core (rate, roll, clamp, apply, project) stays pure functions with no I/O so it can be ported to Rust later. Postgres for storage. |
-| 35 | Characters | Each player plays a person from the chosen point in history: picked from a suggested roster, found by describing what they want to play, or named by the player even if unlisted. Characters are judged by **agency in history, not fame**: a spy or assassin nobody remembers can matter as much as a king. No two players may hold the same character. (2026-10-20) |
+| 35 | Characters | Each player plays a person from the chosen point in history: picked from a suggested roster, found by describing what they want to play, or named by the player even if unlisted. Characters are judged by **agency in history, not fame**: a colonel or spymaster nobody remembers can matter as much as a king. **Revised 2026-10-21:** a playable character must control a force, office or network asset of tier 2+ that bears on a contest, checked in code (§5.5). No two players may hold the same character. (2026-10-20) |
 | 36 | Winning | Decided at **season end**. Every player whose goal is met wins. A player who meets their goal keeps playing and may help or thwart the others. (2026-10-20) |
 | 37 | Secret goals | Goals are secret. Other players learn them only through intelligence in the fiction: sending spies, intercepting messages, turning or capturing agents. Partial information is normal. (2026-10-20) |
 | 38 | Competing goals | Allowed. Two players may want the same throne. (2026-10-20) |
 
 ## 4. Core loop [proposed]
 
-1. **Session Zero.** Players agree on a point in history and lock it with `/establish`. Each player then chooses a character, chooses a secret goal, reads a historical brief, and designs their agent. The GM writes the world bible in the fixed schema (§12).
+1. **Session Zero.** The host pitches a period with `/establish`, picks a start point from the setting card and confirms it (§5.2). Each player then chooses a character, chooses a secret goal, reads a historical brief, and designs their agent. The GM writes the world bible in the fixed schema (§12).
 2. **Briefing.** Each seat's agent writes that seat's briefing, from that seat's knowledge only.
 3. **Act.** Players talk to their agent in free text, any time. The agent turns orders into structured intents, tagged with a visibility level (§7). Players can also talk to each other directly.
 4. **Resolve.** Each resolution tick, the engine batches every intent in that window, plus the AI factions' moves and any director events, and resolves them together (§13).
 5. **React.** The world updates. Personas, the press, factions and markets respond. Consequences are scheduled for later ticks.
 6. **Repeat.** Formal sessions, delayed consequences, director events and co-GM events punctuate the flow. Chapter breaks and season ends bring partial or full reveals.
 
-## 5. Session Zero [proposed]
+## 5. Session Zero [v3 decided 2026-10-21; build in progress]
 
-Built in Layer 10 item 1 (docs/design.md §17); `/establish` is host-only until co-GM votes exist.
+Session Zero v3 (build plan Layer 10 item 16) replaces the place-and-date `/establish` of item 1c. Source: the Session Zero reorientation decisions, D1-D7 (2026-10-21). `/establish` is host-only until co-GM votes exist.
 
-Every campaign starts here, as at a tabletop. Defaults to a quick start: a preset historical start, a suggested roster, and preset settings. Everything can be customised.
+Every campaign starts here, as at a tabletop. The principle: **put the limits on the world, not on the player.** Orders stay free text. The world carries pressure, momentum and stakes so play keeps moving.
+
+**The world is always real history.** There is no replay-or-reinvent setting (D4). The game follows the record from the start date until players disrupt it. How much of history survives is measured by divergence and is the shareable score. Fictional scenarios and invented worlds are still out of scope (decision 4).
 
 Session Zero runs in five steps, in order. Steps 3-5 are private to each player.
 
-1. **Discuss.** The players talk freely in the campaign channel about when and where to play. The GM can answer questions about a period ("what was going on in Florence in 1478?") but builds nothing yet.
-2. **Establish (`/establish`).** One command locks the world: a point in history (place and date, for example "Florence, April 1478" or "Washington, October 1962") plus the settings below. Any human can call it; it passes by the co-GM vote rules (§14), or by the host alone at 2 or fewer humans. The GM then compiles the world bible from the historical record at that date. After this, the start is fixed.
-3. **Character.** Each player picks one of three routes:
-   - **Roster:** a suggested list of 8-12 real people from that moment, each with a one-line pitch and their reach.
-   - **Search:** the player describes what they want to play ("someone who can move money without being seen") and the GM suggests matching real people.
-   - **Own pick:** any real person from that point in history, listed or not. The GM checks they existed and were placed to act at that date, then adds them to the world bible.
-   Characters are judged by **agency in history, not fame**. An unnamed spy, courier, banker's clerk or assassin is a valid character, and the roster includes such roles deliberately, as a named or composite person drawn from what the record shows such people did. Where the record names no one, the character is a **composite**: given a name, built from what people in that role did, and labelled as composite in the brief. Once a player claims a character, no one else can (decision 35).
-4. **Goal.** Each player picks one secret goal (decision 37), again by one of three routes:
-   - **As history went:** what the character really tried for, and whether they got it.
-   - **As history could have gone:** plausible alternatives the character was placed to try.
-   - **Own goal:** written by the player, grounded in the world as it stands.
-   Every goal must compile to a condition the engine can check in code (§15). The agent helps reword a goal that cannot, for example "be remembered as great" into "hold the Signoria and outlive the Pazzi". Two players may hold competing goals (decision 38).
-5. **Brief.** The player's agent delivers the tick-0 briefing: the character's real history up to the start date, how they really pursued the goal and how it turned out (where the record says), and one suggested route to the goal, marked as a suggestion. Where the record is thin or disputed, the brief says so instead of filling the gap.
+### 5.1 Discuss
 
-Settings locked by `/establish`:
+The players talk freely in the campaign channel about what to play. The GM can answer questions about a period ("what was going on in Florence in 1478?") but builds nothing yet.
 
-- **Setting:** a real point in history, anywhere from antiquity to the recent past (decision 4). Recent events and living people are allowed (decision 28). Fictional scenarios and invented worlds come later.
+### 5.2 Establish: pitch, setting card, confirm, draft (D1)
+
+1. **Pitch.** `/establish <pitch>` takes 1-200 characters, as vague or specific as the host likes: "WWII", "WWII, Philippines, Douglas MacArthur", "Rome, the morning after the Ides". **Time matters more than place:** the date decides the world; the place decides where the detail goes and who is on the roster. A general term ("WWII") means the engine infers the state of every power, involved or not, at that date.
+2. **Setting card.** One cheap call reads the pitch and returns a card, shown to the host only:
+   - how the engine read the pitch;
+   - 2-3 start points, each with a date, the main contests, the powers in them and the area in focus;
+   - any people named in the pitch, kept for the roster;
+   - the history schedule each start point would carry, as a list the host can strike from.
+   Start points sit **just before a turning point**, not after it. A pitch with no readable period is refused with the reason.
+3. **Confirm.** `/establish confirm <n>` picks start point *n*, with optional strikes (schedule items to drop), an in-world end date and a real-life length (§5.7). Until confirmed, nothing is built and nothing is logged beyond the card.
+4. **Draft.** The world draft runs in stages (§5.8). The host gets progress lines while it runs; `#chronicle` gets one closing line. The result is also sent to the host by DM so it survives a closed app (#20).
+
+**Detail is uneven on purpose.** The area in focus gets full detail (people, assets, relationships, secrets). The powers in the contests get some. The rest of the world is background: an alignment, a few meters, standing orders.
+
+**Places on demand (#29).** An order naming a real place that is not in the world file is not refused. One checked call asks whether it is a real place at the current in-world date and under which polity; if so, it is added as a public location entity and the order is filed against it. If the model cannot place it, the order is refused with that reason. At most one such call per order.
+
+### 5.3 Contests (D2)
+
+A **Contest** is a built-in type in the world format. Every world contains at least one; the world checker refuses a draft with none, and with more than three.
+
+- **Rivalry:** two or more sides fighting over a prize. War, election, succession, an economic fight, a tech or space race, a revolution.
+- **Trial:** one power against a pressure with a deadline and no enemy needed. Debt, famine, demobilisation, rebuilding, a shaky coalition, an untested constitution. Examples: Washington 1789, Truman 1946. A quiet era can be the hardest to govern.
+
+Fields: kind; sides (rivalry) or the power under trial (trial); the prize or stake; a **track** showing who is winning (-100..100 for a rivalry, positive favouring the first side; 0..100 for a trial, 100 = passed); a **countdown** in in-world days to the deciding point; and **momentum**, the track change per turn that happens whether or not anyone acts.
+
+- War stays at the level of fronts and armies. A front is a contest track; an army is a Force asset with a strength tier. No hex maps, no individual units. Detailed battles belong to the conflict arena (#26), later.
+- **Contests give code-side odds.** An order that bears on a contest gets an edge of -2..+2 steps on its feasibility band from strength against strength on that contest (§13). The model still rates plausibility; the edge is applied in code. This addresses orders that succeed too easily (#25) and orders refused for thin reasons (#33).
+- When the countdown reaches zero the contest is decided by its track and logged; the world keeps running.
+- Much of a quiet era's drama is between players in one government (Hamilton and Jefferson in one cabinet); that fits the advisor circle (#22).
+
+**Decision 3, revised in part.** Revisionist is pitched as **statecraft under pressure**: every world has a contest, and many contests are wars. Military play is still one kind of seat, not the whole game, and contests can be political, economic or a trial with no enemy.
+
+### 5.4 History's clock (D3)
+
+The world draft also writes a **history schedule**: the key events that really followed the start date, each on its in-world date and with a condition the engine can check. Example: "7 Dec 1941: the carrier force strikes Pearl Harbor. Requires the carrier force intact and Japan at war."
+
+- Schedule items reuse `ScheduledEvent`, with a date, a source (`history`) and a condition from the closed `WinCondition` set (§15).
+- When an item comes due, the engine checks its condition. If it holds, the event fires as recorded. If it fails, the event is skipped, the skip is logged, and divergence rises.
+- **AI factions follow the schedule by default**: their deputy context carries the next scheduled event as a standing order. When a condition breaks, the event does not fire and the faction replans from the world as it is.
+- **Divergence** counts how far the world has drifted from the record: skipped scheduled events, weighted by how central each was. It is public, shown on the dashboard and posted at season end.
+- **Accuracy is the risk.** Every scheduled event must come from the record. The checker can enforce shape, not truth; the host's strike list on the setting card is the control.
+
+### 5.5 Character (D5)
+
+Each player picks one of three routes:
+
+- **Roster:** a suggested list of 8-12 real people from that moment, each with a one-line pitch, their reach and **their side in each contest**.
+- **Search:** the player describes what they want to play ("someone who commands men in the Philippines") and the GM ranks matching people.
+- **Own pick:** any real person from that point in history, listed or not. The GM checks they existed and were placed to act at that date, then adds them to the world.
+
+**The character rule is checked in code, not by a model.** A playable character must, at the start date, control at least one **force, office or network asset of tier 2 or higher that bears on a contest** (is a side of it, or is the power under trial, or is held by one). Money, information or facilities alone do not qualify.
+
+- Passes: Rommel, Himmler, a colonel with a regiment, Canaris (a network), militia leaders, D'Annunzio in 1919. Fails: the poet or bystander with nothing to move.
+- The roster and own pick enforce the rule. An unqualified name is refused with the **nearest qualified person** offered (by shared faction, then shared contest). Search ranks only qualified people.
+- **Composites stay** for people the record does not name ("a regimental commander at Bataan"): given a name, built from what people in that role did, and labelled as composite in the brief.
+- Sides are public; goals stay secret. Session Zero nudges the table to spread across sides, or to share one government for its internal politics.
+- No two players may hold the same character (decision 35).
+
+### 5.6 Goal (D6)
+
+Each player picks **one** secret goal (decision 37), by one of three routes: as history went, as it could have gone, or their own, grounded in the world as it stands. Every goal must compile to a condition the engine checks in code (§15). Two players may hold competing goals (decision 38).
+
+- **Goal rule: warn only** (Josh, 2026-10-21). A goal should bear on at least one contest or on one item in the history schedule (to cause, prevent or bring it forward). A goal that bears on neither is **not refused**: the player sees a warning that it ties to none of the world's pressures, and may confirm it anyway.
+- The goal offer for a military character includes political paths as well as military ones. In peacetime a general's army is political leverage (Boulanger 1886-89, Schleicher 1932, the Spanish generals before July 1936, MacArthur against Truman 1951).
+- The three-level goal ladder (Hold, Prevail, Remake) is set aside.
+
+### 5.7 Game length (D7)
+
+The table picks an **in-world end date** (for example "until the contest is decided or August 1945") and a **real-life length** in days. The engine works out the turn rate.
+
+- In-world time per turn **stretches through quiet spells and shrinks near a crisis**: within three turns of a scheduled event or a contest's deciding point, turns get shorter.
+- The last turn lands exactly on the end date. The calendar is deterministic: the same world, dates and length always give the same turns.
+- With no end date set, the campaign falls back to the fixed `world_days_per_tick` (older campaigns replay unchanged).
+- This settles #15.
+
+### 5.8 The world draft (the /establish fixes)
+
+- **Staged build.** An outline call (full reasoning) sets the polities, factions, people and contests. Assets, relationships, the roster, secrets and the history schedule then draft in parallel against the outline (lower reasoning effort, once the effort trial shows it ties). The wait is the longest stage, not the sum.
+- **Checker problems are logged on every attempt.** Mechanical mistakes with one unambiguous fix (a seat key where an entity key was required) are repaired in code. A retry resends only the failing section with its problems, never the whole file.
+- **Effort levels** are a request field passed to the model CLI. Low effort ships for the detail stages only if a side-by-side build scores the same as full effort.
+- **World cache** (reusing a saved world for the same start point) is deferred.
+- **Progress lines** while the draft runs ("Outline done. Drafting assets, roster, schedule...").
+- Target: a build under 2 minutes and below the Sonnet cost band ($0.30-0.58).
+
+### 5.9 Brief
+
+The player's agent delivers the tick-0 briefing: the character's real history up to the start date, the contests they sit in and on which side, the next items on history's clock that touch them, how they really pursued the goal and how it turned out (where the record says), and one suggested route, marked as a suggestion. Where the record is thin or disputed, the brief says so instead of filling the gap.
+
+### 5.10 Settings locked by `/establish confirm`
+
+- **Setting:** the confirmed start point (a real date and area in focus), from antiquity to the recent past (decision 4). Recent events and living people are allowed (decision 28).
+- **End date and real-life length** (§5.7).
 - **Plausibility:** Strict / Plausible / Pulp. Shifts feasibility bands; never removes engine clamps.
-- **Historical inertia:** None / Tendencies / Strong. How hard AI factions carry real-world doctrine, weakening as the world diverges.
+- **Historical inertia:** None / Tendencies / Strong. How hard AI factions hold to history's clock and real doctrine, weakening as divergence grows.
 - **Tone:** for example grounded, satirical, pulp or grim.
 - **Content rating:** none unless set. Lines (never on the table) and veils (off-screen only). Any player can add a line anonymously at any time; the most restrictive setting wins. If anyone under 18 is at the table, Session Zero reminds the table to set a rating.
 - **Goals mode** (decision 23). Open mode is not offered in v1.
@@ -122,13 +203,13 @@ Settings locked by `/establish`:
 - **Lethality:** Soft (setbacks only) / Hard (permanent losses, default) / Brutal (elimination from events).
 - **Agent harm:** on or off (default on).
 - **Compromised-aide twist:** opt-in (automatic at cutthroat).
-- **Clock speed:** in-world time per real day, and the tick interval. Family campaigns default to 12-24 hour ticks and one digest per player per day.
+- **Tick interval** (real hours per turn); in-world time per turn comes from the calendar.
 - **Availability windows** per player, which formal sessions respect.
-- **Balance check:** run after steps 3 and 4. It scores each character's means and reach on a fixed rubric and each goal's difficulty from the same state. A powerful character with an easy goal, or a weak one with an impossible goal, is flagged to the player with a suggested adjustment; outliers need the table's approval. Scores stay private, so the check does not reveal goals.
+- **Balance check:** run after steps 3 and 4. It scores each character's means and reach on a fixed rubric and each goal's difficulty from the same state. Outliers are flagged privately with a suggested adjustment and need the table's approval.
 - **Agent design:** each player designs their agent's persona (§10), after the brief.
 - **Table norms:** lies stay in the game; out-of-game alliances allowed or in-game channels only.
-- **Output:** a **world bible** in the fixed schema. It covers polities, leaders, factions, resources, geography, tensions, open threads, and each seat's starting knowledge, which may differ between seats. Each player seat carries its character and its goal clock, both Private to that seat. Seat backstory locks when Session Zero ends.
-- **Historical accuracy.** The world bible and briefs are drawn from the documented record and say "as recorded" where it matters. Where historians disagree or the record is silent, the GM picks one reading for the world bible and logs that it did so. Past the start date, history is whatever the players make it.
+- **Output:** a **world bible** in the fixed schema: polities, leaders, factions, resources, geography, contests, the history schedule, and each seat's starting knowledge, which may differ between seats. Each player seat carries its character and its goal clock, both Private to that seat. Seat backstory locks when Session Zero ends.
+- **Historical accuracy.** The world bible, schedule and briefs come from the documented record and say "as recorded" where it matters. Where historians disagree or the record is silent, the GM picks one reading and logs that it did so. Past the start date, history is whatever the players make it.
 
 ## 6. Seats [proposed]
 
@@ -355,7 +436,7 @@ Share cards contain public information only, carry a one-line context, and carry
 2. Exact lead time for co-GM events (1-2 ticks proposed).
 3. Season length default (about 3 weeks proposed) and chapter-break cadence.
 4. ~~Does a met goal stay met?~~ Decided 2026-10-20: depends on the goal. Lasting and undoable kinds, §15.
-5. ~~Unnamed historical figures.~~ Decided 2026-10-20: a named composite drawn from what such people did, labelled as composite in the brief (§5 step 3).
+5. ~~Unnamed historical figures.~~ Decided 2026-10-20: a named composite drawn from what such people did, labelled as composite in the brief (§5.5).
 6. Living people as targets of harm goals (assassination, capture, exile). **Allowed for now** (Josh, 2026-10-20). Must be reviewed before any public release; listed in the §19 pre-distribution checklist.
 
 ## 22. Build path
