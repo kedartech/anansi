@@ -39,9 +39,10 @@ from revisionist.core.state import State
 from revisionist.core.visibility import PUBLIC, private_to
 from revisionist.engine import campaign as cmp
 from revisionist.engine import session_zero
+from revisionist.engine.emit import Emitter, tail
 from revisionist.engine.ids import new_id
 from revisionist.engine.store import EventStore, load_state
-from revisionist.engine.tick import NotInPlayError, TickResult, _Emitter, _tail
+from revisionist.engine.tick import NotInPlayError, TickResult
 
 
 class RealismTickResult(TickResult):
@@ -95,16 +96,16 @@ def run_realism_tick(
     if state.phase is not Phase.PLAY:
         raise NotInPlayError(state.phase)
     events = list(store.read(campaign_id))
-    tail = _tail(events)
-    em = _Emitter(store, state, versions)
-    done = set(tail.completed)
+    log_tail = tail(events)
+    em = Emitter(store, state, versions)
+    done = set(log_tail.completed)
     result = RealismTickResult(
-        tick=state.tick, resumed_from=tail.completed[-1] if tail.completed else None
+        tick=state.tick, resumed_from=log_tail.completed[-1] if log_tail.completed else None
     )
     today = state.in_world_date
     if state.ruleset != "realism" or today is None:
         raise ValueError("run_realism_tick needs a realism campaign with an in-world date")
-    before = _opening_date(events) if tail.opened else today
+    before = _opening_date(events) if log_tail.opened else today
     assert before is not None
 
     def stopped(stage: TickStage) -> bool:
@@ -113,7 +114,7 @@ def run_realism_tick(
     def finish(stage: TickStage) -> RealismTickResult:
         return result.model_copy(update={"stopped_after": stage})
 
-    if not tail.opened:
+    if not log_tail.opened:
         em.commit([em.event(ev.TickOpened(intents_frozen=()))])
 
     if TickStage.ADVANCE not in done:
@@ -166,7 +167,7 @@ def run_realism_tick(
     return result.model_copy(update={"state_hash": digest})
 
 
-def _feed_documents(em: _Emitter, today: date) -> list[Event]:
+def _feed_documents(em: Emitter, today: date) -> list[Event]:
     """A document from every feed due on or before ``today``, dated ``today``.
 
     A feed that fell due during a collapsed stretch issues once, today, not once
@@ -180,7 +181,7 @@ def _feed_documents(em: _Emitter, today: date) -> list[Event]:
     return out
 
 
-def _walk(em: _Emitter, events: Sequence[Event], before: date, until: date) -> list[Event]:
+def _walk(em: Emitter, events: Sequence[Event], before: date, until: date) -> list[Event]:
     """Every day from ``before`` + 1 to ``until``, earliest first. Each day: orders
     move, history fires or skips what fell due (opinion reads fired incidents), the
     orders enacted that day are resolved, then what moves with time, then the feeds

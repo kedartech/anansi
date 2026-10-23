@@ -33,9 +33,10 @@ from revisionist.core.resolution import FeasibilityBand, RejectionReason
 from revisionist.core.state import State, View
 from revisionist.core.visibility import Scope, private_to
 from revisionist.engine.campaign import log_cost
+from revisionist.engine.emit import Emitter
 from revisionist.engine.llm import Request, Transport, TransportError, prompt_text
 from revisionist.engine.store import EventStore, load_state
-from revisionist.engine.tick import _Emitter, file_intent
+from revisionist.engine.tick import file_intent
 
 AGENT_MODEL = "claude-haiku-5-5"
 _INTENT_ADAPTER = TypeAdapter(Intent)
@@ -429,7 +430,7 @@ def _place_check(
         entity = places.admit(current, name, _polity_id(current, output.get("polity")))
     except ValueError:
         return None
-    em = _Emitter(store, current, versions)
+    em = Emitter(store, current, versions)
     em.commit([em.event(ev.EntityCreated(entity=entity))])
     return entity.entity_id
 
@@ -466,7 +467,7 @@ def receive_order(
     ``spin`` are the player's choices and replace whatever the agent filled in;
     the default is Private with no spin.
     """
-    em = _Emitter(store, state, versions or Versions(engine="0.0.1", schema_version="1"))
+    em = Emitter(store, state, versions or Versions(engine="0.0.1", schema_version="1"))
     received = em.event(
         ev.OrderReceived(seat_id=seat, text=text[:4000]), actor=seat, scope=private_to(seat)
     )
