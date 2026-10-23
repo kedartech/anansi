@@ -20,5 +20,8 @@ Module map (build plan Layer 1):
 - ``state``       State (truth) and View (one seat's knowledge)
 """
 
-SCHEMA_VERSION = "10"
-"""Bumped on any change to events, deltas or the ontology."""
+SCHEMA_VERSION = "11"
+"""Bumped on any change to events, deltas, the ontology, State or View.
+
+``tests/test_schema_version.py`` pins the schema's shape to this number, so a
+shape change without a bump fails CI."""

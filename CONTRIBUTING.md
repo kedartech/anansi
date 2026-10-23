@@ -9,6 +9,7 @@ Builders: Josh and Vera (spec §3 #17).
 - Small, reviewable diffs. Comments only for a non-obvious *why*.
 - `revisionist.core` is pure: no I/O, clock, network, model calls or unseeded randomness. `tests/test_purity.py` enforces it and CI runs it on every PR.
 - No live model calls in CI. Model-backed layers ship recorded fixtures.
+- Any change to the schema's shape (events, deltas, ontology, State, View) bumps `SCHEMA_VERSION` in `src/revisionist/core/__init__.py` by one and adds the new fingerprint to `tests/test_schema_version.py`, in the same change as the regenerated `schema/revisionist.schema.json`. CI fails a shape change without a bump.
 - Leak tests (type-level projection, canary, counterfactual, human-boundary) are never skipped or marked xfail.
 
 ## Gates
