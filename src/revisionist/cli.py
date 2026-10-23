@@ -29,6 +29,7 @@ from revisionist.core.state import State
 from revisionist.core.visibility import Visibility
 from revisionist.core.world import WorldFile
 from revisionist.core.world_compile import WorldError, compile_world, resolve_keys
+from revisionist.engine import aide as aides
 from revisionist.engine import campaign as cmp
 from revisionist.engine import counsel, host_ops, play, realism_tick, season, session_zero
 from revisionist.engine import scheduler as sch
@@ -545,6 +546,32 @@ def consult(
     found = leak_report(load_state(store, campaign_id), store.read(campaign_id))
     if found:
         raise _fail(render_leaks(found), EXIT_LEAK)
+
+
+@app.command()
+def aide(seat: PlayerSeat = None, offline: Offline = False) -> None:
+    """Realism: your aide's brief: unread papers, decisions due, draft orders (never filed)."""
+    store = cmp.open_store()
+    campaign_id = _campaign(store)
+    me = _me(load_state(store, campaign_id), seat)
+    _guard(store, campaign_id, me)
+    writer: aides.AideWriter = (
+        aides.TemplateAide() if offline else aides.ClaudeAide(transport_factory())
+    )
+    try:
+        out = aides.aide_for(store, campaign_id, me, writer)
+    except ValueError as exc:
+        raise _fail(str(exc), EXIT_REFUSED) from exc
+    except TransportError as exc:
+        raise _fail(f"your aide could not be reached: {exc}") from exc
+    typer.echo(out.summary)
+    typer.echo("")
+    typer.echo("decisions due:" if out.decisions else "decisions due: none")
+    for d in out.decisions:
+        typer.echo(f"  {d.order_id} {d.lever} (step {d.step}): {', '.join(d.allowed)}")
+    typer.echo("drafts (not filed):" if out.drafts else "drafts: none")
+    for draft in out.drafts:
+        typer.echo(f"  {draft.command()}")
 
 
 def _deliverers() -> DelivererFactory | None:

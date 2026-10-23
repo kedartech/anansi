@@ -18,6 +18,7 @@ from revisionist.engine.llm import Reply, Request
 RECORDINGS = Path(__file__).parent / "recordings"
 PROSE = RECORDINGS / "realism-prose-toy.json"
 COUNSEL = RECORDINGS / "realism-counsel-autumn.json"
+AIDE = RECORDINGS / "realism-aide-autumn.json"
 NOTE = "hand-written for tests; not a model reply"
 
 PROSE_BY_TITLE: Mapping[str, str] = {
@@ -67,6 +68,27 @@ COUNSEL_BY_QUESTION: Mapping[str, str] = {
 def counsel_reply(request: Request) -> Any:
     question = request.prompt.rsplit("\n", 1)[1]
     return {"text": COUNSEL_BY_QUESTION[question]}
+
+
+AIDE_REPLY: Mapping[str, Any] = {
+    "summary": (
+        "Admiral Stark's Atlantic report puts Allied merchant losses to U-boats this month at "
+        "209,835, with 30 U-boats operational in the Atlantic. The Speaker counts 267 House "
+        "Democrats to 162 Republicans; the Majority Leader gives no figure yet for the Senate "
+        "neutrality vote. Gallup has 55 calling your course about right. MAGIC and State have "
+        "nothing firm on Japanese oil stocks, and the Prime Minister's cables carry no figures."
+    ),
+    "drafts": [
+        {"lever": "send_bill", "params": {"bill": "neutrality_revision", "urgency": "urgent"}},
+        {"lever": "naval_order", "params": {"order": "escort_convoys", "zone": "western_atlantic"}},
+        # Out of range on purpose: the aide must drop a draft that does not fit the lever.
+        {"lever": "lend_lease_finding", "params": {"recipient": "ussr", "share_pct": 150}},
+    ],
+}
+
+
+def aide_reply(request: Request) -> Any:
+    return AIDE_REPLY
 
 
 def prose_reply(request: Request) -> Any:
@@ -144,9 +166,23 @@ def record_counsel() -> None:
     hand.save(COUNSEL)
 
 
+def record_aide() -> None:
+    from revisionist.engine.aide import ClaudeAide, aide_for
+    from revisionist.engine.store import MemoryStore
+    from tests.counsel_scenario import roosevelt_seat, ticked
+    from tests.test_realism_tick import CAMPAIGN
+
+    hand = Hand(aide_reply)
+    store = MemoryStore()
+    ticked(store)
+    aide_for(store, CAMPAIGN, roosevelt_seat(store), ClaudeAide(hand))
+    hand.save(AIDE)
+
+
 def main() -> None:
     record_prose()
     record_counsel()
+    record_aide()
 
 
 if __name__ == "__main__":
