@@ -8,23 +8,29 @@ each landed in the log as one atomic batch ending in ``tick_stage_completed``:
     RESOLVE    goal changes, each private to the goal's owner
     FEEDS      any document still owed on the new today (the walk issues each feed
                on the day it falls due, so it waits in the in-tray until read)
+    PROSE      one prose call per author for the pages issued since the last tick
+               closed, from the pages and the author's voice only (Phase 4)
 
 Resuming reads the tail of the log and continues from the first stage not marked
-complete, so a resumed run reaches the hash an uninterrupted one would. Prose and
-delivery come later (Phase 4); ``TickResult.delivered`` is empty.
+complete, so a resumed run reaches the hash an uninterrupted one would. PROSE runs
+only when the caller passes a writer; a page whose prose is refused or whose call
+fails keeps its body lines, and the tick still closes. Delivery comes later;
+``TickResult.delivered`` is empty.
 """
 
+import logging
 from collections.abc import Sequence
 from datetime import date, timedelta
 
 from revisionist.core import events as ev
 from revisionist.core import goals, history
-from revisionist.core.events import Event, Versions
+from revisionist.core.events import CallCost, Event, Versions
 from revisionist.core.fold import replay, state_hash
 from revisionist.core.ids import CampaignId, EntityId, EventId, OrderId, SeatId, derived_id
 from revisionist.core.ontology import Phase
 from revisionist.core.realism.advance import Wake, next_wake
 from revisionist.core.realism.card import ParamKind, ParamSpec, ParamValue
+from revisionist.core.realism.document import DocumentView
 from revisionist.core.realism.feeds import due_feeds, issue, seed_for_day
 from revisionist.core.realism.pipeline import Order, OrderStatus, StepAction
 from revisionist.core.realism.pipelines import human_step, run_pipelines
@@ -41,13 +47,21 @@ from revisionist.engine import campaign as cmp
 from revisionist.engine import session_zero
 from revisionist.engine.emit import Emitter, tail
 from revisionist.engine.ids import new_id
+from revisionist.engine.llm import TransportError
+from revisionist.engine.prose import ProseWriter, accepted, author_of, prose_prompt_version
 from revisionist.engine.store import EventStore, load_state
 from revisionist.engine.tick import NotInPlayError, TickResult
+
+log = logging.getLogger(__name__)
 
 
 class RealismTickResult(TickResult):
     wake: Wake | None = None
     """Where the advance stopped. None when a resumed tick passed ADVANCE in an earlier run."""
+    written: int = 0
+    """Pages given prose in this run."""
+    prose_dropped: tuple[str, ...] = ()
+    """``doc_id: reason`` for pages left without prose in this run."""
 
 
 def _opening_date(events: Sequence[Event]) -> date | None:
@@ -95,8 +109,11 @@ def run_realism_tick(
     *,
     versions: Versions | None = None,
     stop_after: TickStage | None = None,
+    prose: ProseWriter | None = None,
 ) -> RealismTickResult:
-    """Run (or resume) one realism tick. Safe to call again after a crash at any point."""
+    """Run (or resume) one realism tick. Safe to call again after a crash at any point.
+
+    ``prose`` writes the pages; with none, the tick has no PROSE stage."""
     versions = versions or cmp.versions()
     state = load_state(store, campaign_id)
     if state.phase is not Phase.PLAY:
@@ -167,10 +184,66 @@ def run_realism_tick(
         if stopped(TickStage.FEEDS):
             return finish(TickStage.FEEDS)
 
+    costs = list(log_tail.costs)
+    if prose is not None and TickStage.PROSE not in done:
+        batch, spent, dropped = _prose(em, prose)
+        costs += spent
+        batch.append(em.event(ev.TickStageCompleted(stage=TickStage.PROSE, costs=tuple(spent))))
+        em.commit(batch)
+        done.add(TickStage.PROSE)
+        result = result.model_copy(
+            update={"written": len(batch) - 1, "prose_dropped": tuple(dropped)}
+        )
+        if stopped(TickStage.PROSE):
+            return finish(TickStage.PROSE)
+
     digest = state_hash(em.state)
-    em.commit([em.event(ev.TickClosed(state_hash=digest))])
+    em.commit([em.event(ev.TickClosed(state_hash=digest, costs=tuple(costs)))])
     em.store.save_snapshot(em.state)
     return result.model_copy(update={"state_hash": digest})
+
+
+def _prose(em: Emitter, writer: ProseWriter) -> tuple[list[Event], list[CallCost], list[str]]:
+    """``document_written`` for each page issued since the last tick closed that has no
+    prose yet, one writer call per author. A failed call leaves its pages bare."""
+    log_now = list(em.store.read(em.state.campaign_id))
+    start = max((i + 1 for i, e in enumerate(log_now) if e.kind == "tick_closed"), default=0)
+    issued = [
+        e.payload.document.doc_id
+        for e in log_now[start:]
+        if isinstance(e.payload, ev.DocumentIssued)
+    ]
+    by_author: dict[EntityId, list[DocumentView]] = {}
+    for doc_id in issued:
+        page = em.state.documents[doc_id].view
+        if page.prose is None:
+            by_author.setdefault(page.author, []).append(page)
+    versions = em.versions.model_copy(
+        update={"prompt": ",".join(x for x in (em.versions.prompt, prose_prompt_version()) if x)}
+    )
+    batch: list[Event] = []
+    costs: list[CallCost] = []
+    dropped: list[str] = []
+    for author_id in sorted(by_author):
+        pages = sorted(by_author[author_id], key=lambda v: (v.issued, v.doc_id))
+        try:
+            written = writer.write(author_of(em.state, author_id), pages)
+        except TransportError as exc:
+            log.warning("prose call for %s failed: %s", author_id, exc)
+            dropped += [f"{p.doc_id}: call failed" for p in pages]
+            continue
+        if written.cost is not None:
+            costs.append(written.cost)
+        keep, refused = accepted(pages, written)
+        dropped += [f"{r.doc_id}: {r.reason}" for r in refused]
+        for page in pages:
+            if page.doc_id in keep:
+                e = em.event(
+                    ev.DocumentWritten(doc_id=page.doc_id, prose=keep[page.doc_id]),
+                    scope=page.scope,
+                )
+                batch.append(e.model_copy(update={"versions": versions}))
+    return batch, costs, dropped
 
 
 def _feed_documents(em: Emitter, today: date) -> list[Event]:
