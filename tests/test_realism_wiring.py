@@ -24,12 +24,15 @@ from revisionist.core.realism.pipelines import waiting_on_human
 from revisionist.core.realism.resolvers import qid, value
 from revisionist.core.report import leak_report
 from revisionist.core.state import State
-from revisionist.core.visibility import private_to
+from revisionist.core.visibility import Scope, private_to
 from revisionist.engine import campaign as cmp
 from revisionist.engine import realism_tick
+from revisionist.engine.llm import RecordedTransport
 from revisionist.engine.store import EventStore, load_state
 from revisionist.engine.web import realism_snapshot as rs
 from revisionist.engine.web.snapshot import checked
+from tests.counsel_scenario import TICKS, WIRING_QUESTION
+from tests.handwritten import AIDE, COUNSEL
 
 runner = CliRunner()
 CANARY = "CANARY-WIRING-TRUTH-77d1"
@@ -218,3 +221,83 @@ def test_the_final_step_counts_the_votes_at_once(fixed_campaign: None) -> None:
         and e.payload.quantity.quantity_id in votes
     ]
     assert recounted == []  # the tick does not resolve the order a second time
+
+
+def _plant(payload: ev.Payload, scope: Scope, name: str) -> None:
+    store, state = current()
+    store.append_all(
+        [
+            ev.Event(
+                event_id=EventId(derived_id(state.campaign_id, name)),
+                campaign_id=state.campaign_id,
+                seq=state.last_seq + 1,
+                tick=state.tick,
+                scope=scope,
+                payload=payload,
+                versions=cmp.versions(),
+            )
+        ]
+    )
+
+
+@pytest.mark.usefixtures("fixed_campaign")
+def test_prose_counsel_and_the_aide_through_the_cli_leak_nothing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    run("new", "autumn-1941", "--seat", "roosevelt")
+    for _ in range(TICKS):  # the recordings were made after this many offline ticks
+        run("tick", "--offline")
+    _, state = current()
+    assert state.documents and all(d.view.prose for d in state.documents.values())
+    (seat,) = state.seats
+    assert all(p.prose for p in project(state, seat).documents.values())
+
+    monkeypatch.setattr(cli, "transport_factory", lambda: RecordedTransport(COUNSEL))
+    said = run("consult", "hopkins", WIRING_QUESTION)
+    assert said.startswith("Harry L. Hopkins, in person:") and "full list" in said
+    refused = runner.invoke(cli.app, ["consult", "molotov", "Will you hold Moscow?"])
+    assert refused.exit_code == 2 and "within your reach" in refused.output
+
+    monkeypatch.setattr(cli, "transport_factory", lambda: RecordedTransport(AIDE))
+    brief = run("aide")
+    assert "209,835" in brief and "decisions due: none" in brief
+    assert "revisionist lever send_bill bill=neutrality_revision urgency=urgent" in brief
+    assert "share_pct=150" not in brief
+    assert "drafts (not filed)" in run("aide", "--offline")
+    _, after = current()
+    assert not after.orders  # nothing the aide or counsel said was filed
+
+    assert "per in-world day" in run("cost")
+
+    _, state = current()
+    today = state.in_world_date
+    assert today is not None
+    doc_id = DocumentId(derived_id(state.campaign_id, "canary-doc"))
+    view = DocumentView(
+        doc_id=doc_id,
+        kind=DocumentKind.MEMO,
+        author=state.seats[seat].embodies,
+        issued=today,
+        arrives=today,
+        channel=ChannelKind.IN_PERSON,
+        title="A planted page",
+        body=(BodyField(label="Votes", value=8, unit="votes"),),
+        scope=private_to(seat),
+    )
+    truth = DocumentTruth(
+        doc_id=doc_id,
+        truth_refs=(TruthRef(quantity_id=next(iter(state.quantities)), value=7, canary=CANARY),),
+    )
+    _plant(ev.DocumentIssued(document=view, truth=truth), private_to(seat), "canary-event")
+    run("tick", "--offline")  # the planted page gets template prose too
+    _, state = current()
+    assert state.documents[doc_id].view.prose
+    assert "0 leaks" in run("leaks")
+
+    hopkins = next(e for e, x in state.entities.items() if x.name == "Harry L. Hopkins")
+    bad = ev.CounselHeld(
+        seat_id=seat, person=hopkins, channel=ChannelKind.IN_PERSON, text=f"Truly, {CANARY}."
+    )
+    _plant(bad, private_to(seat), "bad-counsel")
+    caught = runner.invoke(cli.app, ["leaks"])
+    assert caught.exit_code == cli.EXIT_LEAK and f"fact={doc_id}" in caught.output
