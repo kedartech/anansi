@@ -21,7 +21,7 @@ from revisionist.core.realism.document import (
 )
 from revisionist.core.realism.pipeline import OrderStatus
 from revisionist.core.realism.pipelines import waiting_on_human
-from revisionist.core.realism.resolvers import value
+from revisionist.core.realism.resolvers import qid, value
 from revisionist.core.report import leak_report
 from revisionist.core.state import State
 from revisionist.core.visibility import private_to
@@ -185,3 +185,36 @@ def test_a_truth_canary_reaches_no_view_snapshot_or_report() -> None:
     tracker = checked(state, seat, json.loads(json.dumps(rs.orders(seen, state.pipelines))))
     assert CANARY not in json.dumps([listing, page, tracker])
     assert leak_report(state, store.read(state.campaign_id)) == []
+
+
+VOTES = ("neutrality_revision_house_yeas", "neutrality_revision_passed")
+
+
+def test_the_final_step_counts_the_votes_at_once(fixed_campaign: None) -> None:
+    run("new", "autumn-1941", "--seat", "roosevelt")
+    oid = order_id(run("lever", "send_bill", "bill=neutrality_revision", "urgency=urgent"))
+    for _ in range(200):
+        _, state = current()
+        if waiting_on_human(state, state.orders[oid]):
+            break
+        run("tick", "--offline")
+    else:
+        pytest.fail("the bill never reached Roosevelt's desk")
+    run("step", oid, "pass")
+    store, state = current()
+    assert state.orders[oid].status is OrderStatus.ENACTED
+    counted = {key: value(state, key) for key in VOTES}
+    assert None not in counted.values(), counted
+    seen = state.last_seq
+    run("tick", "--offline")
+    store, state = current()
+    assert {key: value(state, key) for key in VOTES} == counted
+    votes = {qid(state, key) for key in VOTES}
+    recounted = [
+        e
+        for e in store.read(state.campaign_id)
+        if e.seq > seen
+        and isinstance(e.payload, ev.QuantitySet)
+        and e.payload.quantity.quantity_id in votes
+    ]
+    assert recounted == []  # the tick does not resolve the order a second time

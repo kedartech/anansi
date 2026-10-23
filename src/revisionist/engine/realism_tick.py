@@ -70,7 +70,11 @@ def _opening_date(events: Sequence[Event]) -> date | None:
 
 def _unresolved(events: Sequence[Event]) -> list[OrderId]:
     """Orders enacted since the last PIPELINES stage closed: a human's final step,
-    filed between ticks, whose resolver has not run."""
+    filed between ticks, whose resolver has not run.
+
+    ``take_step`` now resolves the order in the step's own batch and marks that
+    batch with the issuer as actor, so only a settlement without an actor (a log
+    written before that) is left for the tick to resolve."""
     after = 0
     for i, e in enumerate(events):
         p = e.payload
@@ -79,7 +83,9 @@ def _unresolved(events: Sequence[Event]) -> list[OrderId]:
     return [
         e.payload.order_id
         for e in events[after:]
-        if isinstance(e.payload, ev.OrderSettled) and e.payload.status is OrderStatus.ENACTED
+        if isinstance(e.payload, ev.OrderSettled)
+        and e.payload.status is OrderStatus.ENACTED
+        and e.actor is None
     ]
 
 
@@ -314,20 +320,35 @@ def take_step(
     steps = human_step(state, order_id, action, state.in_world_date, amended)
     batch: list[Event] = []
     seq = state.last_seq
-    for payload in steps:
-        seq += 1
-        batch.append(
-            Event(
-                event_id=EventId(new_id()),
-                campaign_id=campaign_id,
-                seq=seq,
-                tick=state.tick,
-                scope=payload.document.scope if isinstance(payload, ev.DocumentIssued) else PUBLIC,
-                payload=payload,
-                versions=cmp.versions(),
+
+    def add(payloads: Sequence[ev.Payload]) -> State:
+        nonlocal seq
+        added: list[Event] = []
+        for payload in payloads:
+            seq += 1
+            added.append(
+                Event(
+                    event_id=EventId(new_id()),
+                    campaign_id=campaign_id,
+                    seq=seq,
+                    tick=state.tick,
+                    actor=order.issuer,
+                    scope=(
+                        payload.document.scope if isinstance(payload, ev.DocumentIssued) else PUBLIC
+                    ),
+                    payload=payload,
+                    versions=cmp.versions(),
+                )
             )
-        )
-    replay(batch, initial=state)  # fold first so a bad step never reaches the store
+        batch.extend(added)
+        # fold first so a bad step never reaches the store
+        return replay(batch, initial=state)
+
+    after = add(steps)
+    if any(isinstance(p, ev.OrderSettled) and p.status is OrderStatus.ENACTED for p in steps):
+        # The votes are counted at once, in the same batch as the final step.
+        enacted = after.orders[order_id]
+        add(apply_changes(after, ON_ORDER[resolver_for(after, enacted)](after, enacted)))
     store.append_all(batch)
     return load_state(store, campaign_id).orders[order_id]
 
