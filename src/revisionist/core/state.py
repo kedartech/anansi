@@ -10,7 +10,7 @@ defines the shapes.
 """
 
 from datetime import date
-from typing import ClassVar
+from typing import ClassVar, Literal
 
 from pydantic import Field
 
@@ -22,11 +22,16 @@ from revisionist.core.ids import (
     ClockId,
     CommitmentId,
     ContestId,
+    DocumentId,
     EntityId,
     FactId,
+    FeedId,
     GoalId,
     IntentId,
     MeterId,
+    OrderId,
+    PipelineId,
+    QuantityId,
     RelationshipId,
     ScheduledEventId,
     SeatId,
@@ -47,7 +52,13 @@ from revisionist.core.ontology import (
     Seat,
     SeatKind,
 )
+from revisionist.core.realism.card import CardFace, Desk, SeatCard
+from revisionist.core.realism.document import Document, DocumentView, Feed
+from revisionist.core.realism.pipeline import Order, Pipeline
+from revisionist.core.realism.quantity import Quantity
 from revisionist.core.settings import Settings
+
+Ruleset = Literal["legacy", "realism"]
 
 
 class _World(Model):
@@ -76,9 +87,11 @@ class _World(Model):
     """How far the world has drifted from the record (spec §5.4). Public."""
     in_world_date: date | None = None
     """Today in the world. None for a campaign with no start date."""
+    ruleset: Ruleset = "legacy"
+    """Set once, by ``campaign_created``. Public: the client hides odds under realism."""
 
     late_fields: ClassVar[frozenset[str]] = frozenset(
-        {"goals", "phase", "roster", "contests", "divergence", "in_world_date"}
+        {"goals", "phase", "roster", "contests", "divergence", "in_world_date", "ruleset"}
     )
 
 
@@ -104,6 +117,23 @@ class State(_World):
     """Filed, not yet frozen into a tick."""
     frozen: tuple[IntentId, ...] = ()
     """Intents in the tick being resolved."""
+    cards: dict[EntityId, SeatCard] = Field(default_factory=dict)
+    """Realism: one card per person, policy fields included."""
+    feeds: dict[FeedId, Feed] = Field(default_factory=dict)
+    pipelines: dict[PipelineId, Pipeline] = Field(default_factory=dict)
+    documents: dict[DocumentId, Document] = Field(default_factory=dict)
+    """Both halves of every document issued, arrived or not."""
+    orders: dict[OrderId, Order] = Field(default_factory=dict)
+    quantities: dict[QuantityId, Quantity] = Field(default_factory=dict)
+
+    late_fields: ClassVar[frozenset[str]] = _World.late_fields | {
+        "cards",
+        "feeds",
+        "pipelines",
+        "documents",
+        "orders",
+        "quantities",
+    }
 
 
 class View(_World):
@@ -116,3 +146,21 @@ class View(_World):
     """Every seat, the viewer's included, as others see it."""
     own_pending: tuple[Intent, ...] = ()
     """The viewer's own filed intents; others' intents are never in a view."""
+    cards: dict[EntityId, CardFace] = Field(default_factory=dict)
+    """Realism: every card's public face."""
+    desk: Desk | None = None
+    """Realism: the card of the person the viewer embodies, without its AI policy."""
+    documents: dict[DocumentId, DocumentView] = Field(default_factory=dict)
+    """Pages in scope that have arrived by today. Never a ``DocumentTruth``."""
+    orders: dict[OrderId, Order] = Field(default_factory=dict)
+    """The viewer's own orders only."""
+    quantities: dict[QuantityId, Quantity] = Field(default_factory=dict)
+    """Only quantities whose scope admits the viewer."""
+
+    late_fields: ClassVar[frozenset[str]] = _World.late_fields | {
+        "cards",
+        "desk",
+        "documents",
+        "orders",
+        "quantities",
+    }

@@ -12,12 +12,18 @@ the ID of the right type and refuses a key of the wrong type.
 
 This module only defines the shapes. It is pure: no file reading, no YAML.
 ``revisionist.engine.worlds.load`` reads a file into a ``WorldFile``.
+
+A ``ruleset: realism`` world adds cards, feeds, pipelines, quantities and
+sources. It names no human seat: any card marked ``playable`` may be claimed
+at Session Zero, and every person left unclaimed is run by code. Every number
+authored in a quantity, feed or pipeline carries ``source: <a sources key>``
+or ``gap: true``, so an unsourced figure can never pass as a sourced one.
 """
 
 from datetime import date
 from typing import Annotated, Literal
 
-from pydantic import Field, StringConstraints
+from pydantic import Field, StringConstraints, model_validator
 
 from revisionist.core._base import Label, Model
 from revisionist.core.goals import WinCondition
@@ -32,6 +38,10 @@ from revisionist.core.ontology import (
     EntityKind,
     SeatKind,
 )
+from revisionist.core.realism.card import ChannelKind, ParamSpec
+from revisionist.core.realism.document import Bias, Classification, DocumentKind
+from revisionist.core.realism.pipeline import StepAction, StepKind
+from revisionist.core.realism.quantity import ResolverKey
 from revisionist.core.settings import Settings
 from revisionist.core.visibility import Visibility
 
@@ -238,6 +248,114 @@ class CharacterDecl(Model):
     """Other names people use for this person. Public."""
 
 
+# --- realism ---------------------------------------------------------------------
+
+
+class SourceDecl(Model):
+    """A published source numbers are cited to. ``verified`` stays false until its
+    coverage and licence are checked (plan, 0b)."""
+
+    key: Key
+    title: str = Field(max_length=200)
+    note: str = Field(default="", max_length=400)
+    verified: bool = False
+
+
+class Cited(Model):
+    """A declaration holding authored numbers: cited to a source, or marked a gap."""
+
+    source: Key | None = None
+    gap: bool = False
+
+    @model_validator(mode="after")
+    def _cited_or_gap(self) -> "Cited":
+        if (self.source is None) == (not self.gap):
+            raise ValueError("give exactly one of source: <key> or gap: true")
+        return self
+
+
+class QuantityDecl(Cited):
+    key: Key
+    owner: Key | None = None
+    """An entity key."""
+    name: Label
+    value: int | None = None
+    """Left out only for a gap."""
+    unit: Label
+    as_of: date | None = None
+    """None means the world's start date."""
+    public: bool = False
+    """Public quantities are in every view; the rest reach seats only as documents."""
+
+    @model_validator(mode="after")
+    def _gap_has_no_value(self) -> "QuantityDecl":
+        if self.value is None and not self.gap:
+            raise ValueError(f"quantity {self.key}: a value, or gap: true")
+        return self
+
+
+class FeedDecl(Cited):
+    key: Key
+    name: Label
+    author: Key
+    """A person key."""
+    kind: DocumentKind
+    channel: ChannelKind
+    classification: Classification = Classification.OPEN
+    every_days: int | None = Field(default=None, ge=1, le=365)
+    latency_days: int | None = Field(default=None, ge=0, le=365)
+    reports: tuple[Key, ...] = ()
+    """Quantity keys."""
+    bias: Bias = Bias()
+
+
+class StepDecl(Model):
+    person: Key
+    kind: StepKind
+    days: int | None = Field(default=None, ge=0, le=365)
+    allowed: tuple[StepAction, ...] = (StepAction.PASS,)
+
+
+class PipelineDecl(Cited):
+    key: Key
+    name: Label
+    steps: tuple[StepDecl, ...] = Field(min_length=1, max_length=12)
+
+
+class LeverDecl(Model):
+    name: Label
+    pipeline: Key
+    resolver: ResolverKey
+    params: tuple[ParamSpec, ...] = ()
+
+
+class ContactDecl(Model):
+    person: Key
+    channel: ChannelKind
+
+
+class CardDecl(Model):
+    """A person's seat card. ``person`` is a person key; the card has no key of its own."""
+
+    person: Key
+    office: Label
+    playable: bool = False
+    principals: tuple[Key, ...] = ()
+    powers: tuple[Label, ...] = ()
+    levers: tuple[LeverDecl, ...] = ()
+    contacts: tuple[ContactDecl, ...] = ()
+    feeds: tuple[Key, ...] = ()
+    pipelines: tuple[Key, ...] = ()
+    constraints: tuple[Label, ...] = ()
+    personal: tuple[Label, ...] = ()
+    successor: Key | None = None
+    horizon_days: int = Field(ge=1, le=365)
+    voice: str = Field(default="", max_length=200)
+    loyalty: int = Field(default=0, ge=-5, le=5)
+    doctrine: tuple[Label, ...] = ()
+    interests: tuple[Label, ...] = ()
+
+
 Slug = Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_-]*$", max_length=40)]
 """A world's file name: lowercase, digits, underscores and hyphens."""
 
@@ -267,27 +385,42 @@ class WorldFile(Model):
     contests: tuple[ContestDecl, ...] = ()
     schedule: tuple[HistoryDecl, ...] = ()
     """History's clock: the key events that really followed ``start_date``."""
+    ruleset: Literal["legacy", "realism"] = "legacy"
+    cards: tuple[CardDecl, ...] = ()
+    feeds: tuple[FeedDecl, ...] = ()
+    pipelines: tuple[PipelineDecl, ...] = ()
+    quantities: tuple[QuantityDecl, ...] = ()
+    sources: tuple[SourceDecl, ...] = ()
 
 
 __all__ = [
     "AgentDecl",
     "AssetDecl",
+    "CardDecl",
     "CharacterDecl",
+    "Cited",
     "ClauseDecl",
     "ClockDecl",
     "CommitmentDecl",
+    "ContactDecl",
     "ContestDecl",
     "EntityDecl",
     "FactDecl",
+    "FeedDecl",
     "GoalDecl",
     "HistoryDecl",
     "Key",
+    "LeverDecl",
     "MeterDecl",
+    "PipelineDecl",
+    "QuantityDecl",
     "RelationshipDecl",
     "ScopeDecl",
     "ScopeSpec",
     "SeatDecl",
     "SideDecl",
     "Slug",
+    "SourceDecl",
+    "StepDecl",
     "WorldFile",
 ]

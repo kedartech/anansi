@@ -11,14 +11,15 @@ ScheduledEventFired, ContestCreated, ContestMoved, ContestDecided,
 ScheduledEventCreated, ScheduledEventSkipped, DivergenceChanged, DateAdvanced,
 SessionZeroOpened, CharacterListed, CharacterClaimed,
 SessionZeroClosed, SeasonEnded, GoalSet, GoalProgressed, GoalMet, GoalUndone,
-TickOpened, TickClosed``.
+TickOpened, TickClosed``, and for realism campaigns ``CardsDeclared,
+DocumentIssued, OrderDrafted, OrderStepTaken, OrderSettled, QuantitySet``.
 
 Every other kind is a record: it is replayable, searchable and shown by
 ``/why``, but changes no state.
 """
 
 from datetime import date
-from typing import Annotated, Literal
+from typing import Annotated, ClassVar, Literal
 
 from pydantic import ConfigDict, Field
 
@@ -30,10 +31,12 @@ from revisionist.core.ids import (
     ClockId,
     ContestId,
     DeltaId,
+    DocumentId,
     EntityId,
     EventId,
     GoalId,
     IntentId,
+    OrderId,
     ScheduledEventId,
     SeatId,
 )
@@ -53,8 +56,13 @@ from revisionist.core.ontology import (
     Seat,
     SeatStatus,
 )
+from revisionist.core.realism.card import ChannelKind, SeatCard
+from revisionist.core.realism.document import DocumentTruth, DocumentView, Feed
+from revisionist.core.realism.pipeline import Order, OrderStatus, Pipeline, StepOutcome
+from revisionist.core.realism.quantity import Quantity
 from revisionist.core.resolution import FeasibilityBand, OutcomeTier, RejectionReason, TickStage
 from revisionist.core.settings import Settings
+from revisionist.core.state import Ruleset
 from revisionist.core.visibility import Scope
 
 
@@ -73,6 +81,10 @@ class CampaignCreated(Model):
     name: str
     world: str
     """Name of the world bible this campaign was compiled from."""
+    ruleset: Ruleset = "legacy"
+    """Which rules resolve this campaign. Left out of a legacy log, so it hashes as before."""
+
+    late_fields: ClassVar[frozenset[str]] = frozenset({"ruleset"})
 
 
 class SettingsSet(Model):
@@ -471,6 +483,79 @@ class CostLogged(Model):
     costs: tuple[CallCost, ...]
 
 
+# --- Realism (core/realism) ---------------------------------------------------
+
+
+class CardsDeclared(Model):
+    """The scenario's cards, feeds and pipelines, compiled from the world file.
+
+    One event, after the entities it names, so the fold can check every
+    reference at once. Engine only: cards carry the AI policy fields.
+    """
+
+    kind: Literal["cards_declared"] = "cards_declared"
+    cards: tuple[SeatCard, ...] = ()
+    feeds: tuple[Feed, ...] = ()
+    pipelines: tuple[Pipeline, ...] = ()
+
+
+class DocumentIssued(Model):
+    """A document is written. Its envelope scope is the view's; seats see it on arrival."""
+
+    kind: Literal["document_issued"] = "document_issued"
+    document: DocumentView
+    truth: DocumentTruth
+
+
+class DocumentRead(Model):
+    """A seat opened a document (the in-tray's unread mark). A record."""
+
+    kind: Literal["document_read"] = "document_read"
+    seat_id: SeatId
+    doc_id: DocumentId
+
+
+class OrderDrafted(Model):
+    """A seat pulled a lever: the order enters its pipeline at step 0."""
+
+    kind: Literal["order_drafted"] = "order_drafted"
+    order: Order
+
+
+class OrderStepTaken(Model):
+    """The person at the order's current step acted on it."""
+
+    kind: Literal["order_step_taken"] = "order_step_taken"
+    order_id: OrderId
+    outcome: StepOutcome
+
+
+class OrderSettled(Model):
+    """The order left its pipeline: enacted, refused, lapsed or withdrawn."""
+
+    kind: Literal["order_settled"] = "order_settled"
+    order_id: OrderId
+    status: OrderStatus
+
+
+class QuantitySet(Model):
+    """A quantity's value as of a date: authored at compile, computed by a resolver after."""
+
+    kind: Literal["quantity_set"] = "quantity_set"
+    quantity: Quantity
+
+
+class CounselHeld(Model):
+    """A seat consulted a person on its card. The words are prose and change nothing;
+    a record, sealed with the seat's key like an order's text."""
+
+    kind: Literal["counsel_held"] = "counsel_held"
+    seat_id: SeatId
+    person: EntityId
+    channel: ChannelKind
+    text: str = Field(max_length=8000)
+
+
 # --- Admin --------------------------------------------------------------------
 
 
@@ -551,6 +636,14 @@ Payload = Annotated[
     | TickClosed
     | CostLogged
     | AdminRead
+    | CardsDeclared
+    | DocumentIssued
+    | DocumentRead
+    | OrderDrafted
+    | OrderStepTaken
+    | OrderSettled
+    | QuantitySet
+    | CounselHeld
     | Sealed,
     Field(discriminator="kind"),
 ]
@@ -591,6 +684,12 @@ MUTATING_KINDS: frozenset[str] = frozenset(
         "goal_undone",
         "tick_opened",
         "tick_closed",
+        "cards_declared",
+        "document_issued",
+        "order_drafted",
+        "order_step_taken",
+        "order_settled",
+        "quantity_set",
     }
 )
 

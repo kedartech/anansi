@@ -12,7 +12,7 @@ from revisionist.core.ids import DeltaId, IntentId, derived_id
 from revisionist.core.intent import Intent, Verb
 from revisionist.core.ontology import ClockKind, ClockStatus
 from revisionist.core.referee import Roll
-from revisionist.core.resolution import OutcomeTier, RejectionReason, TickStage
+from revisionist.core.resolution import LEGACY_STAGES, OutcomeTier, RejectionReason, TickStage
 from revisionist.core.state import State
 from revisionist.core.visibility import PUBLIC, private_to
 from revisionist.engine import tick as tick_mod
@@ -27,7 +27,7 @@ from revisionist.engine.store import EventStore, MemoryStore, SqliteStore, load_
 from revisionist.engine.tick import Providers, file_intent, run_tick
 from tests import fixtures as fx
 
-STAGES = list(TickStage)
+STAGES = list(LEGACY_STAGES)
 
 
 @pytest.fixture(params=["memory", "sqlite"])

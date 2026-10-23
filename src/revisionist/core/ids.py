@@ -27,6 +27,11 @@ IntentId = NewType("IntentId", str)
 DeltaId = NewType("DeltaId", str)
 GoalId = NewType("GoalId", str)
 ContestId = NewType("ContestId", str)
+DocumentId = NewType("DocumentId", str)
+OrderId = NewType("OrderId", str)
+QuantityId = NewType("QuantityId", str)
+PipelineId = NewType("PipelineId", str)
+FeedId = NewType("FeedId", str)
 
 WorldObjectId = EntityId | AssetId | RelationshipId | MeterId | ClockId | FactId | CommitmentId
 """Anything an Intent may target."""

@@ -1,6 +1,6 @@
 """Hypothesis strategies for every core model. Reused by Layers 2 and 3."""
 
-from datetime import date
+from datetime import date, timedelta
 from typing import cast
 
 from hypothesis import strategies as st
@@ -15,12 +15,17 @@ from revisionist.core.ids import (
     CommitmentId,
     ContestId,
     DeltaId,
+    DocumentId,
     EntityId,
     EventId,
     FactId,
+    FeedId,
     GoalId,
     IntentId,
     MeterId,
+    OrderId,
+    PipelineId,
+    QuantityId,
     RelationshipId,
     ScheduledEventId,
     SeatId,
@@ -50,6 +55,10 @@ from revisionist.core.ontology import (
     Seat,
     SeatKind,
 )
+from revisionist.core.realism import card as rc
+from revisionist.core.realism import document as rd
+from revisionist.core.realism import pipeline as rp
+from revisionist.core.realism.quantity import RESOLVER_KEYS, Quantity
 from revisionist.core.settings import Settings
 from revisionist.core.visibility import Scope, Visibility
 
@@ -71,6 +80,11 @@ seat_ids = ulid.map(SeatId)
 intent_ids = ulid.map(IntentId)
 delta_ids = ulid.map(DeltaId)
 goal_ids = ulid.map(GoalId)
+document_ids = ulid.map(DocumentId)
+order_ids = ulid.map(OrderId)
+quantity_ids = ulid.map(QuantityId)
+pipeline_ids = ulid.map(PipelineId)
+feed_ids = ulid.map(FeedId)
 
 short_text = st.text(min_size=1, max_size=40)
 tags = st.frozensets(short_text, max_size=3)
@@ -418,7 +432,217 @@ history_events = st.builds(
 
 any_scheduled_events = scheduled_events | history_events
 
+# --- realism ------------------------------------------------------------------
+
+channels = st.sampled_from(list(rc.ChannelKind))
+labels = st.text(min_size=1, max_size=60)
+
+
+@st.composite
+def param_specs(draw: st.DrawFn) -> rc.ParamSpec:
+    kind = draw(st.sampled_from(list(rc.ParamKind)))
+    name = draw(labels)
+    if kind is rc.ParamKind.INT:
+        lo = draw(st.integers(-1000, 1000))
+        return rc.ParamSpec(name=name, kind=kind, lo=lo, hi=lo + draw(st.integers(0, 1000)))
+    if kind is rc.ParamKind.ENUM:
+        choices = draw(st.lists(labels, min_size=1, max_size=4, unique=True))
+        return rc.ParamSpec(name=name, kind=kind, choices=tuple(choices))
+    return rc.ParamSpec(name=name, kind=kind)
+
+
+levers = st.builds(
+    rc.Lever,
+    name=labels,
+    pipeline=pipeline_ids,
+    resolver=st.sampled_from(RESOLVER_KEYS),
+    params=st.lists(param_specs(), max_size=3, unique_by=lambda p: p.name).map(tuple),
+)
+
+seat_cards = st.builds(
+    rc.SeatCard,
+    person=entity_ids,
+    office=labels,
+    playable=st.booleans(),
+    powers=st.lists(labels, max_size=3).map(tuple),
+    contacts=st.lists(st.builds(rc.Contact, person=entity_ids, channel=channels), max_size=3).map(
+        tuple
+    ),
+    principals=st.lists(entity_ids, max_size=2).map(tuple),
+    levers=st.lists(levers, max_size=2).map(tuple),
+    feeds=st.lists(feed_ids, max_size=2).map(tuple),
+    pipelines=st.lists(pipeline_ids, max_size=2).map(tuple),
+    constraints=st.lists(labels, max_size=2).map(tuple),
+    personal=st.lists(labels, max_size=2).map(tuple),
+    successor=st.none() | entity_ids,
+    horizon_days=st.integers(1, 365),
+    voice=st.text(max_size=200),
+    loyalty=st.integers(-5, 5),
+    doctrine=st.lists(labels, max_size=2).map(tuple),
+    interests=st.lists(labels, max_size=2).map(tuple),
+)
+
+biases = st.builds(
+    rd.Bias,
+    skew_pct=st.integers(-100, 100),
+    noise_pct=st.integers(0, 100),
+    omit_pct=st.integers(0, 100),
+    delay_days=st.integers(0, 365),
+)
+
+feeds = st.builds(
+    rd.Feed,
+    feed_id=feed_ids,
+    name=labels,
+    author=entity_ids,
+    kind=st.sampled_from(list(rd.DocumentKind)),
+    channel=channels,
+    classification=st.sampled_from(list(rd.Classification)),
+    every_days=st.none() | st.integers(1, 365),
+    latency_days=st.none() | st.integers(0, 365),
+    reports=st.lists(quantity_ids, max_size=3).map(tuple),
+    bias=biases,
+)
+
+
+@st.composite
+def steps(draw: st.DrawFn) -> rp.Step:
+    kind = draw(st.sampled_from(list(rp.StepKind)))
+    allowed = frozenset({rp.StepAction.PASS})
+    if kind is rp.StepKind.DECISION:
+        allowed |= draw(st.frozensets(st.sampled_from(list(rp.StepAction))))
+    return rp.Step(
+        person=draw(entity_ids),
+        kind=kind,
+        days=draw(st.none() | st.integers(0, 365)),
+        allowed=allowed,
+    )
+
+
+pipelines = st.builds(
+    rp.Pipeline,
+    pipeline_id=pipeline_ids,
+    name=labels,
+    steps=st.lists(steps(), min_size=1, max_size=4).map(tuple),
+)
+
+param_values = st.integers(-1000, 1000) | st.text(max_size=200)
+param_maps = st.dictionaries(labels, param_values, max_size=3)
+
+
+@st.composite
+def step_outcomes(draw: st.DrawFn) -> rp.StepOutcome:
+    action = draw(st.sampled_from(list(rp.StepAction)))
+    amended = draw(st.dictionaries(labels, param_values, min_size=1, max_size=2))
+    return rp.StepOutcome(
+        step=draw(st.integers(0, 11)),
+        person=draw(entity_ids),
+        action=action,
+        on=draw(in_world_dates),
+        amended=amended if action is rp.StepAction.AMEND else {},
+    )
+
+
+orders = st.builds(
+    rp.Order,
+    order_id=order_ids,
+    issuer=seat_ids,
+    lever=labels,
+    pipeline=pipeline_ids,
+    params=param_maps,
+    status=st.sampled_from(list(rp.OrderStatus)),
+    step=st.integers(0, 12),
+    filed=in_world_dates,
+    outcomes=st.lists(step_outcomes(), max_size=3).map(tuple),
+)
+
+
+@st.composite
+def document_views(draw: st.DrawFn) -> rd.DocumentView:
+    issued = draw(in_world_dates)
+    return rd.DocumentView(
+        doc_id=draw(document_ids),
+        kind=draw(st.sampled_from(list(rd.DocumentKind))),
+        author=draw(entity_ids),
+        issued=issued,
+        arrives=issued + draw(st.timedeltas(min_value=timedelta(0), max_value=timedelta(60))),
+        channel=draw(channels),
+        classification=draw(st.sampled_from(list(rd.Classification))),
+        title=draw(st.text(max_size=60)),
+        body=tuple(
+            draw(
+                st.lists(
+                    st.builds(
+                        rd.BodyField,
+                        label=labels,
+                        value=st.none() | st.integers(-(10**6), 10**6) | labels,
+                        unit=st.text(max_size=60),
+                    ),
+                    max_size=3,
+                )
+            )
+        ),
+        prose=draw(st.none() | st.text(max_size=400)),
+        scope=draw(scopes()),
+    )
+
+
+truth_refs = st.builds(
+    rd.TruthRef,
+    quantity_id=quantity_ids,
+    value=st.none() | st.integers(-(10**6), 10**6),
+    canary=st.none() | ulid,
+)
+
+
+@st.composite
+def documents_issued(draw: st.DrawFn) -> ev.DocumentIssued:
+    view = draw(document_views())
+    truth = rd.DocumentTruth(
+        doc_id=view.doc_id,
+        feed=draw(st.none() | feed_ids),
+        truth_refs=tuple(draw(st.lists(truth_refs, max_size=3))),
+        bias=draw(biases),
+    )
+    return ev.DocumentIssued(document=view, truth=truth)
+
+
+quantities = st.builds(
+    Quantity,
+    quantity_id=quantity_ids,
+    owner=st.none() | entity_ids,
+    name=labels,
+    value=st.none() | st.integers(-(10**9), 10**9),
+    unit=labels,
+    as_of=in_world_dates,
+    scope=st.none() | scopes(),
+)
+
+realism_payloads = st.one_of(
+    st.builds(ev.CampaignCreated, name=short_text, world=short_text, ruleset=st.just("realism")),
+    st.builds(
+        ev.CardsDeclared,
+        cards=st.lists(seat_cards, max_size=2).map(tuple),
+        feeds=st.lists(feeds, max_size=2).map(tuple),
+        pipelines=st.lists(pipelines, max_size=2).map(tuple),
+    ),
+    documents_issued(),
+    st.builds(ev.DocumentRead, seat_id=seat_ids, doc_id=document_ids),
+    st.builds(ev.OrderDrafted, order=orders),
+    st.builds(ev.OrderStepTaken, order_id=order_ids, outcome=step_outcomes()),
+    st.builds(ev.OrderSettled, order_id=order_ids, status=st.sampled_from(sorted(rp.SETTLED))),
+    st.builds(ev.QuantitySet, quantity=quantities),
+    st.builds(
+        ev.CounselHeld,
+        seat_id=seat_ids,
+        person=entity_ids,
+        channel=channels,
+        text=st.text(max_size=400),
+    ),
+)
+
 payloads = st.one_of(
+    realism_payloads,
     st.builds(ev.CampaignCreated, name=short_text, world=short_text),
     st.builds(ev.SettingsSet, settings=settings),
     st.builds(ev.EntityCreated, entity=entities),
@@ -567,4 +791,10 @@ ALL_MODEL_STRATEGIES: dict[str, st.SearchStrategy[object]] = {
     "Intent": cast(st.SearchStrategy[object], intents),
     "Goal": cast(st.SearchStrategy[object], goals()),
     "Event": cast(st.SearchStrategy[object], events),
+    "SeatCard": cast(st.SearchStrategy[object], seat_cards),
+    "Feed": cast(st.SearchStrategy[object], feeds),
+    "Pipeline": cast(st.SearchStrategy[object], pipelines),
+    "Order": cast(st.SearchStrategy[object], orders),
+    "DocumentView": cast(st.SearchStrategy[object], document_views()),
+    "Quantity": cast(st.SearchStrategy[object], quantities),
 }

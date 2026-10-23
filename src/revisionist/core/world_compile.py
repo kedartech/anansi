@@ -3,6 +3,10 @@
 Pure: the world file arrives already parsed and the campaign ID is given, so the
 same world into the same campaign yields the same events. Every problem is found
 before anything is emitted. The fold runs last, as a check on what was emitted.
+
+A realism world compiles to the same creation events plus ``ruleset: realism`` on
+``campaign_created``, one ``quantity_set`` per quantity and one ``cards_declared``.
+A legacy world compiles exactly as before.
 """
 
 from collections.abc import Callable, Mapping, Sequence
@@ -34,8 +38,11 @@ from revisionist.core.ids import (
     EntityId,
     EventId,
     FactId,
+    FeedId,
     GoalId,
     MeterId,
+    PipelineId,
+    QuantityId,
     RelationshipId,
     ScheduledEventId,
     SeatId,
@@ -64,9 +71,21 @@ from revisionist.core.ontology import (
     Seat,
     SeatKind,
 )
+from revisionist.core.realism.card import Contact, Lever, SeatCard
+from revisionist.core.realism.document import Feed
+from revisionist.core.realism.pipeline import Pipeline, Step
+from revisionist.core.realism.quantity import Quantity
 from revisionist.core.state import State
 from revisionist.core.visibility import PUBLIC, Scope, Visibility, private_to
-from revisionist.core.world import ClauseDecl, GoalDecl, ScopeDecl, ScopeSpec, WorldFile
+from revisionist.core.world import (
+    CardDecl,
+    Cited,
+    ClauseDecl,
+    GoalDecl,
+    ScopeDecl,
+    ScopeSpec,
+    WorldFile,
+)
 
 
 class WorldError(ValueError):
@@ -157,6 +176,10 @@ def _keyed(world: WorldFile) -> list[tuple[str, str]]:
     keyed += [("goal", d.key) for d in world.goals]
     keyed += [("contest", d.key) for d in world.contests]
     keyed += [("history", d.key) for d in world.schedule]
+    keyed += [("source", d.key) for d in world.sources]
+    keyed += [("quantity", d.key) for d in world.quantities]
+    keyed += [("feed", d.key) for d in world.feeds]
+    keyed += [("pipeline", d.key) for d in world.pipelines]
     return keyed
 
 
@@ -219,6 +242,7 @@ def _check(world: WorldFile, sections: Mapping[str, str], problems: list[str]) -
     _check_goals(world, sections, problems)
     _check_roster(world, sections, problems)
     _check_v3(world, sections, problems)
+    _check_realism(world, sections, problems)
 
 
 ROSTER_MIN, ROSTER_MAX = 8, 12
@@ -306,6 +330,70 @@ def _check_v3(world: WorldFile, sections: Mapping[str, str], problems: list[str]
             decl = contests.get(s.contest)
             if decl is not None and s.side not in decl.sides:
                 problems.append(f"{where}: {s.side} is not a side of {s.contest}")
+
+
+def _check_realism(world: WorldFile, sections: Mapping[str, str], problems: list[str]) -> None:
+    """Cards, feeds, pipelines, quantities and their citations (realism direction)."""
+    if world.ruleset == "legacy":
+        for name in ("cards", "feeds", "pipelines", "quantities", "sources"):
+            if getattr(world, name):
+                problems.append(f"{name}: only a realism world has {name}")
+        return
+    if world.start_date is None:
+        problems.append("world: a realism world needs a start_date")
+    for seat in world.seats:
+        if seat.controller is Controller.HUMAN:
+            problems.append(f"seat {seat.key}: a realism world names no human seat")
+    people = {d.key for d in world.entities if d.kind is EntityKind.PERSON}
+
+    def person(where: str, key: str | None) -> None:
+        _ref(problems, where, key, "entity", sections)
+        if key is not None and key in sections and key not in people:
+            problems.append(f"{where}: {key} is not a person")
+
+    for q in world.quantities:
+        where = f"quantity {q.key}"
+        _ref(problems, where, q.owner, "entity", sections)
+        _check_cited(problems, where, q, sections)
+    for f in world.feeds:
+        where = f"feed {f.key}"
+        person(where, f.author)
+        _refs(problems, where, f.reports, "quantity", sections)
+        _check_cited(problems, where, f, sections)
+    for pl in world.pipelines:
+        where = f"pipeline {pl.key}"
+        for step in pl.steps:
+            person(where, step.person)
+        _check_cited(problems, where, pl, sections)
+    carded: set[str] = set()
+    for c in world.cards:
+        where = f"card {c.person}"
+        person(where, c.person)
+        if c.person in carded:
+            problems.append(f"{where}: a second card for one person")
+        carded.add(c.person)
+        _refs(problems, where, c.principals, "entity", sections)
+        for k in c.contacts:
+            person(where, k.person)
+        _refs(problems, where, c.feeds, "feed", sections)
+        _refs(problems, where, c.pipelines, "pipeline", sections)
+        person(where, c.successor)
+        levers = [lv.name for lv in c.levers]
+        if len(set(levers)) != len(levers):
+            problems.append(f"{where}: a lever is named twice")
+        for lv in c.levers:
+            if lv.pipeline not in c.pipelines:
+                problems.append(f"{where}: lever {lv.name} names a pipeline not on the card")
+    playable = {c.person for c in world.cards if c.playable}
+    listed = {ch.entity for ch in world.roster}
+    for key in sorted(listed - playable):
+        problems.append(f"character {key}: a realism roster lists only playable cards")
+    for key in sorted(playable - listed):
+        problems.append(f"card {key}: playable, so it must be on the roster")
+
+
+def _check_cited(problems: list[str], where: str, decl: Cited, sections: Mapping[str, str]) -> None:
+    _ref(problems, where, decl.source, "source", sections)
 
 
 def _check_roster(world: WorldFile, sections: Mapping[str, str], problems: list[str]) -> None:
@@ -488,7 +576,7 @@ def _emit(
     world: WorldFile, ids: Mapping[str, str], sections: Mapping[str, str]
 ) -> list[tuple[ev.Payload, Scope]]:
     out: list[tuple[ev.Payload, Scope]] = [
-        (ev.CampaignCreated(name=world.name, world=world.world), PUBLIC),
+        (ev.CampaignCreated(name=world.name, world=world.world, ruleset=world.ruleset), PUBLIC),
         (ev.SettingsSet(settings=world.settings), PUBLIC),
     ]
     for e in world.entities:
@@ -590,6 +678,8 @@ def _emit(
         out.append((ev.CommitmentCreated(commitment=commitment), scope))
     if world.start_date is not None:
         out.append((ev.DateAdvanced(to=world.start_date), PUBLIC))
+    if world.ruleset == "realism":
+        out += _emit_realism(world, ids)
     for k in world.contests:
         scope = _scope(k.scope, ids)
         contest = Contest(
@@ -677,6 +767,90 @@ def _emit(
     if world.start:
         out.append((ev.SessionZeroOpened(start=world.start, notes=world.notes), PUBLIC))
     return out
+
+
+def _emit_realism(world: WorldFile, ids: Mapping[str, str]) -> list[tuple[ev.Payload, Scope]]:
+    """Quantities first, so the cards' feeds can name them. All engine only but the
+    quantities declared public: cards carry the AI policy fields."""
+    assert world.start_date is not None  # checked before emitting
+    out: list[tuple[ev.Payload, Scope]] = []
+    for q in world.quantities:
+        quantity = Quantity(
+            quantity_id=QuantityId(ids[q.key]),
+            owner=_maybe(ids, q.owner, EntityId),
+            name=q.name,
+            value=q.value,
+            unit=q.unit,
+            as_of=q.as_of or world.start_date,
+            scope=PUBLIC if q.public else None,
+        )
+        out.append((ev.QuantitySet(quantity=quantity), PUBLIC))
+    feeds = tuple(
+        Feed(
+            feed_id=FeedId(ids[f.key]),
+            name=f.name,
+            author=EntityId(ids[f.author]),
+            kind=f.kind,
+            channel=f.channel,
+            classification=f.classification,
+            every_days=f.every_days,
+            latency_days=f.latency_days,
+            reports=tuple(QuantityId(ids[k]) for k in f.reports),
+            bias=f.bias,
+        )
+        for f in world.feeds
+    )
+    pipelines = tuple(
+        Pipeline(
+            pipeline_id=PipelineId(ids[pl.key]),
+            name=pl.name,
+            steps=tuple(
+                Step(
+                    person=EntityId(ids[st.person]),
+                    kind=st.kind,
+                    days=st.days,
+                    allowed=frozenset(st.allowed),
+                )
+                for st in pl.steps
+            ),
+        )
+        for pl in world.pipelines
+    )
+    cards = tuple(_card(c, ids) for c in world.cards)
+    out.append((ev.CardsDeclared(cards=cards, feeds=feeds, pipelines=pipelines), PUBLIC))
+    return out
+
+
+def _card(c: CardDecl, ids: Mapping[str, str]) -> SeatCard:
+    return SeatCard(
+        person=EntityId(ids[c.person]),
+        office=c.office,
+        playable=c.playable,
+        powers=c.powers,
+        contacts=tuple(
+            Contact(person=EntityId(ids[k.person]), channel=k.channel) for k in c.contacts
+        ),
+        principals=tuple(EntityId(ids[k]) for k in c.principals),
+        levers=tuple(
+            Lever(
+                name=lv.name,
+                pipeline=PipelineId(ids[lv.pipeline]),
+                resolver=lv.resolver,
+                params=lv.params,
+            )
+            for lv in c.levers
+        ),
+        feeds=tuple(FeedId(ids[k]) for k in c.feeds),
+        pipelines=tuple(PipelineId(ids[k]) for k in c.pipelines),
+        constraints=c.constraints,
+        personal=c.personal,
+        successor=_maybe(ids, c.successor, EntityId),
+        horizon_days=c.horizon_days,
+        voice=c.voice,
+        loyalty=c.loyalty,
+        doctrine=c.doctrine,
+        interests=c.interests,
+    )
 
 
 def _fact_obj(

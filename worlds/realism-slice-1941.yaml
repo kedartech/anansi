@@ -1,0 +1,152 @@
+# Contract-proof slice of the autumn 1941 scenario (realism plan, Phase 1).
+#
+# Five real people with cards, two feeds and one pipeline, to find schema
+# defects while they are cheap. Not the scenario: that is
+# roosevelt-1941-autumn.yaml, authored in Phase 3.
+#
+# Offices are as of 1 September 1941. No seat is human here: the playable
+# cards (Roosevelt, Churchill, Konoe; plan 3a) go on the roster and the table
+# chooses. Every figure is `gap: true` until the Phase 0b source note cites it;
+# the sources below are candidates, not yet checked for coverage or licence.
+# horizon_days are design values [proposed], not data.
+
+world: realism-slice-1941
+name: Autumn 1941 (slice)
+ruleset: realism
+start: "Washington, September 1941"
+start_date: 1941-09-01
+
+entities:
+  - {key: usa, kind: polity, name: United States}
+  - {key: uk, kind: polity, name: United Kingdom}
+  - {key: japan, kind: polity, name: Japan}
+  - {key: house, kind: org, name: House of Representatives, parent: usa}
+  - {key: state_dept, kind: org, name: Department of State, parent: usa}
+  - {key: commons, kind: org, name: House of Commons, parent: uk}
+  - {key: roosevelt, kind: person, name: Franklin D. Roosevelt, parent: usa}
+  - {key: wallace, kind: person, name: Henry A. Wallace, parent: usa}
+  - {key: hull, kind: person, name: Cordell Hull, parent: state_dept}
+  - {key: rayburn, kind: person, name: Sam Rayburn, parent: house}
+  - {key: churchill, kind: person, name: Winston Churchill, parent: uk}
+  - {key: konoe, kind: person, name: Fumimaro Konoe, parent: japan}
+  - {key: hirohito, kind: person, name: Emperor Hirohito, parent: japan}
+  - {key: tojo, kind: person, name: Hideki Tojo, parent: japan}
+
+sources:
+  - key: frus_1941
+    title: Foreign Relations of the United States, 1941
+    note: Candidate (plan 0b). Coverage and licence not checked.
+  - key: voteview
+    title: "Voteview: congressional roll-call votes"
+    note: Candidate (plan 0b). Coverage and licence not checked.
+
+quantities:
+  - {key: house_votes_neutrality, owner: house, name: House votes for Neutrality Act revision, unit: votes, gap: true}
+  - {key: japan_oil_stocks, owner: japan, name: Japanese oil stocks, unit: months of supply, gap: true}
+
+feeds:
+  - key: state_dept_reports
+    name: State Department memoranda
+    author: hull
+    kind: memo
+    channel: letter
+    classification: confidential
+    reports: [japan_oil_stocks]
+    gap: true
+  - key: house_whip_count
+    name: The Speaker's count
+    author: rayburn
+    kind: whip_count
+    channel: telephone
+    reports: [house_votes_neutrality]
+    gap: true
+
+pipelines:
+  # The Senate side (Barkley) is not in this slice. The floor vote is the
+  # `votes` resolver's, at settlement, not a person's step.
+  - key: bill_through_congress
+    name: A bill through Congress
+    gap: true
+    steps:
+      - {person: rayburn, kind: decision, allowed: [pass, expedite, stall, amend, refuse, leak]}
+      - {person: roosevelt, kind: decision, allowed: [pass, refuse]}
+
+cards:
+  - person: roosevelt
+    office: President of the United States
+    playable: true
+    principals: [usa]
+    powers:
+      - Commander in Chief of the Army and Navy
+      - sign or veto bills
+      - issue executive orders
+      - make executive agreements
+    levers:
+      - name: send_bill
+        pipeline: bill_through_congress
+        resolver: votes
+        params:
+          - {name: bill, kind: enum, choices: [neutrality_revision]}
+    contacts:
+      - {person: hull, channel: in_person}
+      - {person: rayburn, channel: telephone}
+      - {person: churchill, channel: cable}
+    feeds: [state_dept_reports, house_whip_count]
+    pipelines: [bill_through_congress]
+    constraints:
+      - Congress alone declares war
+      - Congress holds appropriations
+      - Neutrality Act of 1939 in force
+    personal: [legs paralysed by polio; kept from the public]
+    successor: wallace
+    horizon_days: 14
+  - person: hull
+    office: Secretary of State
+    principals: [roosevelt]
+    powers: [conduct negotiations under instruction]
+    contacts:
+      - {person: roosevelt, channel: in_person}
+    horizon_days: 7
+  - person: rayburn
+    office: Speaker of the House of Representatives
+    principals: [house]
+    powers: [recognise members on the floor, refer bills to committee]
+    contacts:
+      - {person: roosevelt, channel: telephone}
+    horizon_days: 7
+  - person: churchill
+    office: Prime Minister of the United Kingdom
+    playable: true
+    principals: [commons]
+    powers: [appoint and dismiss ministers, Minister of Defence]
+    contacts:
+      - {person: roosevelt, channel: cable}
+    constraints:
+      - keeps the confidence of the Commons
+      - orders go through the Chiefs of Staff Committee
+    horizon_days: 14
+  - person: konoe
+    office: Prime Minister of Japan
+    playable: true
+    principals: [hirohito]
+    powers: [form or resign the cabinet]
+    constraints: [service ministers must be serving officers]
+    successor: tojo
+    horizon_days: 14
+
+# Nobody is pre-seated: players claim playable cards at Session Zero.
+seats: []
+
+roster:
+  - entity: roosevelt
+    pitch: Third-term President steering a neutral nation toward the Allies.
+    reach: Executive orders, the Navy, and what Congress will pass.
+    composite: false
+  - entity: churchill
+    pitch: Prime Minister holding on until America comes in.
+    reach: The War Cabinet, the Chiefs of Staff, and cables to Roosevelt.
+    composite: false
+  - entity: konoe
+    pitch: Prime Minister seeking a settlement with Washington before the Army moves.
+    reach: The cabinet, the Liaison Conference, and a summit he cannot arrange alone.
+    composite: false

@@ -5,9 +5,10 @@ Pure; the cryptography lives in ``engine/seal.py``. Two tiers of key:
 - the campaign key seals every event and snapshot of a sealed campaign, so the
   fold can always read the game;
 - a seat key seals that seat's own words: what its player typed
-  (``order_received``), what its agent asked back (``clarification_asked``) and
-  its private briefings (``narration_written``). None of these is folded, so
-  destroying a seat key erases them and replay still works.
+  (``order_received``), what its agent asked back (``clarification_asked``),
+  its private briefings (``narration_written``) and its counsel transcripts
+  (``counsel_held``). None of these is folded, so destroying a seat key erases
+  them and replay still works.
 """
 
 from typing import Any
@@ -22,7 +23,7 @@ from revisionist.core.visibility import Scope, Visibility
 def seal_holder(event: Event) -> SeatId | None:
     """The seat whose key seals this event, or ``None`` for the campaign key."""
     p = event.payload
-    if isinstance(p, ev.OrderReceived | ev.ClarificationAsked | ev.GoalProposed):
+    if isinstance(p, ev.OrderReceived | ev.ClarificationAsked | ev.GoalProposed | ev.CounselHeld):
         return p.seat_id
     if isinstance(p, ev.NarrationWritten) and event.scope.visibility is not Visibility.PUBLIC:
         return p.seat_id
@@ -46,9 +47,16 @@ def needs_admin_read(event: Event) -> bool:
     """Showing this event to a person is an admin read: something in it is not public.
 
     The envelope is not enough: ``delta_applied`` is logged Public even when its
-    delta creates a covert fact.
+    delta creates a covert fact. Realism truth has no seat to be scoped to, so a
+    document's truth half, a card's AI policy and an engine-only quantity count
+    as private whatever their envelope says.
     """
     if seal_holder(event) is not None:
+        return True
+    p = event.payload
+    if isinstance(p, ev.CardsDeclared | ev.DocumentIssued):
+        return True
+    if isinstance(p, ev.QuantitySet) and p.quantity.scope is None:
         return True
     return any(
         s.visibility is not Visibility.PUBLIC for s in [event.scope, *scopes_in(event.payload)]

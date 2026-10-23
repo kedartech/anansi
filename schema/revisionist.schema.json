@@ -467,6 +467,80 @@
         "title": "Betrayal",
         "type": "string"
       },
+      "Bias": {
+        "additionalProperties": false,
+        "description": "The transform the author's bias applied, in percent [proposed].",
+        "properties": {
+          "delay_days": {
+            "default": 0,
+            "maximum": 365,
+            "minimum": 0,
+            "title": "Delay Days",
+            "type": "integer"
+          },
+          "noise_pct": {
+            "default": 0,
+            "maximum": 100,
+            "minimum": 0,
+            "title": "Noise Pct",
+            "type": "integer"
+          },
+          "omit_pct": {
+            "default": 0,
+            "maximum": 100,
+            "minimum": 0,
+            "title": "Omit Pct",
+            "type": "integer"
+          },
+          "skew_pct": {
+            "default": 0,
+            "maximum": 100,
+            "minimum": -100,
+            "title": "Skew Pct",
+            "type": "integer"
+          }
+        },
+        "title": "Bias",
+        "type": "object"
+      },
+      "BodyField": {
+        "additionalProperties": false,
+        "description": "One structured line of a document: what the author claims, never the truth.",
+        "properties": {
+          "label": {
+            "maxLength": 60,
+            "title": "Label",
+            "type": "string"
+          },
+          "unit": {
+            "default": "",
+            "maxLength": 60,
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Value"
+          }
+        },
+        "required": [
+          "label"
+        ],
+        "title": "BodyField",
+        "type": "object"
+      },
       "BriefingDelivered": {
         "additionalProperties": false,
         "properties": {
@@ -558,6 +632,15 @@
             "title": "Name",
             "type": "string"
           },
+          "ruleset": {
+            "default": "legacy",
+            "enum": [
+              "legacy",
+              "realism"
+            ],
+            "title": "Ruleset",
+            "type": "string"
+          },
           "world": {
             "title": "World",
             "type": "string"
@@ -569,6 +652,58 @@
         ],
         "title": "CampaignCreated",
         "type": "object"
+      },
+      "CardsDeclared": {
+        "additionalProperties": false,
+        "description": "The scenario's cards, feeds and pipelines, compiled from the world file.\n\nOne event, after the entities it names, so the fold can check every\nreference at once. Engine only: cards carry the AI policy fields.",
+        "properties": {
+          "cards": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/SeatCard"
+            },
+            "title": "Cards",
+            "type": "array"
+          },
+          "feeds": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/Feed"
+            },
+            "title": "Feeds",
+            "type": "array"
+          },
+          "kind": {
+            "const": "cards_declared",
+            "default": "cards_declared",
+            "title": "Kind",
+            "type": "string"
+          },
+          "pipelines": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/Pipeline"
+            },
+            "title": "Pipelines",
+            "type": "array"
+          }
+        },
+        "title": "CardsDeclared",
+        "type": "object"
+      },
+      "ChannelKind": {
+        "description": "How words travel. Each trades speed against exposure (direction, channels table).",
+        "enum": [
+          "in_person",
+          "telephone",
+          "cable",
+          "letter",
+          "courier",
+          "radio",
+          "press"
+        ],
+        "title": "ChannelKind",
+        "type": "string"
       },
       "Character": {
         "additionalProperties": false,
@@ -737,6 +872,17 @@
         ],
         "title": "ClarificationAsked",
         "type": "object"
+      },
+      "Classification": {
+        "enum": [
+          "open",
+          "restricted",
+          "confidential",
+          "secret",
+          "most_secret"
+        ],
+        "title": "Classification",
+        "type": "string"
       },
       "Clause": {
         "additionalProperties": false,
@@ -1366,6 +1512,25 @@
         "title": "CommitmentStatusSet",
         "type": "object"
       },
+      "Contact": {
+        "additionalProperties": false,
+        "description": "A person this one can consult, and how the words travel.",
+        "properties": {
+          "channel": {
+            "$ref": "#/$defs/ChannelKind"
+          },
+          "person": {
+            "title": "Person",
+            "type": "string"
+          }
+        },
+        "required": [
+          "person",
+          "channel"
+        ],
+        "title": "Contact",
+        "type": "object"
+      },
       "Contest": {
         "additionalProperties": false,
         "description": "A pressure that keeps the world moving (spec \u00a75.3).\n\nA rivalry's track runs -100..100, positive favouring ``sides[0]``. A trial's\nruns 0..100, 100 = passed. ``momentum`` moves the track every turn whether or\nnot anyone acts. ``countdown_days`` is in-world days to the deciding point.",
@@ -1622,6 +1787,42 @@
           "costs"
         ],
         "title": "CostLogged",
+        "type": "object"
+      },
+      "CounselHeld": {
+        "additionalProperties": false,
+        "description": "A seat consulted a person on its card. The words are prose and change nothing;\na record, sealed with the seat's key like an order's text.",
+        "properties": {
+          "channel": {
+            "$ref": "#/$defs/ChannelKind"
+          },
+          "kind": {
+            "const": "counsel_held",
+            "default": "counsel_held",
+            "title": "Kind",
+            "type": "string"
+          },
+          "person": {
+            "title": "Person",
+            "type": "string"
+          },
+          "seat_id": {
+            "title": "Seat Id",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 8000,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "seat_id",
+          "person",
+          "channel",
+          "text"
+        ],
+        "title": "CounselHeld",
         "type": "object"
       },
       "DateAdvanced": {
@@ -2001,6 +2202,190 @@
         "title": "DivergenceChanged",
         "type": "object"
       },
+      "DocumentIssued": {
+        "additionalProperties": false,
+        "description": "A document is written. Its envelope scope is the view's; seats see it on arrival.",
+        "properties": {
+          "document": {
+            "$ref": "#/$defs/DocumentView"
+          },
+          "kind": {
+            "const": "document_issued",
+            "default": "document_issued",
+            "title": "Kind",
+            "type": "string"
+          },
+          "truth": {
+            "$ref": "#/$defs/DocumentTruth"
+          }
+        },
+        "required": [
+          "document",
+          "truth"
+        ],
+        "title": "DocumentIssued",
+        "type": "object"
+      },
+      "DocumentKind": {
+        "enum": [
+          "report",
+          "cable",
+          "memo",
+          "letter",
+          "poll",
+          "press",
+          "whip_count",
+          "intercept",
+          "transcript"
+        ],
+        "title": "DocumentKind",
+        "type": "string"
+      },
+      "DocumentRead": {
+        "additionalProperties": false,
+        "description": "A seat opened a document (the in-tray's unread mark). A record.",
+        "properties": {
+          "doc_id": {
+            "title": "Doc Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "document_read",
+            "default": "document_read",
+            "title": "Kind",
+            "type": "string"
+          },
+          "seat_id": {
+            "title": "Seat Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "seat_id",
+          "doc_id"
+        ],
+        "title": "DocumentRead",
+        "type": "object"
+      },
+      "DocumentTruth": {
+        "additionalProperties": false,
+        "description": "Engine only. Never in a ``View``, a snapshot or a prompt.",
+        "properties": {
+          "bias": {
+            "$ref": "#/$defs/Bias",
+            "default": {
+              "delay_days": 0,
+              "noise_pct": 0,
+              "omit_pct": 0,
+              "skew_pct": 0
+            }
+          },
+          "doc_id": {
+            "title": "Doc Id",
+            "type": "string"
+          },
+          "feed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Feed"
+          },
+          "truth_refs": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/TruthRef"
+            },
+            "title": "Truth Refs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "doc_id"
+        ],
+        "title": "DocumentTruth",
+        "type": "object"
+      },
+      "DocumentView": {
+        "additionalProperties": false,
+        "description": "The page a seat reads. Visible once in scope and ``arrives`` has come.",
+        "properties": {
+          "arrives": {
+            "format": "date",
+            "title": "Arrives",
+            "type": "string"
+          },
+          "author": {
+            "title": "Author",
+            "type": "string"
+          },
+          "body": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/BodyField"
+            },
+            "title": "Body",
+            "type": "array"
+          },
+          "channel": {
+            "$ref": "#/$defs/ChannelKind"
+          },
+          "classification": {
+            "$ref": "#/$defs/Classification",
+            "default": "open"
+          },
+          "doc_id": {
+            "title": "Doc Id",
+            "type": "string"
+          },
+          "issued": {
+            "format": "date",
+            "title": "Issued",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/$defs/DocumentKind"
+          },
+          "prose": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Prose"
+          },
+          "scope": {
+            "$ref": "#/$defs/Scope"
+          },
+          "title": {
+            "default": "",
+            "maxLength": 60,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "doc_id",
+          "kind",
+          "author",
+          "issued",
+          "arrives",
+          "channel",
+          "scope"
+        ],
+        "title": "DocumentView",
+        "type": "object"
+      },
       "Entity": {
         "additionalProperties": false,
         "properties": {
@@ -2360,6 +2745,89 @@
           "perceived"
         ],
         "title": "FeasibilityRated",
+        "type": "object"
+      },
+      "Feed": {
+        "additionalProperties": false,
+        "description": "A source of documents on a cadence (pillar 3). Whose desk it reaches is on the cards.",
+        "properties": {
+          "author": {
+            "title": "Author",
+            "type": "string"
+          },
+          "bias": {
+            "$ref": "#/$defs/Bias",
+            "default": {
+              "delay_days": 0,
+              "noise_pct": 0,
+              "omit_pct": 0,
+              "skew_pct": 0
+            }
+          },
+          "channel": {
+            "$ref": "#/$defs/ChannelKind"
+          },
+          "classification": {
+            "$ref": "#/$defs/Classification",
+            "default": "open"
+          },
+          "every_days": {
+            "anyOf": [
+              {
+                "maximum": 365,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Every Days"
+          },
+          "feed_id": {
+            "title": "Feed Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/$defs/DocumentKind"
+          },
+          "latency_days": {
+            "anyOf": [
+              {
+                "maximum": 365,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Latency Days"
+          },
+          "name": {
+            "maxLength": 60,
+            "title": "Name",
+            "type": "string"
+          },
+          "reports": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Reports",
+            "type": "array"
+          }
+        },
+        "required": [
+          "feed_id",
+          "name",
+          "author",
+          "kind",
+          "channel"
+        ],
+        "title": "Feed",
         "type": "object"
       },
       "Goal": {
@@ -2950,6 +3418,46 @@
         "title": "Lethality",
         "type": "string"
       },
+      "Lever": {
+        "additionalProperties": false,
+        "description": "Something the person can set moving. Names a pipeline and a resolver, never a verb.",
+        "properties": {
+          "name": {
+            "maxLength": 60,
+            "title": "Name",
+            "type": "string"
+          },
+          "params": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/ParamSpec"
+            },
+            "title": "Params",
+            "type": "array"
+          },
+          "pipeline": {
+            "title": "Pipeline",
+            "type": "string"
+          },
+          "resolver": {
+            "enum": [
+              "votes",
+              "shipping",
+              "production",
+              "opinion"
+            ],
+            "title": "Resolver",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "pipeline",
+          "resolver"
+        ],
+        "title": "Lever",
+        "type": "object"
+      },
       "Meter": {
         "additionalProperties": false,
         "properties": {
@@ -3194,6 +3702,98 @@
         "title": "OperationResolved",
         "type": "object"
       },
+      "Order": {
+        "additionalProperties": false,
+        "properties": {
+          "filed": {
+            "format": "date",
+            "title": "Filed",
+            "type": "string"
+          },
+          "issuer": {
+            "title": "Issuer",
+            "type": "string"
+          },
+          "lever": {
+            "maxLength": 60,
+            "title": "Lever",
+            "type": "string"
+          },
+          "order_id": {
+            "title": "Order Id",
+            "type": "string"
+          },
+          "outcomes": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/StepOutcome"
+            },
+            "title": "Outcomes",
+            "type": "array"
+          },
+          "params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                }
+              ]
+            },
+            "propertyNames": {
+              "maxLength": 60
+            },
+            "title": "Params",
+            "type": "object"
+          },
+          "pipeline": {
+            "title": "Pipeline",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/$defs/OrderStatus",
+            "default": "moving"
+          },
+          "step": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Step",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "order_id",
+          "issuer",
+          "lever",
+          "pipeline",
+          "filed"
+        ],
+        "title": "Order",
+        "type": "object"
+      },
+      "OrderDrafted": {
+        "additionalProperties": false,
+        "description": "A seat pulled a lever: the order enters its pipeline at step 0.",
+        "properties": {
+          "kind": {
+            "const": "order_drafted",
+            "default": "order_drafted",
+            "title": "Kind",
+            "type": "string"
+          },
+          "order": {
+            "$ref": "#/$defs/Order"
+          }
+        },
+        "required": [
+          "order"
+        ],
+        "title": "OrderDrafted",
+        "type": "object"
+      },
       "OrderReceived": {
         "additionalProperties": false,
         "description": "Raw player text. Always Private to the seat. Encrypted at rest from Layer 9.",
@@ -3221,6 +3821,67 @@
         "title": "OrderReceived",
         "type": "object"
       },
+      "OrderSettled": {
+        "additionalProperties": false,
+        "description": "The order left its pipeline: enacted, refused, lapsed or withdrawn.",
+        "properties": {
+          "kind": {
+            "const": "order_settled",
+            "default": "order_settled",
+            "title": "Kind",
+            "type": "string"
+          },
+          "order_id": {
+            "title": "Order Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/$defs/OrderStatus"
+          }
+        },
+        "required": [
+          "order_id",
+          "status"
+        ],
+        "title": "OrderSettled",
+        "type": "object"
+      },
+      "OrderStatus": {
+        "enum": [
+          "moving",
+          "enacted",
+          "refused",
+          "lapsed",
+          "withdrawn"
+        ],
+        "title": "OrderStatus",
+        "type": "string"
+      },
+      "OrderStepTaken": {
+        "additionalProperties": false,
+        "description": "The person at the order's current step acted on it.",
+        "properties": {
+          "kind": {
+            "const": "order_step_taken",
+            "default": "order_step_taken",
+            "title": "Kind",
+            "type": "string"
+          },
+          "order_id": {
+            "title": "Order Id",
+            "type": "string"
+          },
+          "outcome": {
+            "$ref": "#/$defs/StepOutcome"
+          }
+        },
+        "required": [
+          "order_id",
+          "outcome"
+        ],
+        "title": "OrderStepTaken",
+        "type": "object"
+      },
       "OutcomeTier": {
         "enum": [
           "fail_complication",
@@ -3230,6 +3891,69 @@
         ],
         "title": "OutcomeTier",
         "type": "string"
+      },
+      "ParamKind": {
+        "enum": [
+          "int",
+          "enum",
+          "entity",
+          "text"
+        ],
+        "title": "ParamKind",
+        "type": "string"
+      },
+      "ParamSpec": {
+        "additionalProperties": false,
+        "description": "One typed parameter of a lever. An order's params and every amendment must fit it.",
+        "properties": {
+          "choices": {
+            "default": [],
+            "items": {
+              "maxLength": 60,
+              "type": "string"
+            },
+            "title": "Choices",
+            "type": "array"
+          },
+          "hi": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Hi"
+          },
+          "kind": {
+            "$ref": "#/$defs/ParamKind"
+          },
+          "lo": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Lo"
+          },
+          "name": {
+            "maxLength": 60,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "kind"
+        ],
+        "title": "ParamSpec",
+        "type": "object"
       },
       "Persona": {
         "additionalProperties": false,
@@ -3266,6 +3990,36 @@
         "title": "Persona",
         "type": "object"
       },
+      "Pipeline": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 60,
+            "title": "Name",
+            "type": "string"
+          },
+          "pipeline_id": {
+            "title": "Pipeline Id",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/$defs/Step"
+            },
+            "maxItems": 12,
+            "minItems": 1,
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "pipeline_id",
+          "name",
+          "steps"
+        ],
+        "title": "Pipeline",
+        "type": "object"
+      },
       "Plausibility": {
         "enum": [
           "strict",
@@ -3274,6 +4028,93 @@
         ],
         "title": "Plausibility",
         "type": "string"
+      },
+      "Quantity": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 60,
+            "title": "Name",
+            "type": "string"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Owner"
+          },
+          "quantity_id": {
+            "title": "Quantity Id",
+            "type": "string"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Scope"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "unit": {
+            "maxLength": 60,
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Value"
+          }
+        },
+        "required": [
+          "quantity_id",
+          "name",
+          "unit",
+          "as_of"
+        ],
+        "title": "Quantity",
+        "type": "object"
+      },
+      "QuantitySet": {
+        "additionalProperties": false,
+        "description": "A quantity's value as of a date: authored at compile, computed by a resolver after.",
+        "properties": {
+          "kind": {
+            "const": "quantity_set",
+            "default": "quantity_set",
+            "title": "Kind",
+            "type": "string"
+          },
+          "quantity": {
+            "$ref": "#/$defs/Quantity"
+          }
+        },
+        "required": [
+          "quantity"
+        ],
+        "title": "QuantitySet",
+        "type": "object"
       },
       "RejectionReason": {
         "enum": [
@@ -3906,6 +4747,149 @@
         "title": "Seat",
         "type": "object"
       },
+      "SeatCard": {
+        "additionalProperties": false,
+        "description": "The whole card. The policy fields below are how code runs an unclaimed person;\nthey never leave the engine.",
+        "properties": {
+          "constraints": {
+            "default": [],
+            "items": {
+              "maxLength": 60,
+              "type": "string"
+            },
+            "title": "Constraints",
+            "type": "array"
+          },
+          "contacts": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/Contact"
+            },
+            "title": "Contacts",
+            "type": "array"
+          },
+          "doctrine": {
+            "default": [],
+            "items": {
+              "maxLength": 60,
+              "type": "string"
+            },
+            "title": "Doctrine",
+            "type": "array"
+          },
+          "feeds": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Feeds",
+            "type": "array"
+          },
+          "horizon_days": {
+            "maximum": 365,
+            "minimum": 1,
+            "title": "Horizon Days",
+            "type": "integer"
+          },
+          "interests": {
+            "default": [],
+            "items": {
+              "maxLength": 60,
+              "type": "string"
+            },
+            "title": "Interests",
+            "type": "array"
+          },
+          "levers": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/Lever"
+            },
+            "title": "Levers",
+            "type": "array"
+          },
+          "loyalty": {
+            "default": 0,
+            "maximum": 5,
+            "minimum": -5,
+            "title": "Loyalty",
+            "type": "integer"
+          },
+          "office": {
+            "maxLength": 60,
+            "title": "Office",
+            "type": "string"
+          },
+          "person": {
+            "title": "Person",
+            "type": "string"
+          },
+          "personal": {
+            "default": [],
+            "items": {
+              "maxLength": 60,
+              "type": "string"
+            },
+            "title": "Personal",
+            "type": "array"
+          },
+          "pipelines": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Pipelines",
+            "type": "array"
+          },
+          "playable": {
+            "default": false,
+            "title": "Playable",
+            "type": "boolean"
+          },
+          "powers": {
+            "default": [],
+            "items": {
+              "maxLength": 60,
+              "type": "string"
+            },
+            "title": "Powers",
+            "type": "array"
+          },
+          "principals": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Principals",
+            "type": "array"
+          },
+          "successor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Successor"
+          },
+          "voice": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Voice",
+            "type": "string"
+          }
+        },
+        "required": [
+          "person",
+          "office",
+          "horizon_days"
+        ],
+        "title": "SeatCard",
+        "type": "object"
+      },
       "SeatCreated": {
         "additionalProperties": false,
         "properties": {
@@ -4247,6 +5231,118 @@
         "title": "StatementIssued",
         "type": "object"
       },
+      "Step": {
+        "additionalProperties": false,
+        "properties": {
+          "allowed": {
+            "default": [
+              "pass"
+            ],
+            "items": {
+              "$ref": "#/$defs/StepAction"
+            },
+            "title": "Allowed",
+            "type": "array",
+            "uniqueItems": true
+          },
+          "days": {
+            "anyOf": [
+              {
+                "maximum": 365,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Days"
+          },
+          "kind": {
+            "$ref": "#/$defs/StepKind"
+          },
+          "person": {
+            "title": "Person",
+            "type": "string"
+          }
+        },
+        "required": [
+          "person",
+          "kind"
+        ],
+        "title": "Step",
+        "type": "object"
+      },
+      "StepAction": {
+        "enum": [
+          "expedite",
+          "stall",
+          "leak",
+          "amend",
+          "refuse",
+          "pass"
+        ],
+        "title": "StepAction",
+        "type": "string"
+      },
+      "StepKind": {
+        "enum": [
+          "decision",
+          "clerical"
+        ],
+        "title": "StepKind",
+        "type": "string"
+      },
+      "StepOutcome": {
+        "additionalProperties": false,
+        "description": "What the person at one step did with the order.",
+        "properties": {
+          "action": {
+            "$ref": "#/$defs/StepAction"
+          },
+          "amended": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                }
+              ]
+            },
+            "propertyNames": {
+              "maxLength": 60
+            },
+            "title": "Amended",
+            "type": "object"
+          },
+          "on": {
+            "format": "date",
+            "title": "On",
+            "type": "string"
+          },
+          "person": {
+            "title": "Person",
+            "type": "string"
+          },
+          "step": {
+            "minimum": 0,
+            "title": "Step",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "step",
+          "person",
+          "action",
+          "on"
+        ],
+        "title": "StepOutcome",
+        "type": "object"
+      },
       "TickClosed": {
         "additionalProperties": false,
         "properties": {
@@ -4316,7 +5412,12 @@
           "validate",
           "apply",
           "narrate",
-          "deliver"
+          "deliver",
+          "advance",
+          "pipelines",
+          "resolve",
+          "feeds",
+          "prose"
         ],
         "title": "TickStage",
         "type": "string"
@@ -4346,6 +5447,46 @@
           "stage"
         ],
         "title": "TickStageCompleted",
+        "type": "object"
+      },
+      "TruthRef": {
+        "additionalProperties": false,
+        "description": "One truth a document was built from, and its value when issued.",
+        "properties": {
+          "canary": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Canary"
+          },
+          "quantity_id": {
+            "title": "Quantity Id",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "quantity_id",
+          "value"
+        ],
+        "title": "TruthRef",
         "type": "object"
       },
       "Verb": {
@@ -4447,6 +5588,7 @@
             "asset_created": "#/$defs/AssetCreated",
             "briefing_delivered": "#/$defs/BriefingDelivered",
             "campaign_created": "#/$defs/CampaignCreated",
+            "cards_declared": "#/$defs/CardsDeclared",
             "character_claimed": "#/$defs/CharacterClaimed",
             "character_listed": "#/$defs/CharacterListed",
             "clarification_asked": "#/$defs/ClarificationAsked",
@@ -4456,11 +5598,14 @@
             "contest_decided": "#/$defs/ContestDecided",
             "contest_moved": "#/$defs/ContestMoved",
             "cost_logged": "#/$defs/CostLogged",
+            "counsel_held": "#/$defs/CounselHeld",
             "date_advanced": "#/$defs/DateAdvanced",
             "delta_applied": "#/$defs/DeltaApplied",
             "delta_proposed": "#/$defs/DeltaProposed",
             "delta_rejected": "#/$defs/DeltaRejected",
             "divergence_changed": "#/$defs/DivergenceChanged",
+            "document_issued": "#/$defs/DocumentIssued",
+            "document_read": "#/$defs/DocumentRead",
             "entity_created": "#/$defs/EntityCreated",
             "fact_asserted": "#/$defs/FactAsserted",
             "feasibility_rated": "#/$defs/FeasibilityRated",
@@ -4476,7 +5621,11 @@
             "narration_written": "#/$defs/NarrationWritten",
             "operation_opened": "#/$defs/OperationOpened",
             "operation_resolved": "#/$defs/OperationResolved",
+            "order_drafted": "#/$defs/OrderDrafted",
             "order_received": "#/$defs/OrderReceived",
+            "order_settled": "#/$defs/OrderSettled",
+            "order_step_taken": "#/$defs/OrderStepTaken",
+            "quantity_set": "#/$defs/QuantitySet",
             "relationship_set": "#/$defs/RelationshipSet",
             "rolled": "#/$defs/Rolled",
             "scheduled_event_created": "#/$defs/ScheduledEventCreated",
@@ -4646,6 +5795,30 @@
           },
           {
             "$ref": "#/$defs/AdminRead"
+          },
+          {
+            "$ref": "#/$defs/CardsDeclared"
+          },
+          {
+            "$ref": "#/$defs/DocumentIssued"
+          },
+          {
+            "$ref": "#/$defs/DocumentRead"
+          },
+          {
+            "$ref": "#/$defs/OrderDrafted"
+          },
+          {
+            "$ref": "#/$defs/OrderStepTaken"
+          },
+          {
+            "$ref": "#/$defs/OrderSettled"
+          },
+          {
+            "$ref": "#/$defs/QuantitySet"
+          },
+          {
+            "$ref": "#/$defs/CounselHeld"
           },
           {
             "$ref": "#/$defs/Sealed"
@@ -4915,6 +6088,94 @@
         "title": "Betrayal",
         "type": "string"
       },
+      "Bias": {
+        "additionalProperties": false,
+        "description": "The transform the author's bias applied, in percent [proposed].",
+        "properties": {
+          "delay_days": {
+            "default": 0,
+            "maximum": 365,
+            "minimum": 0,
+            "title": "Delay Days",
+            "type": "integer"
+          },
+          "noise_pct": {
+            "default": 0,
+            "maximum": 100,
+            "minimum": 0,
+            "title": "Noise Pct",
+            "type": "integer"
+          },
+          "omit_pct": {
+            "default": 0,
+            "maximum": 100,
+            "minimum": 0,
+            "title": "Omit Pct",
+            "type": "integer"
+          },
+          "skew_pct": {
+            "default": 0,
+            "maximum": 100,
+            "minimum": -100,
+            "title": "Skew Pct",
+            "type": "integer"
+          }
+        },
+        "title": "Bias",
+        "type": "object"
+      },
+      "BodyField": {
+        "additionalProperties": false,
+        "description": "One structured line of a document: what the author claims, never the truth.",
+        "properties": {
+          "label": {
+            "maxLength": 60,
+            "title": "Label",
+            "type": "string"
+          },
+          "unit": {
+            "default": "",
+            "maxLength": 60,
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Value"
+          }
+        },
+        "required": [
+          "label"
+        ],
+        "title": "BodyField",
+        "type": "object"
+      },
+      "ChannelKind": {
+        "description": "How words travel. Each trades speed against exposure (direction, channels table).",
+        "enum": [
+          "in_person",
+          "telephone",
+          "cable",
+          "letter",
+          "courier",
+          "radio",
+          "press"
+        ],
+        "title": "ChannelKind",
+        "type": "string"
+      },
       "Character": {
         "additionalProperties": false,
         "description": "A real person from the chosen moment that a player may claim (spec \u00a75 step 3).\n\nJudged by agency in history, not fame. Where the record names no one, the\ncharacter is a composite: named, built from what people in that role did,\nand labelled as such in the brief.",
@@ -5005,6 +6266,17 @@
         ],
         "title": "CharacterSide",
         "type": "object"
+      },
+      "Classification": {
+        "enum": [
+          "open",
+          "restricted",
+          "confidential",
+          "secret",
+          "most_secret"
+        ],
+        "title": "Classification",
+        "type": "string"
       },
       "Clause": {
         "additionalProperties": false,
@@ -5288,6 +6560,25 @@
         "title": "CommitmentStatus",
         "type": "string"
       },
+      "Contact": {
+        "additionalProperties": false,
+        "description": "A person this one can consult, and how the words travel.",
+        "properties": {
+          "channel": {
+            "$ref": "#/$defs/ChannelKind"
+          },
+          "person": {
+            "title": "Person",
+            "type": "string"
+          }
+        },
+        "required": [
+          "person",
+          "channel"
+        ],
+        "title": "Contact",
+        "type": "object"
+      },
       "Contest": {
         "additionalProperties": false,
         "description": "A pressure that keeps the world moving (spec \u00a75.3).\n\nA rivalry's track runs -100..100, positive favouring ``sides[0]``. A trial's\nruns 0..100, 100 = passed. ``momentum`` moves the track every turn whether or\nnot anyone acts. ``countdown_days`` is in-world days to the deciding point.",
@@ -5443,6 +6734,158 @@
           "value"
         ],
         "title": "DispositionAt",
+        "type": "object"
+      },
+      "Document": {
+        "additionalProperties": false,
+        "description": "A document as ``State`` holds it: both halves.",
+        "properties": {
+          "truth": {
+            "$ref": "#/$defs/DocumentTruth"
+          },
+          "view": {
+            "$ref": "#/$defs/DocumentView"
+          }
+        },
+        "required": [
+          "view",
+          "truth"
+        ],
+        "title": "Document",
+        "type": "object"
+      },
+      "DocumentKind": {
+        "enum": [
+          "report",
+          "cable",
+          "memo",
+          "letter",
+          "poll",
+          "press",
+          "whip_count",
+          "intercept",
+          "transcript"
+        ],
+        "title": "DocumentKind",
+        "type": "string"
+      },
+      "DocumentTruth": {
+        "additionalProperties": false,
+        "description": "Engine only. Never in a ``View``, a snapshot or a prompt.",
+        "properties": {
+          "bias": {
+            "$ref": "#/$defs/Bias",
+            "default": {
+              "delay_days": 0,
+              "noise_pct": 0,
+              "omit_pct": 0,
+              "skew_pct": 0
+            }
+          },
+          "doc_id": {
+            "title": "Doc Id",
+            "type": "string"
+          },
+          "feed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Feed"
+          },
+          "truth_refs": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/TruthRef"
+            },
+            "title": "Truth Refs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "doc_id"
+        ],
+        "title": "DocumentTruth",
+        "type": "object"
+      },
+      "DocumentView": {
+        "additionalProperties": false,
+        "description": "The page a seat reads. Visible once in scope and ``arrives`` has come.",
+        "properties": {
+          "arrives": {
+            "format": "date",
+            "title": "Arrives",
+            "type": "string"
+          },
+          "author": {
+            "title": "Author",
+            "type": "string"
+          },
+          "body": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/BodyField"
+            },
+            "title": "Body",
+            "type": "array"
+          },
+          "channel": {
+            "$ref": "#/$defs/ChannelKind"
+          },
+          "classification": {
+            "$ref": "#/$defs/Classification",
+            "default": "open"
+          },
+          "doc_id": {
+            "title": "Doc Id",
+            "type": "string"
+          },
+          "issued": {
+            "format": "date",
+            "title": "Issued",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/$defs/DocumentKind"
+          },
+          "prose": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Prose"
+          },
+          "scope": {
+            "$ref": "#/$defs/Scope"
+          },
+          "title": {
+            "default": "",
+            "maxLength": 60,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "doc_id",
+          "kind",
+          "author",
+          "issued",
+          "arrives",
+          "channel",
+          "scope"
+        ],
+        "title": "DocumentView",
         "type": "object"
       },
       "Entity": {
@@ -5621,6 +7064,89 @@
           "scope"
         ],
         "title": "Fact",
+        "type": "object"
+      },
+      "Feed": {
+        "additionalProperties": false,
+        "description": "A source of documents on a cadence (pillar 3). Whose desk it reaches is on the cards.",
+        "properties": {
+          "author": {
+            "title": "Author",
+            "type": "string"
+          },
+          "bias": {
+            "$ref": "#/$defs/Bias",
+            "default": {
+              "delay_days": 0,
+              "noise_pct": 0,
+              "omit_pct": 0,
+              "skew_pct": 0
+            }
+          },
+          "channel": {
+            "$ref": "#/$defs/ChannelKind"
+          },
+          "classification": {
+            "$ref": "#/$defs/Classification",
+            "default": "open"
+          },
+          "every_days": {
+            "anyOf": [
+              {
+                "maximum": 365,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Every Days"
+          },
+          "feed_id": {
+            "title": "Feed Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/$defs/DocumentKind"
+          },
+          "latency_days": {
+            "anyOf": [
+              {
+                "maximum": 365,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Latency Days"
+          },
+          "name": {
+            "maxLength": 60,
+            "title": "Name",
+            "type": "string"
+          },
+          "reports": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Reports",
+            "type": "array"
+          }
+        },
+        "required": [
+          "feed_id",
+          "name",
+          "author",
+          "kind",
+          "channel"
+        ],
+        "title": "Feed",
         "type": "object"
       },
       "Goal": {
@@ -5892,6 +7418,46 @@
         "title": "Lethality",
         "type": "string"
       },
+      "Lever": {
+        "additionalProperties": false,
+        "description": "Something the person can set moving. Names a pipeline and a resolver, never a verb.",
+        "properties": {
+          "name": {
+            "maxLength": 60,
+            "title": "Name",
+            "type": "string"
+          },
+          "params": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/ParamSpec"
+            },
+            "title": "Params",
+            "type": "array"
+          },
+          "pipeline": {
+            "title": "Pipeline",
+            "type": "string"
+          },
+          "resolver": {
+            "enum": [
+              "votes",
+              "shipping",
+              "production",
+              "opinion"
+            ],
+            "title": "Resolver",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "pipeline",
+          "resolver"
+        ],
+        "title": "Lever",
+        "type": "object"
+      },
       "Meter": {
         "additionalProperties": false,
         "properties": {
@@ -5983,6 +7549,152 @@
         "title": "Mode",
         "type": "string"
       },
+      "Order": {
+        "additionalProperties": false,
+        "properties": {
+          "filed": {
+            "format": "date",
+            "title": "Filed",
+            "type": "string"
+          },
+          "issuer": {
+            "title": "Issuer",
+            "type": "string"
+          },
+          "lever": {
+            "maxLength": 60,
+            "title": "Lever",
+            "type": "string"
+          },
+          "order_id": {
+            "title": "Order Id",
+            "type": "string"
+          },
+          "outcomes": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/StepOutcome"
+            },
+            "title": "Outcomes",
+            "type": "array"
+          },
+          "params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                }
+              ]
+            },
+            "propertyNames": {
+              "maxLength": 60
+            },
+            "title": "Params",
+            "type": "object"
+          },
+          "pipeline": {
+            "title": "Pipeline",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/$defs/OrderStatus",
+            "default": "moving"
+          },
+          "step": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Step",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "order_id",
+          "issuer",
+          "lever",
+          "pipeline",
+          "filed"
+        ],
+        "title": "Order",
+        "type": "object"
+      },
+      "OrderStatus": {
+        "enum": [
+          "moving",
+          "enacted",
+          "refused",
+          "lapsed",
+          "withdrawn"
+        ],
+        "title": "OrderStatus",
+        "type": "string"
+      },
+      "ParamKind": {
+        "enum": [
+          "int",
+          "enum",
+          "entity",
+          "text"
+        ],
+        "title": "ParamKind",
+        "type": "string"
+      },
+      "ParamSpec": {
+        "additionalProperties": false,
+        "description": "One typed parameter of a lever. An order's params and every amendment must fit it.",
+        "properties": {
+          "choices": {
+            "default": [],
+            "items": {
+              "maxLength": 60,
+              "type": "string"
+            },
+            "title": "Choices",
+            "type": "array"
+          },
+          "hi": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Hi"
+          },
+          "kind": {
+            "$ref": "#/$defs/ParamKind"
+          },
+          "lo": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Lo"
+          },
+          "name": {
+            "maxLength": 60,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "kind"
+        ],
+        "title": "ParamSpec",
+        "type": "object"
+      },
       "Persona": {
         "additionalProperties": false,
         "description": "The player-designed face of their agent. Narrative only; no mechanics.",
@@ -6028,6 +7740,36 @@
         "title": "Phase",
         "type": "string"
       },
+      "Pipeline": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 60,
+            "title": "Name",
+            "type": "string"
+          },
+          "pipeline_id": {
+            "title": "Pipeline Id",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/$defs/Step"
+            },
+            "maxItems": 12,
+            "minItems": 1,
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "pipeline_id",
+          "name",
+          "steps"
+        ],
+        "title": "Pipeline",
+        "type": "object"
+      },
       "Plausibility": {
         "enum": [
           "strict",
@@ -6036,6 +7778,73 @@
         ],
         "title": "Plausibility",
         "type": "string"
+      },
+      "Quantity": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 60,
+            "title": "Name",
+            "type": "string"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Owner"
+          },
+          "quantity_id": {
+            "title": "Quantity Id",
+            "type": "string"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Scope"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "unit": {
+            "maxLength": 60,
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Value"
+          }
+        },
+        "required": [
+          "quantity_id",
+          "name",
+          "unit",
+          "as_of"
+        ],
+        "title": "Quantity",
+        "type": "object"
       },
       "Relationship": {
         "additionalProperties": false,
@@ -6347,6 +8156,149 @@
         "title": "Seat",
         "type": "object"
       },
+      "SeatCard": {
+        "additionalProperties": false,
+        "description": "The whole card. The policy fields below are how code runs an unclaimed person;\nthey never leave the engine.",
+        "properties": {
+          "constraints": {
+            "default": [],
+            "items": {
+              "maxLength": 60,
+              "type": "string"
+            },
+            "title": "Constraints",
+            "type": "array"
+          },
+          "contacts": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/Contact"
+            },
+            "title": "Contacts",
+            "type": "array"
+          },
+          "doctrine": {
+            "default": [],
+            "items": {
+              "maxLength": 60,
+              "type": "string"
+            },
+            "title": "Doctrine",
+            "type": "array"
+          },
+          "feeds": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Feeds",
+            "type": "array"
+          },
+          "horizon_days": {
+            "maximum": 365,
+            "minimum": 1,
+            "title": "Horizon Days",
+            "type": "integer"
+          },
+          "interests": {
+            "default": [],
+            "items": {
+              "maxLength": 60,
+              "type": "string"
+            },
+            "title": "Interests",
+            "type": "array"
+          },
+          "levers": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/Lever"
+            },
+            "title": "Levers",
+            "type": "array"
+          },
+          "loyalty": {
+            "default": 0,
+            "maximum": 5,
+            "minimum": -5,
+            "title": "Loyalty",
+            "type": "integer"
+          },
+          "office": {
+            "maxLength": 60,
+            "title": "Office",
+            "type": "string"
+          },
+          "person": {
+            "title": "Person",
+            "type": "string"
+          },
+          "personal": {
+            "default": [],
+            "items": {
+              "maxLength": 60,
+              "type": "string"
+            },
+            "title": "Personal",
+            "type": "array"
+          },
+          "pipelines": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Pipelines",
+            "type": "array"
+          },
+          "playable": {
+            "default": false,
+            "title": "Playable",
+            "type": "boolean"
+          },
+          "powers": {
+            "default": [],
+            "items": {
+              "maxLength": 60,
+              "type": "string"
+            },
+            "title": "Powers",
+            "type": "array"
+          },
+          "principals": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Principals",
+            "type": "array"
+          },
+          "successor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Successor"
+          },
+          "voice": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Voice",
+            "type": "string"
+          }
+        },
+        "required": [
+          "person",
+          "office",
+          "horizon_days"
+        ],
+        "title": "SeatCard",
+        "type": "object"
+      },
       "SeatKind": {
         "enum": [
           "player",
@@ -6506,6 +8458,158 @@
         "title": "Settings",
         "type": "object"
       },
+      "Step": {
+        "additionalProperties": false,
+        "properties": {
+          "allowed": {
+            "default": [
+              "pass"
+            ],
+            "items": {
+              "$ref": "#/$defs/StepAction"
+            },
+            "title": "Allowed",
+            "type": "array",
+            "uniqueItems": true
+          },
+          "days": {
+            "anyOf": [
+              {
+                "maximum": 365,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Days"
+          },
+          "kind": {
+            "$ref": "#/$defs/StepKind"
+          },
+          "person": {
+            "title": "Person",
+            "type": "string"
+          }
+        },
+        "required": [
+          "person",
+          "kind"
+        ],
+        "title": "Step",
+        "type": "object"
+      },
+      "StepAction": {
+        "enum": [
+          "expedite",
+          "stall",
+          "leak",
+          "amend",
+          "refuse",
+          "pass"
+        ],
+        "title": "StepAction",
+        "type": "string"
+      },
+      "StepKind": {
+        "enum": [
+          "decision",
+          "clerical"
+        ],
+        "title": "StepKind",
+        "type": "string"
+      },
+      "StepOutcome": {
+        "additionalProperties": false,
+        "description": "What the person at one step did with the order.",
+        "properties": {
+          "action": {
+            "$ref": "#/$defs/StepAction"
+          },
+          "amended": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                }
+              ]
+            },
+            "propertyNames": {
+              "maxLength": 60
+            },
+            "title": "Amended",
+            "type": "object"
+          },
+          "on": {
+            "format": "date",
+            "title": "On",
+            "type": "string"
+          },
+          "person": {
+            "title": "Person",
+            "type": "string"
+          },
+          "step": {
+            "minimum": 0,
+            "title": "Step",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "step",
+          "person",
+          "action",
+          "on"
+        ],
+        "title": "StepOutcome",
+        "type": "object"
+      },
+      "TruthRef": {
+        "additionalProperties": false,
+        "description": "One truth a document was built from, and its value when issued.",
+        "properties": {
+          "canary": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Canary"
+          },
+          "quantity_id": {
+            "title": "Quantity Id",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "quantity_id",
+          "value"
+        ],
+        "title": "TruthRef",
+        "type": "object"
+      },
       "Verb": {
         "description": "Closed list. Adding one is a schema change with a migration note.",
         "enum": [
@@ -6560,6 +8664,13 @@
         "title": "Campaign Id",
         "type": "string"
       },
+      "cards": {
+        "additionalProperties": {
+          "$ref": "#/$defs/SeatCard"
+        },
+        "title": "Cards",
+        "type": "object"
+      },
       "clocks": {
         "additionalProperties": {
           "$ref": "#/$defs/Clock"
@@ -6587,6 +8698,13 @@
         "title": "Divergence",
         "type": "integer"
       },
+      "documents": {
+        "additionalProperties": {
+          "$ref": "#/$defs/Document"
+        },
+        "title": "Documents",
+        "type": "object"
+      },
       "entities": {
         "additionalProperties": {
           "$ref": "#/$defs/Entity"
@@ -6599,6 +8717,13 @@
           "$ref": "#/$defs/Fact"
         },
         "title": "Facts",
+        "type": "object"
+      },
+      "feeds": {
+        "additionalProperties": {
+          "$ref": "#/$defs/Feed"
+        },
+        "title": "Feeds",
         "type": "object"
       },
       "frozen": {
@@ -6641,6 +8766,13 @@
         "title": "Meters",
         "type": "object"
       },
+      "orders": {
+        "additionalProperties": {
+          "$ref": "#/$defs/Order"
+        },
+        "title": "Orders",
+        "type": "object"
+      },
       "pending": {
         "additionalProperties": {
           "$ref": "#/$defs/Intent"
@@ -6651,6 +8783,20 @@
       "phase": {
         "$ref": "#/$defs/Phase",
         "default": "play"
+      },
+      "pipelines": {
+        "additionalProperties": {
+          "$ref": "#/$defs/Pipeline"
+        },
+        "title": "Pipelines",
+        "type": "object"
+      },
+      "quantities": {
+        "additionalProperties": {
+          "$ref": "#/$defs/Quantity"
+        },
+        "title": "Quantities",
+        "type": "object"
       },
       "relationships": {
         "additionalProperties": {
@@ -6665,6 +8811,15 @@
         },
         "title": "Roster",
         "type": "object"
+      },
+      "ruleset": {
+        "default": "legacy",
+        "enum": [
+          "legacy",
+          "realism"
+        ],
+        "title": "Ruleset",
+        "type": "string"
       },
       "scheduled": {
         "additionalProperties": {
@@ -6938,6 +9093,101 @@
         "title": "Betrayal",
         "type": "string"
       },
+      "BodyField": {
+        "additionalProperties": false,
+        "description": "One structured line of a document: what the author claims, never the truth.",
+        "properties": {
+          "label": {
+            "maxLength": 60,
+            "title": "Label",
+            "type": "string"
+          },
+          "unit": {
+            "default": "",
+            "maxLength": 60,
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Value"
+          }
+        },
+        "required": [
+          "label"
+        ],
+        "title": "BodyField",
+        "type": "object"
+      },
+      "CardFace": {
+        "additionalProperties": false,
+        "description": "What anyone knows of the office: who holds it, its powers and its channels.",
+        "properties": {
+          "contacts": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/Contact"
+            },
+            "title": "Contacts",
+            "type": "array"
+          },
+          "office": {
+            "maxLength": 60,
+            "title": "Office",
+            "type": "string"
+          },
+          "person": {
+            "title": "Person",
+            "type": "string"
+          },
+          "playable": {
+            "default": false,
+            "title": "Playable",
+            "type": "boolean"
+          },
+          "powers": {
+            "default": [],
+            "items": {
+              "maxLength": 60,
+              "type": "string"
+            },
+            "title": "Powers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "person",
+          "office"
+        ],
+        "title": "CardFace",
+        "type": "object"
+      },
+      "ChannelKind": {
+        "description": "How words travel. Each trades speed against exposure (direction, channels table).",
+        "enum": [
+          "in_person",
+          "telephone",
+          "cable",
+          "letter",
+          "courier",
+          "radio",
+          "press"
+        ],
+        "title": "ChannelKind",
+        "type": "string"
+      },
       "Character": {
         "additionalProperties": false,
         "description": "A real person from the chosen moment that a player may claim (spec \u00a75 step 3).\n\nJudged by agency in history, not fame. Where the record names no one, the\ncharacter is a composite: named, built from what people in that role did,\nand labelled as such in the brief.",
@@ -7028,6 +9278,17 @@
         ],
         "title": "CharacterSide",
         "type": "object"
+      },
+      "Classification": {
+        "enum": [
+          "open",
+          "restricted",
+          "confidential",
+          "secret",
+          "most_secret"
+        ],
+        "title": "Classification",
+        "type": "string"
       },
       "Clause": {
         "additionalProperties": false,
@@ -7311,6 +9572,25 @@
         "title": "CommitmentStatus",
         "type": "string"
       },
+      "Contact": {
+        "additionalProperties": false,
+        "description": "A person this one can consult, and how the words travel.",
+        "properties": {
+          "channel": {
+            "$ref": "#/$defs/ChannelKind"
+          },
+          "person": {
+            "title": "Person",
+            "type": "string"
+          }
+        },
+        "required": [
+          "person",
+          "channel"
+        ],
+        "title": "Contact",
+        "type": "object"
+      },
       "Contest": {
         "additionalProperties": false,
         "description": "A pressure that keeps the world moving (spec \u00a75.3).\n\nA rivalry's track runs -100..100, positive favouring ``sides[0]``. A trial's\nruns 0..100, 100 = passed. ``momentum`` moves the track every turn whether or\nnot anyone acts. ``countdown_days`` is in-world days to the deciding point.",
@@ -7432,6 +9712,118 @@
         "title": "ControlsAsset",
         "type": "object"
       },
+      "Desk": {
+        "additionalProperties": false,
+        "description": "The face plus what the person works with. Shown only to the person's own seat.",
+        "properties": {
+          "constraints": {
+            "default": [],
+            "items": {
+              "maxLength": 60,
+              "type": "string"
+            },
+            "title": "Constraints",
+            "type": "array"
+          },
+          "contacts": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/Contact"
+            },
+            "title": "Contacts",
+            "type": "array"
+          },
+          "feeds": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Feeds",
+            "type": "array"
+          },
+          "horizon_days": {
+            "maximum": 365,
+            "minimum": 1,
+            "title": "Horizon Days",
+            "type": "integer"
+          },
+          "levers": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/Lever"
+            },
+            "title": "Levers",
+            "type": "array"
+          },
+          "office": {
+            "maxLength": 60,
+            "title": "Office",
+            "type": "string"
+          },
+          "person": {
+            "title": "Person",
+            "type": "string"
+          },
+          "personal": {
+            "default": [],
+            "items": {
+              "maxLength": 60,
+              "type": "string"
+            },
+            "title": "Personal",
+            "type": "array"
+          },
+          "pipelines": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Pipelines",
+            "type": "array"
+          },
+          "playable": {
+            "default": false,
+            "title": "Playable",
+            "type": "boolean"
+          },
+          "powers": {
+            "default": [],
+            "items": {
+              "maxLength": 60,
+              "type": "string"
+            },
+            "title": "Powers",
+            "type": "array"
+          },
+          "principals": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Principals",
+            "type": "array"
+          },
+          "successor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Successor"
+          }
+        },
+        "required": [
+          "person",
+          "office",
+          "horizon_days"
+        ],
+        "title": "Desk",
+        "type": "object"
+      },
       "DispositionAt": {
         "additionalProperties": false,
         "properties": {
@@ -7466,6 +9858,96 @@
           "value"
         ],
         "title": "DispositionAt",
+        "type": "object"
+      },
+      "DocumentKind": {
+        "enum": [
+          "report",
+          "cable",
+          "memo",
+          "letter",
+          "poll",
+          "press",
+          "whip_count",
+          "intercept",
+          "transcript"
+        ],
+        "title": "DocumentKind",
+        "type": "string"
+      },
+      "DocumentView": {
+        "additionalProperties": false,
+        "description": "The page a seat reads. Visible once in scope and ``arrives`` has come.",
+        "properties": {
+          "arrives": {
+            "format": "date",
+            "title": "Arrives",
+            "type": "string"
+          },
+          "author": {
+            "title": "Author",
+            "type": "string"
+          },
+          "body": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/BodyField"
+            },
+            "title": "Body",
+            "type": "array"
+          },
+          "channel": {
+            "$ref": "#/$defs/ChannelKind"
+          },
+          "classification": {
+            "$ref": "#/$defs/Classification",
+            "default": "open"
+          },
+          "doc_id": {
+            "title": "Doc Id",
+            "type": "string"
+          },
+          "issued": {
+            "format": "date",
+            "title": "Issued",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/$defs/DocumentKind"
+          },
+          "prose": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Prose"
+          },
+          "scope": {
+            "$ref": "#/$defs/Scope"
+          },
+          "title": {
+            "default": "",
+            "maxLength": 60,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "doc_id",
+          "kind",
+          "author",
+          "issued",
+          "arrives",
+          "channel",
+          "scope"
+        ],
+        "title": "DocumentView",
         "type": "object"
       },
       "Entity": {
@@ -7915,6 +10397,46 @@
         "title": "Lethality",
         "type": "string"
       },
+      "Lever": {
+        "additionalProperties": false,
+        "description": "Something the person can set moving. Names a pipeline and a resolver, never a verb.",
+        "properties": {
+          "name": {
+            "maxLength": 60,
+            "title": "Name",
+            "type": "string"
+          },
+          "params": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/ParamSpec"
+            },
+            "title": "Params",
+            "type": "array"
+          },
+          "pipeline": {
+            "title": "Pipeline",
+            "type": "string"
+          },
+          "resolver": {
+            "enum": [
+              "votes",
+              "shipping",
+              "production",
+              "opinion"
+            ],
+            "title": "Resolver",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "pipeline",
+          "resolver"
+        ],
+        "title": "Lever",
+        "type": "object"
+      },
       "Meter": {
         "additionalProperties": false,
         "properties": {
@@ -8006,6 +10528,152 @@
         "title": "Mode",
         "type": "string"
       },
+      "Order": {
+        "additionalProperties": false,
+        "properties": {
+          "filed": {
+            "format": "date",
+            "title": "Filed",
+            "type": "string"
+          },
+          "issuer": {
+            "title": "Issuer",
+            "type": "string"
+          },
+          "lever": {
+            "maxLength": 60,
+            "title": "Lever",
+            "type": "string"
+          },
+          "order_id": {
+            "title": "Order Id",
+            "type": "string"
+          },
+          "outcomes": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/StepOutcome"
+            },
+            "title": "Outcomes",
+            "type": "array"
+          },
+          "params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                }
+              ]
+            },
+            "propertyNames": {
+              "maxLength": 60
+            },
+            "title": "Params",
+            "type": "object"
+          },
+          "pipeline": {
+            "title": "Pipeline",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/$defs/OrderStatus",
+            "default": "moving"
+          },
+          "step": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Step",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "order_id",
+          "issuer",
+          "lever",
+          "pipeline",
+          "filed"
+        ],
+        "title": "Order",
+        "type": "object"
+      },
+      "OrderStatus": {
+        "enum": [
+          "moving",
+          "enacted",
+          "refused",
+          "lapsed",
+          "withdrawn"
+        ],
+        "title": "OrderStatus",
+        "type": "string"
+      },
+      "ParamKind": {
+        "enum": [
+          "int",
+          "enum",
+          "entity",
+          "text"
+        ],
+        "title": "ParamKind",
+        "type": "string"
+      },
+      "ParamSpec": {
+        "additionalProperties": false,
+        "description": "One typed parameter of a lever. An order's params and every amendment must fit it.",
+        "properties": {
+          "choices": {
+            "default": [],
+            "items": {
+              "maxLength": 60,
+              "type": "string"
+            },
+            "title": "Choices",
+            "type": "array"
+          },
+          "hi": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Hi"
+          },
+          "kind": {
+            "$ref": "#/$defs/ParamKind"
+          },
+          "lo": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Lo"
+          },
+          "name": {
+            "maxLength": 60,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "kind"
+        ],
+        "title": "ParamSpec",
+        "type": "object"
+      },
       "Persona": {
         "additionalProperties": false,
         "description": "The player-designed face of their agent. Narrative only; no mechanics.",
@@ -8059,6 +10727,73 @@
         ],
         "title": "Plausibility",
         "type": "string"
+      },
+      "Quantity": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 60,
+            "title": "Name",
+            "type": "string"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Owner"
+          },
+          "quantity_id": {
+            "title": "Quantity Id",
+            "type": "string"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Scope"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "unit": {
+            "maxLength": 60,
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Value"
+          }
+        },
+        "required": [
+          "quantity_id",
+          "name",
+          "unit",
+          "as_of"
+        ],
+        "title": "Quantity",
+        "type": "object"
       },
       "Relationship": {
         "additionalProperties": false,
@@ -8558,6 +11293,67 @@
         "title": "Settings",
         "type": "object"
       },
+      "StepAction": {
+        "enum": [
+          "expedite",
+          "stall",
+          "leak",
+          "amend",
+          "refuse",
+          "pass"
+        ],
+        "title": "StepAction",
+        "type": "string"
+      },
+      "StepOutcome": {
+        "additionalProperties": false,
+        "description": "What the person at one step did with the order.",
+        "properties": {
+          "action": {
+            "$ref": "#/$defs/StepAction"
+          },
+          "amended": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                }
+              ]
+            },
+            "propertyNames": {
+              "maxLength": 60
+            },
+            "title": "Amended",
+            "type": "object"
+          },
+          "on": {
+            "format": "date",
+            "title": "On",
+            "type": "string"
+          },
+          "person": {
+            "title": "Person",
+            "type": "string"
+          },
+          "step": {
+            "minimum": 0,
+            "title": "Step",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "step",
+          "person",
+          "action",
+          "on"
+        ],
+        "title": "StepOutcome",
+        "type": "object"
+      },
       "Verb": {
         "description": "Closed list. Adding one is a schema change with a migration note.",
         "enum": [
@@ -8612,6 +11408,13 @@
         "title": "Campaign Id",
         "type": "string"
       },
+      "cards": {
+        "additionalProperties": {
+          "$ref": "#/$defs/CardFace"
+        },
+        "title": "Cards",
+        "type": "object"
+      },
       "clocks": {
         "additionalProperties": {
           "$ref": "#/$defs/Clock"
@@ -8633,11 +11436,29 @@
         "title": "Contests",
         "type": "object"
       },
+      "desk": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/Desk"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
       "divergence": {
         "default": 0,
         "minimum": 0,
         "title": "Divergence",
         "type": "integer"
+      },
+      "documents": {
+        "additionalProperties": {
+          "$ref": "#/$defs/DocumentView"
+        },
+        "title": "Documents",
+        "type": "object"
       },
       "entities": {
         "additionalProperties": {
@@ -8683,6 +11504,13 @@
         "title": "Meters",
         "type": "object"
       },
+      "orders": {
+        "additionalProperties": {
+          "$ref": "#/$defs/Order"
+        },
+        "title": "Orders",
+        "type": "object"
+      },
       "own_pending": {
         "default": [],
         "items": {
@@ -8694,6 +11522,13 @@
       "phase": {
         "$ref": "#/$defs/Phase",
         "default": "play"
+      },
+      "quantities": {
+        "additionalProperties": {
+          "$ref": "#/$defs/Quantity"
+        },
+        "title": "Quantities",
+        "type": "object"
       },
       "relationships": {
         "additionalProperties": {
@@ -8708,6 +11543,15 @@
         },
         "title": "Roster",
         "type": "object"
+      },
+      "ruleset": {
+        "default": "legacy",
+        "enum": [
+          "legacy",
+          "realism"
+        ],
+        "title": "Ruleset",
+        "type": "string"
       },
       "scheduled": {
         "additionalProperties": {

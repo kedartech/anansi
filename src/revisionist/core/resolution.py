@@ -48,6 +48,23 @@ class TickStage(StrEnum):
     APPLY = "apply"
     NARRATE = "narrate"
     DELIVER = "deliver"
+    # The realism runner's stages, appended so legacy markers keep their values.
+    ADVANCE = "advance"
+    PIPELINES = "pipelines"
+    RESOLVE = "resolve"
+    FEEDS = "feeds"
+    PROSE = "prose"
+
+
+LEGACY_STAGES: tuple[TickStage, ...] = (
+    TickStage.FREEZE,
+    TickStage.PROPOSE,
+    TickStage.VALIDATE,
+    TickStage.APPLY,
+    TickStage.NARRATE,
+    TickStage.DELIVER,
+)
+"""The stages ``run_tick`` completes, in order. Realism's run in their own runner."""
 
 
 class RejectionReason(StrEnum):

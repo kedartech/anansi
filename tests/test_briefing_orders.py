@@ -9,7 +9,7 @@ from revisionist.core import events as ev
 from revisionist.core.ids import SeatId
 from revisionist.core.intent import Verb
 from revisionist.core.orders import ORDERS_HEADER
-from revisionist.core.resolution import TickStage
+from revisionist.core.resolution import LEGACY_STAGES, TickStage
 from revisionist.core.state import View
 from revisionist.engine.providers import (
     KeywordSafety,
@@ -22,7 +22,7 @@ from revisionist.engine.tick import Narration, Providers, file_intent, run_tick
 from tests import fixtures as fx
 from tests.test_tick import _file_some, _intent, _script, store  # noqa: F401  (the fixture)
 
-STAGES = list(TickStage)
+STAGES = list(LEGACY_STAGES)
 
 
 class _Recording:

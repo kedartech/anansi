@@ -1,0 +1,99 @@
+# A toy realism world for tests (realism contract, Phase 1).
+#
+# Three people, every one playable: whoever the table seats is human, and the
+# rest are run by code from their cards. No seat is named here. One feed, one
+# pipeline, one quantity, one source. The numbers are invented for the toy
+# and cited to the one source that says so.
+
+world: realism-toy
+name: Realism Toy
+ruleset: realism
+start: "Port Vell, spring 1900"
+start_date: 1900-04-02
+
+entities:
+  - {key: vell, kind: polity, name: Vell}
+  - {key: council, kind: org, name: The Vell Council, parent: vell}
+  - {key: ada, kind: person, name: Ada Mor, parent: vell}
+  - {key: bram, kind: person, name: Bram Tull, parent: council}
+  - {key: cora, kind: person, name: Cora Senn, parent: vell}
+
+sources:
+  - key: toy
+    title: Invented for the toy world
+    note: Not history. Stands in for a real citation in tests.
+    verified: true
+
+quantities:
+  - {key: council_votes, owner: council, name: Council votes for the levy, value: 7, unit: votes, source: toy}
+
+feeds:
+  - key: council_count
+    name: Bram's count of the Council
+    author: bram
+    kind: whip_count
+    channel: letter
+    every_days: 7
+    latency_days: 1
+    reports: [council_votes]
+    bias: {skew_pct: 10}
+    source: toy
+
+pipelines:
+  - key: levy_bill
+    name: A levy through the Council
+    source: toy
+    steps:
+      - {person: cora, kind: clerical, days: 2}
+      - {person: bram, kind: decision, days: 5, allowed: [pass, stall, amend, refuse, leak]}
+
+cards:
+  - person: ada
+    office: First Citizen of Vell
+    playable: true
+    principals: [vell]
+    powers: [propose a levy, sign a levy]
+    levers:
+      - name: propose_levy
+        pipeline: levy_bill
+        resolver: votes
+        params:
+          - {name: rate, kind: int, lo: 1, hi: 10}
+          - {name: purpose, kind: enum, choices: [harbour, militia]}
+    contacts:
+      - {person: bram, channel: letter}
+      - {person: cora, channel: in_person}
+    feeds: [council_count]
+    pipelines: [levy_bill]
+    constraints: [the Council holds the purse]
+    horizon_days: 14
+    voice: Brisk, plain, impatient with ceremony.
+    doctrine: [reformer]
+  - person: bram
+    office: Speaker of the Council
+    playable: true
+    principals: [council]
+    powers: [schedule Council business]
+    contacts:
+      - {person: ada, channel: letter}
+    horizon_days: 7
+    voice: Careful; counts before he speaks.
+    loyalty: 1
+    interests: [keep the Council's purse]
+  - person: cora
+    office: Clerk of the Council
+    playable: true
+    principals: [council]
+    powers: [enrol bills]
+    contacts:
+      - {person: ada, channel: in_person}
+    horizon_days: 3
+    successor: bram
+
+# Nobody is pre-seated: players claim playable cards at Session Zero.
+seats: []
+
+roster:
+  - {entity: ada, pitch: The reformer who wants a harbour., reach: The levy and the Council's ear., composite: true}
+  - {entity: bram, pitch: The Speaker who counts every vote., reach: The Council's calendar., composite: true}
+  - {entity: cora, pitch: The clerk every bill must pass., reach: The rolls of the Council., composite: true}

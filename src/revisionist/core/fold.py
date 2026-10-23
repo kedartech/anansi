@@ -37,6 +37,8 @@ from revisionist.core.ontology import (
     SeatKind,
     SeatStatus,
 )
+from revisionist.core.realism.document import Document
+from revisionist.core.realism.pipeline import ADVANCES, SETTLED, OrderStatus, StepAction
 from revisionist.core.state import State
 from revisionist.core.visibility import PUBLIC, Scope
 
@@ -114,7 +116,7 @@ def _mutate(state: State, event: Event) -> State:
     p = event.payload
     match p:
         case ev.CampaignCreated():
-            return state
+            return state.model_copy(update={"ruleset": p.ruleset})
         case ev.SettingsSet():
             return state.model_copy(update={"settings": p.settings})
         case ev.EntityCreated():
@@ -344,8 +346,119 @@ def _mutate(state: State, event: Event) -> State:
             return state.model_copy(
                 update={"pending": pending, "frozen": (), "tick": event.tick + 1}
             )
+        case (
+            ev.CardsDeclared()
+            | ev.DocumentIssued()
+            | ev.OrderDrafted()
+            | ev.OrderStepTaken()
+            | ev.OrderSettled()
+            | ev.QuantitySet()
+        ):
+            if state.ruleset != "realism":
+                raise FoldError(f"{event.kind} belongs to a realism campaign")
+            return _realism(state, p)
         case _:
             raise FoldError(f"mutating kind {event.kind!r} has no fold case")
+
+
+# --- realism --------------------------------------------------------------------
+
+
+def _realism(state: State, p: ev.Payload) -> State:
+    """Store and update realism records. Deciding what they say is the engine's job."""
+    match p:
+        case ev.CardsDeclared():
+            pipelines = dict(state.pipelines)
+            for pl in p.pipelines:
+                _fresh(pipelines, pl.pipeline_id, "pipeline")
+                for step in pl.steps:
+                    _need(state.entities, step.person, "entity")
+                pipelines[pl.pipeline_id] = pl
+            feeds = dict(state.feeds)
+            for f in p.feeds:
+                _fresh(feeds, f.feed_id, "feed")
+                _need(state.entities, f.author, "entity")
+                for qid in f.reports:
+                    _need(state.quantities, qid, "quantity")
+                feeds[f.feed_id] = f
+            cards = dict(state.cards)
+            for c in p.cards:
+                _fresh(cards, c.person, "card")
+                person = _need(state.entities, c.person, "entity")
+                if person.kind is not EntityKind.PERSON:
+                    raise FoldError(f"card {c.person} is not a person")
+                named = [*c.principals, *(k.person for k in c.contacts)]
+                for entity in [*named, *([c.successor] if c.successor else [])]:
+                    _need(state.entities, entity, "entity")
+                for fid in c.feeds:
+                    _need(feeds, fid, "feed")
+                for pid in c.pipelines:
+                    _need(pipelines, pid, "pipeline")
+                for lever in c.levers:
+                    if lever.pipeline not in c.pipelines:
+                        raise FoldError(
+                            f"card {c.person}: lever {lever.name} names another pipeline"
+                        )
+                cards[c.person] = c
+            return state.model_copy(update={"cards": cards, "feeds": feeds, "pipelines": pipelines})
+        case ev.DocumentIssued():
+            doc = Document(view=p.document, truth=p.truth)
+            _fresh(state.documents, doc.view.doc_id, "document")
+            _need(state.entities, doc.view.author, "entity")
+            if doc.truth.feed is not None:
+                _need(state.feeds, doc.truth.feed, "feed")
+            for ref in doc.truth.truth_refs:
+                _need(state.quantities, ref.quantity_id, "quantity")
+            return state.model_copy(
+                update={"documents": _put(state.documents, doc.view.doc_id, doc)}
+            )
+        case ev.OrderDrafted():
+            o = p.order
+            _fresh(state.orders, o.order_id, "order")
+            _need(state.seats, o.issuer, "seat")
+            _need(state.pipelines, o.pipeline, "pipeline")
+            if o.status is not OrderStatus.MOVING or o.step or o.outcomes:
+                raise FoldError(f"order {o.order_id} must start at its first step")
+            return state.model_copy(update={"orders": _put(state.orders, o.order_id, o)})
+        case ev.OrderStepTaken():
+            o = _need(state.orders, p.order_id, "order")
+            steps = state.pipelines[o.pipeline].steps
+            out = p.outcome
+            if o.status in SETTLED:
+                raise FoldError(f"order {o.order_id} is settled")
+            if out.step != o.step or o.step >= len(steps):
+                raise FoldError(f"order {o.order_id} is not at step {out.step}")
+            if out.person != steps[o.step].person or out.action not in steps[o.step].allowed:
+                raise FoldError(f"order {o.order_id}: step {o.step} does not allow that")
+            params = dict(o.params)
+            if out.action is StepAction.AMEND:
+                if not set(out.amended) <= set(params):
+                    raise FoldError(f"order {o.order_id}: an amendment names a new parameter")
+                params.update(out.amended)
+            o = o.model_copy(
+                update={
+                    "params": params,
+                    "step": o.step + 1 if out.action in ADVANCES else o.step,
+                    "outcomes": (*o.outcomes, out),
+                }
+            )
+            return state.model_copy(update={"orders": _put(state.orders, o.order_id, o)})
+        case ev.OrderSettled():
+            o = _need(state.orders, p.order_id, "order")
+            if o.status in SETTLED or p.status not in SETTLED:
+                raise FoldError(f"order {o.order_id} cannot settle as {p.status.value}")
+            o = o.model_copy(update={"status": p.status})
+            return state.model_copy(update={"orders": _put(state.orders, o.order_id, o)})
+        case ev.QuantitySet():
+            q = p.quantity
+            if q.owner is not None:
+                _need(state.entities, q.owner, "entity")
+            old = state.quantities.get(q.quantity_id)
+            if old is not None and q.as_of < old.as_of:
+                raise FoldError(f"quantity {q.quantity_id} is already set as of {old.as_of}")
+            return state.model_copy(update={"quantities": _put(state.quantities, q.quantity_id, q)})
+        case _:
+            raise FoldError(f"kind {p.kind!r} is not a realism record")
 
 
 # --- deltas -------------------------------------------------------------------
