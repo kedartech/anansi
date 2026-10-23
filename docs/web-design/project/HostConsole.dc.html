@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Host console</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&amp;family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&amp;family=IBM+Plex+Mono:wght@400;500&amp;family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&amp;display=swap">
+<style>
+body{margin:0;background:#000}
+</style>
+</helmet>
+<div style="height: 100vh; min-height: 720px; box-sizing: border-box; display: flex; flex-direction: column; background: #000000; padding: 0 6px 6px; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; color: #1F1B16; overflow: hidden">
+
+<header style="min-height: 52px; display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 6px 12px; color: #EDE3D1">
+  <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><path d="M27 3C19 4.5 13.5 10 12.5 17.5L15 20C22.5 19 27.5 12 27 3Z" fill="#B87333"></path><path d="M26 4.5L13.8 18.8" stroke="#000000" stroke-width="1.2"></path><path d="M13 19.5L15 21.5L4 30Z" fill="#B87333"></path><path d="M10.6 18.6L15.6 23.6" stroke="#B87333" stroke-width="2"></path></svg>
+  <span style="font-size: 13px; font-weight: 600; letter-spacing: 0.32em; color: #B87333">REVISIONIST</span>
+  <span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 16px">Their Finest Hour</span>
+  <div style="margin-left: auto; display: flex; align-items: center; gap: 12px">
+    <span style="font-size: 13px; color: #A89A86">Signed in as ironside</span>
+    <button type="button" aria-label="Report a bug" style="width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid #85705A; color: #EDE3D1"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8.5 7a3.5 3.5 0 0 1 7 0"></path><rect x="7" y="8" width="10" height="12" rx="5"></rect><path d="M12 12v8M3 13h4M17 13h4M4 8l3 2M20 8l-3 2M4 20l3-2.5M20 20l-3-2.5"></path></svg></button>
+  </div>
+</header>
+<!-- host banner: the separation -->
+<div style="flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 10px 16px; background: #B87333; color: #000000">
+  <span style="font-size: 14px; font-weight: 600; letter-spacing: 0.16em">HOST CONSOLE</span>
+  <span style="font-size: 14px">Nothing here reaches your seat. Your own seat sees only what Alan Brooke would.</span>
+  <a href="Seat-Brooke.dc.html" style="margin-left: auto; height: 32px; padding: 0 14px; display: inline-flex; align-items: center; background: #000000; color: #B87333; text-decoration: none; font-size: 13px; font-weight: 600">Return to your seat · Alan Brooke</a>
+</div>
+
+<div style="flex: 1; min-height: 0; display: grid; grid-template-columns: 220px minmax(0, 1fr); background: #D8CFBA">
+  <nav aria-label="Host console" style="min-height: 0; overflow-y: auto; border-right: 1px solid #1F1B16; padding: 14px 10px; display: flex; flex-direction: column; gap: 2px; background: #E4DCCB">
+    <sc-for list="{{nav}}" as="n" hint-placeholder-count="10">
+      <a href="{{n.href}}" aria-current="{{n.cur}}" style="display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; text-decoration: none; font-size: 14px; font-weight: {{n.w}}; background: {{n.bg}}; color: {{n.fg}}">{{n.label}}</a>
+    </sc-for>
+  </nav>
+
+  <main style="min-height: 0; overflow-y: auto; padding: 20px 24px 28px">
+
+    <!-- ================= OVERVIEW ================= -->
+    <sc-if value="{{isOverview}}" hint-placeholder-val="{{true}}">
+      <div style="display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px">
+          <h1 style="margin: 0; font-size: 22px; font-weight: 600">Overview</h1>
+          <span style="font-size: 14px; color: #4D463B">Tick 6 of about 30 · in-world 4 June 1940 · running</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr)); gap: 16px; align-items: start">
+
+          <!-- TICKS -->
+          <section aria-label="Ticks" style="background: #F2ECDF; border: 1px solid #1F1B16; display: flex; flex-direction: column">
+            <div style="display: flex; align-items: center; padding: 10px 14px; border-bottom: 1px solid #1F1B16"><h2 style="margin: 0; font-size: 15px; font-weight: 600">Ticks</h2><span style="margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>Running</span></div>
+            <div style="padding: 12px 14px; display: flex; flex-direction: column; gap: 10px">
+              <div style="display: flex; align-items: baseline; gap: 10px"><span style="font-size: 28px; font-weight: 600; font-feature-settings: 'tnum'">14 h 22 m</span><span style="font-size: 13px; color: #4D463B">to tick 7 · daily at 20:00 London</span></div>
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 13px"><div role="img" aria-label="3 of 5 player seats filed" style="display: flex; gap: 3px"><span style="width: 18px; height: 10px; background: #1F1B16; border: 1px solid #1F1B16"></span><span style="width: 18px; height: 10px; background: #1F1B16; border: 1px solid #1F1B16"></span><span style="width: 18px; height: 10px; background: #1F1B16; border: 1px solid #1F1B16"></span><span style="width: 18px; height: 10px; background: #FAF7F0; border: 1px solid #1F1B16"></span><span style="width: 18px; height: 10px; background: #FAF7F0; border: 1px solid #1F1B16"></span></div><span>3 of 5 player seats have filed. Ticks early when all have.</span></div>
+              <div style="display: flex; flex-wrap: wrap; gap: 8px">
+                <button type="button" style="height: 34px; padding: 0 14px; background: #1F1B16; color: #F2ECDF; border: 0; border-radius: 2px; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">Advance now</button>
+                <button type="button" style="height: 34px; padding: 0 14px; background: transparent; border: 1px solid #1F1B16; border-radius: 2px; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">Pause</button>
+                <button type="button" disabled="" style="height: 34px; padding: 0 14px; background: #C9C0AC; color: #4D463B; border: 0; border-radius: 2px; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">Resume</button>
+                <button type="button" style="height: 34px; padding: 0 6px; background: none; border: 0; color: #2A3D66; text-decoration: underline; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">Change schedule</button>
+              </div>
+              <span style="font-size: 12px; color: #4D463B">Advancing now locks every seat's orders at once. Players are told the tick came early, not why.</span>
+            </div>
+          </section>
+
+          <!-- INVITES -->
+          <section aria-label="Invites" style="background: #F2ECDF; border: 1px solid #1F1B16; display: flex; flex-direction: column">
+            <div style="display: flex; align-items: center; padding: 10px 14px; border-bottom: 1px solid #1F1B16"><h2 style="margin: 0; font-size: 15px; font-weight: 600">Invites</h2><button type="button" style="margin-left: auto; height: 30px; padding: 0 12px; background: #1F1B16; color: #F2ECDF; border: 0; font: 500 12px 'IBM Plex Sans', Arial, sans-serif">Issue invite</button></div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px">
+              <thead><tr style="text-align: left"><th scope="col" style="padding: 8px 14px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4D463B">Code</th><th scope="col" style="padding: 8px 14px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4D463B">Issued</th><th scope="col" style="padding: 8px 14px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4D463B">Status</th></tr></thead>
+              <tbody>
+                <sc-for list="{{invites}}" as="i" hint-placeholder-count="5">
+                  <tr style="border-top: 1px solid #DDD4C2"><td style="padding: 7px 14px; font-family: 'IBM Plex Mono', ui-monospace, monospace">{{i.code}}</td><td style="padding: 7px 14px; color: #4D463B">{{i.issued}}</td><td style="padding: 7px 14px; font-weight: {{i.w}}">{{i.status}}</td></tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </section>
+
+          <!-- SEATS -->
+          <section aria-label="Seats" style="background: #F2ECDF; border: 1px solid #1F1B16; display: flex; flex-direction: column">
+            <div style="display: flex; align-items: center; padding: 10px 14px; border-bottom: 1px solid #1F1B16"><h2 style="margin: 0; font-size: 15px; font-weight: 600">Seats</h2><span style="margin-left: auto; font-size: 12px; color: #4D463B">5 players · the rest run by the game master</span></div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px">
+              <thead><tr style="text-align: left"><th scope="col" style="padding: 8px 14px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4D463B">Seat</th><th scope="col" style="padding: 8px 14px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4D463B">Held by</th><th scope="col" style="padding: 8px 14px"><span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Actions</span></th></tr></thead>
+              <tbody>
+                <sc-for list="{{seats}}" as="s" hint-placeholder-count="6">
+                  <tr style="border-top: 1px solid #DDD4C2"><td style="padding: 7px 14px; font-weight: 600">{{s.seat}}</td><td style="padding: 7px 14px">{{s.who}}</td><td style="padding: 7px 14px; text-align: right"><button type="button" style="height: 26px; padding: 0 8px; background: transparent; border: 1px solid #7A705F; font: 500 12px 'IBM Plex Sans', Arial, sans-serif">{{s.action}}</button></td></tr>
+                </sc-for>
+              </tbody>
+            </table>
+            <span style="padding: 8px 14px 12px; font-size: 12px; color: #4D463B">Who holds which seat is host-only. Players never see it.</span>
+          </section>
+
+          <!-- FLAGS -->
+          <section aria-label="Goal flags" style="background: #F2ECDF; border: 1px solid #1F1B16; display: flex; flex-direction: column">
+            <div style="display: flex; align-items: center; padding: 10px 14px; border-bottom: 1px solid #1F1B16"><h2 style="margin: 0; font-size: 15px; font-weight: 600">Goal flags</h2><span style="margin-left: auto; font-size: 12px; font-weight: 600; padding: 1px 6px; background: #9B2C22; color: #F2ECDF">1 to review</span></div>
+            <div style="padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; line-height: 19px">
+              <span><strong style="font-weight: 600">Benito Mussolini</strong> · held by lisbon_rose</span>
+              <span>The balance check thinks this goal may be met by the history schedule alone (Italy declares war on 10 June).</span>
+              <span style="color: #4D463B">You see the check's reason, not the goal. You hold a seat in this game too.</span>
+              <div style="display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px">
+                <button type="button" style="height: 32px; padding: 0 12px; background: #1F1B16; color: #F2ECDF; border: 0; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">Approve</button>
+                <button type="button" style="height: 32px; padding: 0 12px; background: transparent; border: 1px solid #1F1B16; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">Ask them to revise</button>
+                <button type="button" style="height: 32px; padding: 0 12px; background: transparent; border: 1px solid #9B2C22; color: #9B2C22; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">Read the goal · logged</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- COST -->
+          <section aria-label="Model cost" style="background: #F2ECDF; border: 1px solid #1F1B16; display: flex; flex-direction: column">
+            <div style="display: flex; align-items: center; padding: 10px 14px; border-bottom: 1px solid #1F1B16"><h2 style="margin: 0; font-size: 15px; font-weight: 600">Model cost</h2><span style="margin-left: auto; font-size: 12px; color: #4D463B">sample figures</span></div>
+            <div style="padding: 12px 14px; display: flex; flex-direction: column; gap: 10px">
+              <div style="display: flex; gap: 28px"><div style="display: flex; flex-direction: column"><span style="font-size: 12px; color: #4D463B">This tick so far</span><span style="font-size: 22px; font-weight: 600; font-feature-settings: 'tnum'">$1.40</span></div><div style="display: flex; flex-direction: column"><span style="font-size: 12px; color: #4D463B">Season total</span><span style="font-size: 22px; font-weight: 600; font-feature-settings: 'tnum'">$13.15</span></div></div>
+              <div role="img" aria-label="Cost per tick: tick 1 $3.80, tick 2 $1.90, tick 3 $2.05, tick 4 $1.70, tick 5 $2.30, tick 6 $1.40 so far" style="display: flex; flex-direction: column; gap: 4px">
+                <sc-for list="{{cost}}" as="c" hint-placeholder-count="6">
+                  <div style="display: grid; grid-template-columns: 52px minmax(0, 1fr) 52px; gap: 8px; align-items: center; font-size: 12px"><span style="color: #4D463B">Tick {{c.t}}</span><span style="height: 10px; width: {{c.w}}; background: #4D463B"></span><span style="text-align: right; font-feature-settings: 'tnum'">{{c.v}}</span></div>
+                </sc-for>
+              </div>
+              <span style="font-size: 12px; color: #4D463B">Tick 1 includes building the world.</span>
+            </div>
+          </section>
+
+          <!-- LEAK SCAN -->
+          <section aria-label="Leak scan" style="background: #F2ECDF; border: 1px solid #1F1B16; display: flex; flex-direction: column">
+            <div style="display: flex; align-items: center; padding: 10px 14px; border-bottom: 1px solid #1F1B16"><h2 style="margin: 0; font-size: 15px; font-weight: 600">Leak scan</h2><button type="button" style="margin-left: auto; height: 30px; padding: 0 12px; background: transparent; border: 1px solid #1F1B16; font: 500 12px 'IBM Plex Sans', Arial, sans-serif">Run now</button></div>
+            <div style="padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 19px">
+              <span style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #2E5A3C"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m4 12 5 5L20 6"></path></svg>No leaks found · after tick 5</span>
+              <span>Canary facts checked in 1,184 payloads, 296 asset URLs and 40 page titles across all seats.</span>
+              <span style="color: #4D463B">A finding names the seat and the field, never the hidden fact.</span>
+            </div>
+          </section>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 14px; background: #F2ECDF; border: 1px dashed #1F1B16; font-size: 13px">
+          <span style="font-weight: 600">Admin reads this season: 1</span>
+          <span style="color: #4D463B">Each one is logged and announced to the table.</span>
+          <a href="HostConsole-Why.dc.html" style="margin-left: auto; color: #2A3D66">See the log</a>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ================= WHY / REPLAY / LIFECYCLE ================= -->
+    <sc-if value="{{isWhy}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; flex-direction: column; gap: 16px">
+        <div role="alert" style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; padding: 14px 16px; background: #FAF7F0; border: 2px solid #9B2C22">
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #9B2C22">Admin read · logged 21:40</span>
+            <span style="font-size: 14px; line-height: 21px">You opened a why trace. It shows engine internals a player never sees, including true odds. The read is logged and the table has been told.</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px; padding-left: 16px; border-left: 1px solid #DDD4C2">
+            <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">What every player sees in their chronicle</span>
+            <div style="padding: 8px 10px; background: #E4DCCB; border: 1px solid #B5AA93; display: flex; flex-direction: column; gap: 2px">
+              <span style="font: 700 11px 'Courier Prime', monospace; letter-spacing: 0.1em">HOST NOTICE · TICK 6 · 21:40</span>
+              <span style="font-size: 13px; line-height: 19px">The host opened an admin read: a why trace on one order from tick 6.</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start">
+          <section aria-label="Why trace" style="background: #F2ECDF; border: 1px solid #1F1B16; display: flex; flex-direction: column">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 16px; border-bottom: 1px solid #1F1B16">
+              <h1 style="margin: 0; font-size: 18px; font-weight: 600">Why trace</h1>
+              <label for="hc-order" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Order to trace</label>
+              <select id="hc-order" style="height: 32px; padding: 0 8px; background: #FAF7F0; border: 1px solid #7A705F; font: 400 13px 'IBM Plex Sans', Arial, sans-serif"><option>Order 6·1 · Four squadrons of 12 Group to France</option></select>
+            </div>
+            <ol style="margin: 0; padding: 8px 16px 14px; list-style: none; display: flex; flex-direction: column">
+              <sc-for list="{{trace}}" as="t" hint-placeholder-count="6">
+                <li style="display: grid; grid-template-columns: 28px 120px minmax(0, 1fr); gap: 12px; padding: 10px 0; border-bottom: 1px solid #DDD4C2; font-size: 13px; line-height: 19px">
+                  <span style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; background: #1F1B16; color: #F2ECDF; font-size: 12px; font-weight: 600">{{t.n}}</span>
+                  <span style="font-weight: 600">{{t.stage}}</span>
+                  <div style="display: flex; flex-direction: column; gap: 3px"><span>{{t.main}}</span><span style="color: #4D463B; font-family: {{t.font}}; font-size: 12px">{{t.detail}}</span></div>
+                </li>
+              </sc-for>
+            </ol>
+          </section>
+
+          <div style="display: flex; flex-direction: column; gap: 16px">
+            <section aria-label="Replay and verify" style="background: #F2ECDF; border: 1px solid #1F1B16; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px">
+              <h2 style="margin: 0; font-size: 15px; font-weight: 600">Replay and verify</h2>
+              <div style="display: flex; gap: 8px"><label for="hc-tick" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Tick</label><select id="hc-tick" style="flex: 1; height: 32px; padding: 0 8px; background: #FAF7F0; border: 1px solid #7A705F; font: 400 13px 'IBM Plex Sans', Arial, sans-serif"><option>End of tick 4</option></select><button type="button" style="height: 32px; padding: 0 12px; background: #1F1B16; color: #F2ECDF; border: 0; font: 500 12px 'IBM Plex Sans', Arial, sans-serif">Rebuild</button></div>
+              <div style="display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; background: #FAF7F0; font-size: 13px; line-height: 19px">
+                <span style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #2E5A3C"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m4 12 5 5L20 6"></path></svg>Verified</span>
+                <span>Rebuilt state matches the log: 2,341 events replayed.</span>
+                <code style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #4D463B">state 9f3a…c21e</code>
+              </div>
+            </section>
+            <section aria-label="Season and game" style="background: #F2ECDF; border: 1px solid #1F1B16; padding: 12px 14px; display: flex; flex-direction: column; gap: 12px">
+              <h2 style="margin: 0; font-size: 15px; font-weight: 600">Season and game</h2>
+              <div style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 19px">
+                <span><strong style="font-weight: 600">End the season.</strong> Orders stop and the Reveal opens every secret to the whole table.</span>
+                <button type="button" style="align-self: flex-start; height: 32px; padding: 0 12px; background: transparent; border: 1px solid #1F1B16; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">End the season…</button>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 1px solid #DDD4C2; font-size: 13px; line-height: 19px">
+                <span><strong style="font-weight: 600">Retire this game.</strong> It closes for good. Players keep the Reveal and the almanac. This can't be undone.</span>
+                <button type="button" style="align-self: flex-start; height: 32px; padding: 0 12px; background: transparent; border: 1px solid #9B2C22; color: #9B2C22; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">Retire this game…</button>
+              </div>
+            </section>
+            <section aria-label="Admin read log" style="background: #F2ECDF; border: 1px solid #1F1B16; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; font-size: 13px">
+              <h2 style="margin: 0; font-size: 15px; font-weight: 600">Admin read log</h2>
+              <span><strong style="font-weight: 600">Tick 6 · 21:40</strong> · why trace, one order · announced</span>
+            </section>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"page":{"editor":"enum","options":["overview","why"],"default":"overview"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var page = this.props.page ?? 'overview';
+    var items = [['Overview', 'HostConsole.dc.html', 'overview'], ['Invites', '#', ''], ['Seats', '#', ''], ['Goal flags', '#', ''], ['Ticks', '#', ''], ['Model cost', '#', ''], ['Leak scan', '#', ''], ['Why trace', 'HostConsole-Why.dc.html', 'why'], ['Replay and verify', '#', ''], ['Season and game', '#', '']];
+    var nav = items.map(function (i) { var on = i[2] === page; return { label: i[0], href: i[1], cur: on ? 'page' : 'false', bg: on ? '#1F1B16' : 'transparent', fg: on ? '#F2ECDF' : '#1F1B16', w: on ? 600 : 500 }; });
+    var invites = [['WOLF-7QK2', 'Session Zero', 'Used · bulldog_40', 600], ['WOLF-3MRT', 'Session Zero', 'Used · marne_taxi', 600], ['WOLF-8HCX', 'Session Zero', 'Used · quietcorner', 600], ['WOLF-2DNV', 'Session Zero', 'Used · lisbon_rose', 600], ['WOLF-6PZK', 'Tick 4', 'Unused', 400]].map(function (r) { return { code: r[0], issued: r[1], status: r[2], w: r[3] }; });
+    var seats = [['Alan Brooke', 'ironside (you)', 'Unlink'], ['Winston Churchill', 'bulldog_40', 'Unlink'], ['Paul Reynaud', 'marne_taxi', 'Unlink'], ['Stewart Menzies', 'quietcorner', 'Unlink'], ['Benito Mussolini', 'lisbon_rose', 'Unlink'], ['Lord Halifax', 'Game master', 'Link'], ['Wilhelm Canaris', 'Game master', 'Link']].map(function (s) { return { seat: s[0], who: s[1], action: s[2] }; });
+    var costs = [3.80, 1.90, 2.05, 1.70, 2.30, 1.40];
+    var cost = costs.map(function (v, i) { return { t: i + 1, v: '$' + v.toFixed(2), w: Math.round(v / 3.8 * 100) + '%' }; });
+    var mono = "'IBM Plex Mono', ui-monospace, monospace", sans = "'IBM Plex Sans', Arial, sans-serif";
+    var trace = [
+      [1, 'Filed', 'Tick 6 · 21:18 · seat Winston Churchill', '"Send four fighter squadrons to France, and tell Reynaud it is the last." Clarified: 12 Group.', sans],
+      [2, 'Validated', 'Holdings check passed: RAF Fighter Command held at tier 3. Trigger names an event this seat can see.', 'action TRANSFER · visibility RESTRICTED · slot 3 of 3', mono],
+      [3, 'Odds', 'Perceived: Contested. True chance 0.58.', 'Players only ever see the band.', sans],
+      [4, 'Roll', 'Rolled 0.71 against 0.58 → Partial.', 'not covert, so no exposure roll', mono],
+      [5, 'Changes', '3 squadrons to France; 1 held by weather until tick 7. Reynaud relation: cold → cool.', 'events E6-114, E6-115, E6-116', mono],
+      [6, 'Narration', 'Tick 7 briefing for this seat: "Three squadrons reached Rouen on the 6th…" No public chronicle item (restricted).', 'narration N7-031', mono]
+    ].map(function (t) { return { n: t[0], stage: t[1], main: t[2], detail: t[3], font: t[4] }; });
+    return { isOverview: page === 'overview', isWhy: page === 'why', nav: nav, invites: invites, seats: seats, cost: cost, trace: trace };
+  }
+}
+</script>
+</body>
+</html>

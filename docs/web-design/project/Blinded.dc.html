@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>War room, blinded</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&amp;family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&amp;family=IBM+Plex+Mono:wght@400;500&amp;family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&amp;display=swap">
+<style>
+body{margin:0;background:#000}
+</style>
+</helmet>
+<div style="height: 100vh; min-height: 720px; box-sizing: border-box; display: flex; flex-direction: column; background: #000000; padding: 0 6px 6px; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; color: #1F1B16; overflow: hidden">
+
+<header style="min-height: 56px; display: flex; flex-wrap: wrap; align-items: center; column-gap: 14px; row-gap: 6px; padding: 6px 10px; border-bottom: 1px solid #4A2F16; color: #EDE3D1">
+  <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><path d="M27 3C19 4.5 13.5 10 12.5 17.5L15 20C22.5 19 27.5 12 27 3Z" fill="#B87333"></path><path d="M26 4.5L13.8 18.8" stroke="#000000" stroke-width="1.2"></path><path d="M13 19.5L15 21.5L4 30Z" fill="#B87333"></path><path d="M10.6 18.6L15.6 23.6" stroke="#B87333" stroke-width="2"></path></svg>
+  <span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 16px">Their Finest Hour</span>
+  <span aria-hidden="true" style="width: 1px; height: 32px; background: #4A2F16"></span>
+  <div style="display: flex; flex-direction: column"><span style="font-size: 14px; line-height: 18px; font-weight: 600">Winston Churchill</span><span style="font-size: 12px; line-height: 16px; color: #A89A86">Prime Minister</span></div>
+  <span style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; background: #9B2C22; color: #F2ECDF; font: 700 13px 'Courier Prime', monospace; letter-spacing: 0.14em"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"></path><path d="M4 20 20 4"></path></svg>BLINDED</span>
+  <span aria-hidden="true" style="width: 1px; height: 32px; background: #4A2F16"></span>
+  <div style="display: flex; flex-direction: column"><span style="font-size: 14px; line-height: 18px; font-weight: 600">11 June 1940</span><span style="font-size: 12px; line-height: 16px; color: #A89A86">Tick 7 · this turn 11–18 June</span></div>
+  <div style="margin-left: auto; display: flex; align-items: center; gap: 12px">
+    <div style="display: flex; flex-direction: column; align-items: flex-end"><span style="font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #A89A86">Next tick in</span><span style="font-size: 20px; line-height: 24px; font-weight: 600; color: #D08A49; font-feature-settings: 'tnum'">22 h 05 m</span></div>
+    <div style="display: flex; flex-direction: column; align-items: flex-end; padding-left: 12px; border-left: 1px solid #4A2F16"><span style="font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #A89A86">Divergence</span><span style="font-size: 20px; line-height: 24px; font-weight: 600">13</span></div>
+    <button type="button" aria-label="Report a bug" style="width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid #85705A; color: #EDE3D1"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8.5 7a3.5 3.5 0 0 1 7 0"></path><rect x="7" y="8" width="10" height="12" rx="5"></rect><path d="M12 12v8M3 13h4M17 13h4M4 8l3 2M20 8l-3 2M4 20l3-2.5M20 20l-3-2.5"></path></svg></button>
+    <button type="button" style="height: 36px; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px; background: transparent; border: 1px solid #B87333; color: #B87333; font: 600 13px 'IBM Plex Sans', Arial, sans-serif; white-space: nowrap"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M9 5v14M15 5v14"></path></svg>Pause · Add a line</button>
+  </div>
+</header>
+<div aria-hidden="true" style="height: 4px; background: #1F1B16; flex: none; border-top: 1px solid #4A2F16"></div>
+
+<div style="flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(240px, 18%) minmax(0, 1fr) minmax(320px, 28%); background: #C9C6BF">
+
+  <!-- LEFT: what's left -->
+  <aside aria-label="What you still hold" style="min-height: 0; overflow-y: auto; border-right: 1px solid #1F1B16; padding: 14px 16px; display: flex; flex-direction: column; gap: 14px; font-size: 13px">
+    <section style="display: flex; flex-direction: column; gap: 6px">
+      <div style="display: flex; align-items: center"><h2 style="margin: 0; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase">Operations</h2><span style="margin-left: auto; font-weight: 600">1 slot</span></div>
+      <div role="img" aria-label="1 slot, empty" style="display: flex; gap: 3px"><span style="width: 18px; height: 12px; background: #E9E7E2; border: 1px solid #1F1B16"></span><span style="width: 18px; height: 12px; background: repeating-linear-gradient(45deg, #1F1B16 0 1px, transparent 1px 5px); border: 1px solid #5F574A"></span><span style="width: 18px; height: 12px; background: repeating-linear-gradient(45deg, #1F1B16 0 1px, transparent 1px 5px); border: 1px solid #5F574A"></span></div>
+      <span style="color: #3F3A32">Two slots closed until you have an agent again. Running operations carry on.</span>
+    </section>
+    <section style="display: flex; flex-direction: column; gap: 4px; padding-top: 12px; border-top: 1px solid #9E9A92">
+      <h2 style="margin: 0; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase">Means</h2>
+      <span>Home Fleet · tier 4</span><span>RAF Fighter Command · tier 3, degraded</span><span>Treasury reserves · tier 3</span><span>Secret Intelligence Service · tier 2</span>
+    </section>
+    <section style="display: flex; flex-direction: column; gap: 4px; padding-top: 12px; border-top: 1px solid #9E9A92">
+      <h2 style="margin: 0; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase">Gone while blinded</h2>
+      <span>Briefings</span><span>Perceived odds</span><span>Suggested moves</span><span>Order cards and questions</span><span>A deputy while you're away</span>
+    </section>
+  </aside>
+
+  <!-- CENTER: notice, recovery, raw order -->
+  <main style="min-height: 0; overflow-y: auto; background: #E9E7E2; padding: 22px 28px; display: flex; flex-direction: column; gap: 18px">
+    <section aria-label="Your agent is gone" style="border: 3px solid #1F1B16; background: #F4F3EF; padding: 18px 22px; display: flex; flex-direction: column; gap: 10px">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #9B2C22">Your seat is blinded</span>
+      <h1 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 28px; line-height: 34px">Hartley has been arrested.</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 23px; max-width: 70ch">Special Branch took your private secretary on 9 June. They say he had been passing your papers to the Italian embassy. Without an agent you see only the public record and raw intercepts. Your orders go to the engine exactly as you write them.</p>
+    </section>
+
+    <section aria-label="Get an agent back" style="display: flex; flex-direction: column; gap: 10px">
+      <h2 style="margin: 0; font-size: 16px; font-weight: 600">Get an agent back</h2>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 12px">
+        <div style="background: #F4F3EF; border: 2px solid #1F1B16; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px">
+          <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em">MEANS · RECRUIT</span>
+          <span style="font-size: 16px; font-weight: 600">Recruit a new private secretary</span>
+          <span style="font-size: 13px; line-height: 19px">Takes about 2 ticks and uses your one slot. You design the new agent when it lands.</span>
+          <button type="button" style="align-self: flex-start; height: 36px; padding: 0 14px; background: #1F1B16; color: #F2ECDF; border: 0; font: 500 14px 'IBM Plex Sans', Arial, sans-serif">Start this order</button>
+        </div>
+        <div style="background: #F4F3EF; border: 1px solid #1F1B16; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px">
+          <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: #9B2C22">INFORMATION · INVESTIGATE · COVERT</span>
+          <span style="font-size: 16px; font-weight: 600">Find out whether Hartley was framed</span>
+          <span style="font-size: 13px; line-height: 19px">If he was, you can have him back. Covert, so it carries exposure. Uses your one slot.</span>
+          <button type="button" style="align-self: flex-start; height: 36px; padding: 0 14px; background: transparent; border: 1px solid #1F1B16; font: 500 14px 'IBM Plex Sans', Arial, sans-serif">Start this order</button>
+        </div>
+      </div>
+    </section>
+
+    <form aria-label="Raw order" style="display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; background: #DCDAD4; border: 1px solid #1F1B16">
+      <label for="bl-order" style="font-size: 14px; font-weight: 600">Order, as written</label>
+      <textarea id="bl-order" rows="3" placeholder="Write exactly what you want done. Nobody will check it with you." style="padding: 10px 12px; background: #FFFFFF; border: 1px solid #5F574A; font: 400 14px/21px 'IBM Plex Mono', ui-monospace, Menlo, monospace; color: #1F1B16; resize: vertical"></textarea>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+        <span style="flex: 1 1 280px; font-size: 13px; line-height: 19px; color: #3F3A32">No clarifying questions, no order card, no odds. What you write is what's filed.</span>
+        <button type="submit" style="height: 36px; padding: 0 16px; background: #1F1B16; color: #F2ECDF; border: 0; font: 500 14px 'IBM Plex Sans', Arial, sans-serif">File as written</button>
+      </div>
+    </form>
+  </main>
+
+  <!-- RIGHT: raw intercepts + public -->
+  <aside aria-label="What reaches you" style="min-height: 0; border-left: 1px solid #1F1B16; display: flex; flex-direction: column">
+    <section aria-label="Raw intercepts" style="flex: 1 1 55%; min-height: 0; display: flex; flex-direction: column">
+      <div style="flex: none; padding: 10px 14px; border-bottom: 1px solid #1F1B16; display: flex; align-items: baseline"><h2 style="margin: 0; font-size: 14px; font-weight: 600">Raw intercepts</h2><span style="margin-left: auto; font-size: 12px; color: #3F3A32">unread, unsorted</span></div>
+      <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 10px 14px; display: flex; flex-direction: column; gap: 10px; font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace; font-size: 12px; line-height: 18px">
+        <div style="padding: 8px; background: #E9E7E2; border: 1px solid #9E9A92">0611 0340 GCCS/AIR ++ KONFERENZ FLIEGERKORPS VIII ROUEN 12 ++ TREIBSTOFF ZUWEISUNG ERHOEHT ++</div>
+        <div style="padding: 8px; background: #E9E7E2; border: 1px solid #9E9A92">0610 2210 GCCS/DIPL ++ ROMA A LONDRA AMBASCIATA: DOCUMENTI RICEVUTI. FONTE CHIUSA ++</div>
+        <div style="padding: 8px; background: #E9E7E2; border: 1px solid #9E9A92">0610 1105 GCCS/NAVAL ++ U-37 POSITION 47N 12W ++ GROUP REPORT INCOMPLETE ++</div>
+      </div>
+    </section>
+    <section aria-label="The Chronicle" style="flex: 1 1 45%; min-height: 0; display: flex; flex-direction: column; border-top: 1px solid #1F1B16">
+      <div style="flex: none; padding: 10px 14px; border-bottom: 1px solid #1F1B16; display: flex; align-items: baseline"><h2 style="margin: 0; font-size: 14px; font-weight: 600">The Chronicle</h2><span style="margin-left: auto; font-size: 12px; color: #3F3A32">public</span></div>
+      <ol style="flex: 1; min-height: 0; overflow-y: auto; margin: 0; padding: 4px 14px 10px; list-style: none; font-size: 13px; line-height: 19px">
+        <li style="padding: 8px 0; border-bottom: 1px solid #9E9A92"><strong style="font-weight: 600">Rome radio</strong> · Italy declares war on France and Britain.</li>
+        <li style="padding: 8px 0; border-bottom: 1px solid #9E9A92"><strong style="font-weight: 600">The Times</strong> · Downing Street official detained under the Official Secrets Act.</li>
+        <li style="padding: 8px 0"><strong style="font-weight: 600">Havas</strong> · French government leaves Paris for Tours.</li>
+      </ol>
+    </section>
+  </aside>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

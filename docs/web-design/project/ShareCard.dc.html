@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Share card</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&amp;family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&amp;display=swap">
+<style>
+body{margin:0;background:#000}
+</style>
+</helmet>
+<div role="img" aria-label="Share card: Their Finest Hour, season one, final divergence 31. A work of alternate-history fiction." style="position: relative; width: 1200px; height: 630px; box-sizing: border-box; background: #000000; padding: 28px; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; overflow: hidden">
+  <div style="position: relative; width: 100%; height: 100%; box-sizing: border-box; background: #F4EEDF; border: 1px solid #B87333; padding: 48px 64px; display: flex; flex-direction: column; gap: 18px; overflow: hidden">
+    <span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 18px; letter-spacing: 0.24em; text-transform: uppercase; color: #1F1B16">Revisionist · Season the First</span>
+    <span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 72px; line-height: 78px; color: #1F1B16">Their Finest Hour</span>
+    <span style="font-family: 'Libre Caslon Text', Georgia, serif; font-style: italic; font-size: 26px; line-height: 34px; color: #1F1B16; max-width: 760px">Britain fought on. France fell on 22 June. The French fleet was interned without a shot.</span>
+    <div style="margin-top: auto; display: flex; align-items: flex-end; gap: 40px">
+      <div style="display: flex; flex-direction: column"><span style="font-size: 16px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #1F1B16">Final divergence</span><span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 64px; line-height: 66px; color: #1F1B16">31</span></div>
+      <span style="font-size: 18px; color: #4D463B; padding-bottom: 10px">26 May to 31 December 1940 · 5 players</span>
+    </div>
+    <!-- watermark across the whole card: cannot be cropped out -->
+    <svg aria-hidden="true" width="1200" height="700" viewBox="0 0 1200 700" style="position: absolute; left: -64px; top: -48px; pointer-events: none">
+      <defs>
+        <pattern id="sc-wm" width="420" height="130" patternUnits="userSpaceOnUse" patternTransform="rotate(-18)">
+          <text x="0" y="60" font-family="IBM Plex Sans, Arial" font-size="26" font-weight="600" letter-spacing="4" fill="#1F1B16" fill-opacity="0.14">A WORK OF FICTION ·</text>
+        </pattern>
+      </defs>
+      <rect width="1200" height="700" fill="url(#sc-wm)"></rect>
+    </svg>
+  </div>
+  <!-- frame band: the fiction notice runs round every edge -->
+  <span style="position: absolute; left: 28px; right: 28px; top: 6px; text-align: center; font-size: 13px; font-weight: 600; letter-spacing: 0.22em; color: #B87333">ALTERNATE-HISTORY FICTION · NOT A HISTORICAL RECORD · REVISIONIST</span>
+  <span style="position: absolute; left: 28px; right: 28px; bottom: 6px; text-align: center; font-size: 13px; font-weight: 600; letter-spacing: 0.22em; color: #B87333">ALTERNATE-HISTORY FICTION · NOT A HISTORICAL RECORD · REVISIONIST</span>
+  <span style="position: absolute; left: 6px; top: 50%; transform: translate(-50%, -50%) rotate(-90deg) translateY(10px); white-space: nowrap; font-size: 12px; font-weight: 600; letter-spacing: 0.22em; color: #B87333">FICTION · REVISIONIST</span>
+  <span style="position: absolute; right: 6px; top: 50%; transform: translate(50%, -50%) rotate(90deg) translateY(10px); white-space: nowrap; font-size: 12px; font-weight: 600; letter-spacing: 0.22em; color: #B87333">FICTION · REVISIONIST</span>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1200,"height":630}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

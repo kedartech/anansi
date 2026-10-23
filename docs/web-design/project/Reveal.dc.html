@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The Reveal</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&amp;family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&amp;family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&amp;display=swap">
+<style>
+body{margin:0;background:#000}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; background: #000000; padding: 0 6px 6px; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; color: #1F1B16">
+<header style="min-height: 52px; display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 6px 12px; border-bottom: 1px solid #4A2F16; color: #EDE3D1">
+  <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><path d="M27 3C19 4.5 13.5 10 12.5 17.5L15 20C22.5 19 27.5 12 27 3Z" fill="#B87333"></path><path d="M26 4.5L13.8 18.8" stroke="#000000" stroke-width="1.2"></path><path d="M13 19.5L15 21.5L4 30Z" fill="#B87333"></path><path d="M10.6 18.6L15.6 23.6" stroke="#B87333" stroke-width="2"></path></svg>
+  <span style="font-size: 13px; font-weight: 600; letter-spacing: 0.32em; color: #B87333">REVISIONIST</span>
+  <span style="font-size: 14px; color: #A89A86">Season over · the same page for every player</span>
+  <div style="margin-left: auto; display: flex; gap: 10px">
+    <a href="ShareCard.dc.html" style="height: 34px; padding: 0 12px; display: inline-flex; align-items: center; border: 1px solid #B87333; color: #B87333; text-decoration: none; font-size: 13px; font-weight: 600">Make a share card</a>
+    <button type="button" style="height: 34px; padding: 0 12px; background: transparent; border: 1px solid #85705A; color: #EDE3D1; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">Download the almanac</button>
+  </div>
+</header>
+
+<main style="flex: 1; background: #3A332A; padding: 32px 20px 48px">
+  <article aria-label="The Revisionist Almanac" style="max-width: 1180px; margin: 0 auto; background: #F4EEDF; padding: 36px 44px 44px; display: flex; flex-direction: column; gap: 22px">
+    <!-- masthead -->
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding-bottom: 14px; border-bottom: 4px double #1F1B16; text-align: center">
+      <span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 13px; letter-spacing: 0.3em; text-transform: uppercase">Season the First · 26 May to 31 December 1940</span>
+      <h1 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 700; font-size: 52px; line-height: 58px; letter-spacing: 0.04em">The Revisionist Almanac</h1>
+      <span style="font-family: 'Libre Caslon Text', Georgia, serif; font-style: italic; font-size: 20px">Their Finest Hour: every secret, opened</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: 32px; align-items: start">
+      <!-- left column -->
+      <div style="display: flex; flex-direction: column; gap: 18px; padding-right: 28px; border-right: 1px solid #1F1B16">
+        <section aria-label="Final divergence" style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 16px; border: 1px solid #1F1B16; text-align: center">
+          <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase">Final divergence</span>
+          <span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 72px; line-height: 76px; font-feature-settings: 'tnum'">31</span>
+          <span style="font-size: 13px; color: #4D463B">History bent in 4 places that mattered</span>
+        </section>
+        <section aria-label="Where history bent" style="display: flex; flex-direction: column; gap: 10px">
+          <h2 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 20px; border-bottom: 1px solid #1F1B16; padding-bottom: 4px">Where history bent</h2>
+          <sc-for list="{{bends}}" as="b" hint-placeholder-count="4">
+            <div style="display: flex; flex-direction: column; gap: 2px; font-size: 13px; line-height: 19px">
+              <span style="font-weight: 600">{{b.when}}</span>
+              <span style="font-family: 'Courier Prime', 'Courier New', monospace; font-size: 14px; line-height: 21px">{{b.text}}</span>
+            </div>
+          </sc-for>
+        </section>
+      </div>
+
+      <!-- goals -->
+      <section aria-label="The goals" style="display: flex; flex-direction: column; gap: 10px">
+        <h2 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 26px; border-bottom: 1px solid #1F1B16; padding-bottom: 4px">The goals, and who met them</h2>
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px; line-height: 19px">
+          <thead><tr style="text-align: left; border-bottom: 1px solid #1F1B16"><th scope="col" style="padding: 6px 8px 6px 0; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase">Character</th><th scope="col" style="padding: 6px 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase">Secret goal</th><th scope="col" style="padding: 6px 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase">Outcome</th></tr></thead>
+          <tbody>
+            <sc-for list="{{goals}}" as="g" hint-placeholder-count="6">
+              <tr style="border-bottom: 1px solid #C9BFA8; vertical-align: top">
+                <th scope="row" style="padding: 9px 8px 9px 0; text-align: left"><span style="display: block; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 16px">{{g.who}}</span><span style="font-weight: 400; color: #4D463B">played by {{g.by}}</span></th>
+                <td style="padding: 9px 8px"><span style="display: block; font-family: 'Courier Prime', 'Courier New', monospace; font-size: 14px">{{g.goal}}</span><span style="color: #4D463B">{{g.kind}}</span></td>
+                <td style="padding: 9px 8px; white-space: nowrap"><span style="display: inline-flex; align-items: center; gap: 5px; font-weight: 600; color: {{g.color}}">{{g.result}}</span><span style="display: block; color: #4D463B">{{g.when}}</span></td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </section>
+    </div>
+
+    <!-- dossiers -->
+    <section aria-label="What each rival had uncovered" style="display: flex; flex-direction: column; gap: 10px; padding-top: 6px; border-top: 4px double #1F1B16">
+      <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px">
+        <h2 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 26px">What each rival had uncovered</h2>
+        <span style="display: inline-flex; gap: 14px; font-size: 12px; font-weight: 600"><span style="color: #2E5A3C">✓ True</span><span style="color: #7A4E0C">≈ True but misleading</span><span style="color: #9B2C22">✗ False</span></span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 28px">
+        <sc-for list="{{dossiers}}" as="d" hint-placeholder-count="4">
+          <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-bottom: 1px solid #C9BFA8">
+            <span style="font-size: 14px"><strong style="font-weight: 600">{{d.holder}}</strong> on <strong style="font-weight: 600">{{d.about}}</strong></span>
+            <sc-for list="{{d.pieces}}" as="p" hint-placeholder-count="3">
+              <div style="display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 8px; font-size: 13px; line-height: 19px">
+                <span style="font-weight: 700; color: {{p.color}}" aria-hidden="true">{{p.mark}}</span>
+                <span><span style="color: #4D463B">{{p.step}} ·</span> {{p.value}} <strong style="font-weight: 600; color: {{p.color}}">{{p.verdict}}</strong></span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding-top: 10px">
+      <button type="button" style="height: 40px; padding: 0 18px; background: #1F1B16; color: #F4EEDF; border: 0; font: 500 14px 'IBM Plex Sans', Arial, sans-serif">Replay the season with the truth showing</button>
+      <span style="font-size: 13px; color: #4D463B">Every entry here traces back to the game's event log.</span>
+    </div>
+  </article>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var bends = [
+      { when: '3 July · Mers-el-Kébir', text: 'Struck at Session Zero. The French fleet was interned by agreement; not a shot was fired.' },
+      { when: '17 July · Destroyers for Britain', text: 'Fifty old destroyers came six weeks before the record has them.' },
+      { when: 'October · A channel to London', text: 'The Abwehr opened a quiet line to London through Lisbon. No such line existed in 1940.' },
+      { when: '15 September · Battle of Britain Day', text: 'Happened as recorded.' }
+    ];
+    var ok = '#2E5A3C', no = '#9B2C22', mute = '#4D463B';
+    var goals = [
+      { who: 'Winston Churchill', by: 'bulldog_40', goal: 'Keep the United States supplying Britain by 1 January 1941', kind: 'Lasting', result: '✓ Met', when: 'Tick 12 · 17 July', color: ok },
+      { who: 'Wilhelm Canaris', by: 'the game master', goal: 'Open a secret channel to London by October 1940', kind: 'Lasting', result: '✓ Met', when: 'Tick 23 · 3 October', color: ok },
+      { who: 'Stewart Menzies', by: 'quietcorner', goal: "Keep Bletchley's secret to the season's end", kind: 'Undoable', result: '✓ Held to the end', when: '31 December', color: ok },
+      { who: 'Benito Mussolini', by: 'lisbon_rose', goal: 'Take Nice and Corsica from France', kind: 'Lasting', result: '✗ Not met', when: '', color: no },
+      { who: 'Paul Reynaud', by: 'marne_taxi', goal: 'Keep a French government fighting from Algiers', kind: 'Undoable', result: '✗ Not met', when: 'Lost at tick 9', color: no },
+      { who: 'Alan Brooke', by: 'ironside, host', goal: 'No secret goal', kind: '', result: '—', when: '', color: mute }
+    ];
+    var piece = function (step, value, v, note) {
+      var map = { t: ['✓', 'true', ok], m: ['≈', 'misleading', '#7A4E0C'], f: ['✗', 'false', no] }[v];
+      return { step: step, value: value, mark: map[0], verdict: map[1] + (note ? ': ' + note : ''), color: map[2] };
+    };
+    var dossiers = [
+      { holder: 'Winston Churchill', about: 'Benito Mussolini', pieces: [piece('Aim', 'has an aim', 't'), piece('Domain', 'territory', 't'), piece('Object', 'Malta', 'm', 'it was Corsica')] },
+      { holder: 'Stewart Menzies', about: 'Wilhelm Canaris', pieces: [piece('Aim', 'has an aim', 't'), piece('Domain', 'intelligence', 't'), piece('Object', 'a channel to London', 't'), piece('Full condition', 'by October 1940', 't')] },
+      { holder: 'Benito Mussolini', about: 'Winston Churchill', pieces: [piece('Aim', 'has an aim', 't'), piece('Domain', 'the Empire', 'f', 'planted by SIS, Operation 9·1')] },
+      { holder: 'Wilhelm Canaris', about: 'Stewart Menzies', pieces: [piece('Aim', 'has an aim', 't'), piece('Domain', 'Spain', 'm', 'Spain was the cover')] }
+    ];
+    return { bends: bends, goals: goals, dossiers: dossiers };
+  }
+}
+</script>
+</body>
+</html>

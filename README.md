@@ -57,6 +57,7 @@ Run `uv run revisionist --help` for the full command list, including Session Zer
 | [`docs/game-spec.md`](docs/game-spec.md) | Game rules, parameters and decisions |
 | [`docs/design.md`](docs/design.md) | Event log, visibility, pipeline and the rules the code must keep |
 | [`docs/build-plan.md`](docs/build-plan.md) | Layer-by-layer build plan and what is built |
+| [`docs/web-design/`](docs/web-design/README.md) | Web client design source: 59 screens, tokens and the rules the interface never breaks |
 | [`docs/deploy.md`](docs/deploy.md) | Running on a server: Postgres, systemd, Discord, backups |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Rules and gates for contributors |
 

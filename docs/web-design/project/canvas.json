@@ -1,0 +1,688 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Blinded.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "N1 — Blinded seat",
+      "w": 1440,
+      "x": 0,
+      "y": 20960
+    },
+    "Brooke-List.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "title": "F4 — Map as a list",
+      "w": 1440,
+      "x": 4560,
+      "y": 10200
+    },
+    "Brooke-Sector.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "title": "F2 — Map, drilled to Flanders sector",
+      "w": 1440,
+      "x": 1520,
+      "y": 10200
+    },
+    "Brooke.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "title": "F1 — Map, theatre level (Brooke seat)",
+      "w": 1440,
+      "x": 0,
+      "y": 10200
+    },
+    "Campaigns-Empty.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "C2 — Campaigns, new account",
+      "w": 1440,
+      "x": 1520,
+      "y": 4740
+    },
+    "Campaigns.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "C1 — Campaigns",
+      "w": 1440,
+      "x": 0,
+      "y": 4740
+    },
+    "Counsel-Cabinet.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "G2 — War Cabinet room (restricted, minuted)",
+      "w": 1440,
+      "x": 1520,
+      "y": 11520
+    },
+    "Counsel.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "G1 — Individual room, waiting for a reply",
+      "w": 1440,
+      "x": 0,
+      "y": 11520
+    },
+    "HostConsole-Why.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "M2 — Host console: why trace, replay, lifecycle",
+      "w": 1440,
+      "x": 1520,
+      "y": 19640
+    },
+    "HostConsole.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "M1 — Host console: overview",
+      "w": 1440,
+      "x": 0,
+      "y": 19640
+    },
+    "Index.dc.html": {
+      "h": 1500,
+      "is_interactive": true,
+      "title": "Index — every screen",
+      "w": 1440,
+      "x": -1600,
+      "y": 0
+    },
+    "Leave.dc.html": {
+      "h": 900,
+      "title": "N3a — Declare leave",
+      "w": 1440,
+      "x": 3040,
+      "y": 20960
+    },
+    "Main.dc.html": {
+      "h": 3000,
+      "title": "A — Design system",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "Mandates.dc.html": {
+      "h": 1100,
+      "title": "H1 — Mandate cards, all four kinds",
+      "w": 1440,
+      "x": 0,
+      "y": 12840
+    },
+    "MapPlaces.dc.html": {
+      "h": 900,
+      "title": "F3 — Places on demand + empty district",
+      "w": 1440,
+      "x": 3040,
+      "y": 10200
+    },
+    "Menzies.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "I1 — Intelligence panel (Menzies seat)",
+      "w": 1440,
+      "x": 0,
+      "y": 14360
+    },
+    "OrderFlow-2.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "E2 — Hartley asks, player answers",
+      "w": 1280,
+      "x": 1360,
+      "y": 8880
+    },
+    "OrderFlow-3.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "E3 — Order card to confirm",
+      "w": 1280,
+      "x": 2720,
+      "y": 8880
+    },
+    "OrderFlow-4.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "E4 — Filed, odds shown",
+      "w": 1280,
+      "x": 4080,
+      "y": 8880
+    },
+    "OrderFlow-5.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "E5 — Refused in-world",
+      "w": 1280,
+      "x": 5440,
+      "y": 8880
+    },
+    "OrderFlow-6.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "E6 — Editable before cutoff, locked after",
+      "w": 1280,
+      "x": 6800,
+      "y": 8880
+    },
+    "OrderFlow-7.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "E7 — Results after the tick",
+      "w": 1280,
+      "x": 8160,
+      "y": 8880
+    },
+    "OrderFlow.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "E1 — Player writes the order",
+      "w": 1280,
+      "x": 0,
+      "y": 8880
+    },
+    "Recover-Code.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "B4a — Recover: enter a code",
+      "w": 1440,
+      "x": 4560,
+      "y": 3420
+    },
+    "Recover-Reset.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "B4b — Recover: new password + fresh codes",
+      "w": 1440,
+      "x": 6080,
+      "y": 3420
+    },
+    "RecoveryCodes.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "B2 — Recovery codes",
+      "w": 1440,
+      "x": 1520,
+      "y": 3420
+    },
+    "Return.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "N3b — Return: catch-up briefing",
+      "w": 1440,
+      "x": 4560,
+      "y": 20960
+    },
+    "Reveal.dc.html": {
+      "expand": "fill",
+      "h": 1500,
+      "title": "N4 — The Reveal, as an almanac page",
+      "w": 1440,
+      "x": 0,
+      "y": 22280
+    },
+    "Seat-Brooke.dc.html": {
+      "h": 900,
+      "is_interactive": true,
+      "title": "K2 — Field commander: Brooke",
+      "w": 1440,
+      "x": 3040,
+      "y": 17000
+    },
+    "Seat-Churchill.dc.html": {
+      "h": 900,
+      "is_interactive": true,
+      "title": "K1 — Head of state: Churchill",
+      "w": 1440,
+      "x": 1520,
+      "y": 17000
+    },
+    "Seat-Menzies.dc.html": {
+      "h": 900,
+      "title": "K3 — Spymaster: Menzies",
+      "w": 1440,
+      "x": 4560,
+      "y": 17000
+    },
+    "SessionZero-10.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "L10 — Player: waiting for the host",
+      "w": 1440,
+      "x": 13680,
+      "y": 18320
+    },
+    "SessionZero-2.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "L2 — Host: setting card",
+      "w": 1440,
+      "x": 1520,
+      "y": 18320
+    },
+    "SessionZero-3.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "L3 — Host: confirm and lock settings",
+      "w": 1440,
+      "x": 3040,
+      "y": 18320
+    },
+    "SessionZero-4.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "L4 — Host: drafting the world",
+      "w": 1440,
+      "x": 4560,
+      "y": 18320
+    },
+    "SessionZero-5.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "L5 — Player: join with a code",
+      "w": 1440,
+      "x": 6080,
+      "y": 18320
+    },
+    "SessionZero-6.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "L6 — Player: choose a character",
+      "w": 1440,
+      "x": 7600,
+      "y": 18320
+    },
+    "SessionZero-7.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "L7 — Player: secret goal",
+      "w": 1440,
+      "x": 9120,
+      "y": 18320
+    },
+    "SessionZero-8.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "L8 — Player: historical brief",
+      "w": 1440,
+      "x": 10640,
+      "y": 18320
+    },
+    "SessionZero-9.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "L9 — Player: design your agent",
+      "w": 1440,
+      "x": 12160,
+      "y": 18320
+    },
+    "SessionZero.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "L1 — Host: pitch",
+      "w": 1440,
+      "x": 0,
+      "y": 18320
+    },
+    "Settings-Agent.dc.html": {
+      "expand": "fill",
+      "h": 1200,
+      "title": "O2 — Settings: agent, delete account",
+      "w": 1440,
+      "x": 1520,
+      "y": 24200
+    },
+    "Settings.dc.html": {
+      "expand": "fill",
+      "h": 1200,
+      "title": "O1 — Settings: account, recovery, Discord, sessions",
+      "w": 1440,
+      "x": 0,
+      "y": 24200
+    },
+    "ShareCard.dc.html": {
+      "h": 630,
+      "title": "N5 — Share card",
+      "w": 1200,
+      "x": 1520,
+      "y": 22280
+    },
+    "SignIn.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "B3 — Sign in",
+      "w": 1440,
+      "x": 3040,
+      "y": 3420
+    },
+    "SignUp.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "B1 — Sign up",
+      "w": 1440,
+      "x": 0,
+      "y": 3420
+    },
+    "Succession.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "N2 — Succession",
+      "w": 1440,
+      "x": 1520,
+      "y": 20960
+    },
+    "System-R2.dc.html": {
+      "h": 3000,
+      "title": "A2 — Round 2 components",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    },
+    "WarRoom-1280.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "title": "D5 — Check at 1280 × 800",
+      "w": 1280,
+      "x": 0,
+      "y": 7380
+    },
+    "WarRoom-1920.dc.html": {
+      "h": 1080,
+      "is_interactive": true,
+      "title": "D6 — Check at 1920 × 1080",
+      "w": 1920,
+      "x": 1360,
+      "y": 7380
+    },
+    "WarRoom-Error.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "title": "D4 — Error",
+      "w": 1440,
+      "x": 4560,
+      "y": 6060
+    },
+    "WarRoom-Ledger.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "title": "J1 — Economic ledger (Churchill seat)",
+      "w": 1440,
+      "x": 0,
+      "y": 15680
+    },
+    "WarRoom-Mandates.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "title": "H2 — Two live mandates, one expiring",
+      "w": 1440,
+      "x": 1520,
+      "y": 12840
+    },
+    "WarRoom-Quiet.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "title": "H3 — Quiet tick, no mandate",
+      "w": 1440,
+      "x": 3040,
+      "y": 12840
+    },
+    "WarRoom-SeasonOver.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "title": "D3 — Season over",
+      "w": 1440,
+      "x": 3040,
+      "y": 6060
+    },
+    "WarRoom-Thinking.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "title": "D2 — Model call in progress",
+      "w": 1440,
+      "x": 1520,
+      "y": 6060
+    },
+    "WarRoom.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "title": "D1 — War room, default (returning player)",
+      "w": 1440,
+      "x": 0,
+      "y": 6060
+    },
+    "Workspaces.dc.html": {
+      "h": 900,
+      "title": "K0 — How a seat's workspace assembles",
+      "w": 1440,
+      "x": 0,
+      "y": 17000
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-22T21:05:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "titleA": {
+      "kind": "title1",
+      "maxW": 2960,
+      "text": "A · Design system — Round 1 and Round 2 additions",
+      "w": 240,
+      "x": 0,
+      "y": -300
+    },
+    "titleB": {
+      "kind": "title1",
+      "maxW": 7520,
+      "text": "B · Accounts — no personal information, ever",
+      "w": 240,
+      "x": 0,
+      "y": 3120
+    },
+    "titleC": {
+      "kind": "title1",
+      "maxW": 2960,
+      "text": "C · Campaigns",
+      "w": 240,
+      "x": 0,
+      "y": 4440
+    },
+    "titleD": {
+      "kind": "title1",
+      "maxW": 6000,
+      "text": "D · War room — Winston Churchill seat",
+      "w": 240,
+      "x": 0,
+      "y": 5760
+    },
+    "titleD2": {
+      "kind": "title1",
+      "maxW": 3280,
+      "text": "D · Same screen at 1280 × 800 and 1920 × 1080",
+      "w": 240,
+      "x": 0,
+      "y": 7080
+    },
+    "titleE": {
+      "kind": "title1",
+      "maxW": 8000,
+      "text": "E · The order flow — one order, start to result",
+      "w": 240,
+      "x": 0,
+      "y": 8580
+    },
+    "titleF": {
+      "kind": "title1",
+      "maxW": 6000,
+      "text": "F · The map — General Alan Brooke, II Corps, 28 May 1940",
+      "w": 240,
+      "x": 0,
+      "y": 9900
+    },
+    "titleG": {
+      "kind": "title1",
+      "maxW": 2960,
+      "text": "G · Counsel",
+      "w": 240,
+      "x": 0,
+      "y": 11220
+    },
+    "titleH": {
+      "kind": "title1",
+      "maxW": 4480,
+      "text": "H · Mandates",
+      "w": 240,
+      "x": 0,
+      "y": 12540
+    },
+    "titleI": {
+      "kind": "title1",
+      "maxW": 1440,
+      "text": "I · Intelligence — Stewart Menzies, chief of SIS",
+      "w": 240,
+      "x": 0,
+      "y": 14060
+    },
+    "titleIdx": {
+      "kind": "title1",
+      "maxW": 1440,
+      "text": "Index",
+      "w": 240,
+      "x": -1600,
+      "y": -300
+    },
+    "titleJ": {
+      "kind": "title1",
+      "maxW": 1440,
+      "text": "J · Economic ledger — Churchill seat",
+      "w": 240,
+      "x": 0,
+      "y": 15380
+    },
+    "titleK": {
+      "kind": "title1",
+      "maxW": 6000,
+      "text": "K · One renderer, three seats",
+      "w": 240,
+      "x": 0,
+      "y": 16700
+    },
+    "titleL": {
+      "kind": "title1",
+      "maxW": 8000,
+      "text": "L · Session Zero — host ironside builds the table; player bulldog_40 joins",
+      "w": 240,
+      "x": 0,
+      "y": 18020
+    },
+    "titleM": {
+      "kind": "title1",
+      "maxW": 2960,
+      "text": "M · Host console — separate from the host's own seat",
+      "w": 240,
+      "x": 0,
+      "y": 19340
+    },
+    "titleN": {
+      "kind": "title1",
+      "maxW": 6000,
+      "text": "N · Special states",
+      "w": 240,
+      "x": 0,
+      "y": 20660
+    },
+    "titleN2": {
+      "kind": "title1",
+      "maxW": 2720,
+      "text": "N · Season end — the Reveal and the share card",
+      "w": 240,
+      "x": 0,
+      "y": 21980
+    },
+    "titleO": {
+      "kind": "title1",
+      "maxW": 2960,
+      "text": "O · Settings",
+      "w": 240,
+      "x": 0,
+      "y": 23900
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "WarRoom.dc.html",
+    "WarRoom-Thinking.dc.html",
+    "WarRoom-SeasonOver.dc.html",
+    "WarRoom-Error.dc.html",
+    "WarRoom-1280.dc.html",
+    "WarRoom-1920.dc.html",
+    "SignUp.dc.html",
+    "RecoveryCodes.dc.html",
+    "SignIn.dc.html",
+    "Recover-Code.dc.html",
+    "Recover-Reset.dc.html",
+    "Campaigns.dc.html",
+    "Campaigns-Empty.dc.html",
+    "System-R2.dc.html",
+    "OrderFlow.dc.html",
+    "OrderFlow-2.dc.html",
+    "OrderFlow-3.dc.html",
+    "OrderFlow-4.dc.html",
+    "OrderFlow-5.dc.html",
+    "OrderFlow-6.dc.html",
+    "OrderFlow-7.dc.html",
+    "Brooke.dc.html",
+    "Brooke-Sector.dc.html",
+    "MapPlaces.dc.html",
+    "Brooke-List.dc.html",
+    "Counsel.dc.html",
+    "Counsel-Cabinet.dc.html",
+    "Mandates.dc.html",
+    "WarRoom-Mandates.dc.html",
+    "WarRoom-Quiet.dc.html",
+    "Menzies.dc.html",
+    "WarRoom-Ledger.dc.html",
+    "Workspaces.dc.html",
+    "Seat-Churchill.dc.html",
+    "Seat-Brooke.dc.html",
+    "Seat-Menzies.dc.html",
+    "SessionZero.dc.html",
+    "SessionZero-2.dc.html",
+    "SessionZero-3.dc.html",
+    "SessionZero-4.dc.html",
+    "SessionZero-5.dc.html",
+    "SessionZero-6.dc.html",
+    "SessionZero-7.dc.html",
+    "SessionZero-8.dc.html",
+    "SessionZero-9.dc.html",
+    "SessionZero-10.dc.html",
+    "HostConsole.dc.html",
+    "HostConsole-Why.dc.html",
+    "Blinded.dc.html",
+    "Succession.dc.html",
+    "Leave.dc.html",
+    "Return.dc.html",
+    "Reveal.dc.html",
+    "ShareCard.dc.html",
+    "Settings.dc.html",
+    "Settings-Agent.dc.html",
+    "Index.dc.html"
+  ],
+  "pages": [],
+  "title": "Revisionist — Rounds 1–3"
+}

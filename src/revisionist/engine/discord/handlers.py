@@ -54,6 +54,7 @@ from revisionist.engine.pg_store import PostgresEventStore
 from revisionist.engine.pitch import PendingCard, PitchError, card_lines, end_from, strikes_from
 from revisionist.engine.runner import DelivererFactory, Publishes
 from revisionist.engine.store import load_state
+from revisionist.engine.web.accounts import WebSeats
 
 log = logging.getLogger("revisionist.discord")
 
@@ -538,6 +539,7 @@ class Handlers:
             links = SeatLinks(store.conn)
             for seat in links.users(target):
                 links.unlink(target, seat)
+            WebSeats(store.conn).unlink_campaign(target)
             log.info("/retire: %s (%s) retired by the host", names[target], target)
             text = (
                 f"Retired {names[target]} ({target}): it never ticks again "
@@ -552,7 +554,7 @@ class Handlers:
 
         def work(store: PostgresEventStore, campaign_id: CampaignId) -> str:
             state = load_state(store, campaign_id)
-            linked = SeatLinks(store.conn).users(campaign_id)
+            linked = host_ops.held_seats(store.conn, campaign_id)
             if state.phase is Phase.SESSION_ZERO and not seat.strip():
                 seat_id, who = SeatId(new_id()), "a new player"
             else:

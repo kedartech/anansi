@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Session Zero</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&amp;family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&amp;family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&amp;display=swap">
+<style>
+body{margin:0;background:#000}
+@keyframes rev-drafting{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
+@media (prefers-reduced-motion: reduce){.rev-anim{animation:none !important;transform:none !important}}
+</style>
+</helmet>
+<div style="height: 100vh; min-height: 720px; box-sizing: border-box; display: flex; flex-direction: column; background: #000000; padding: 0 6px 6px; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; color: #1F1B16; overflow: hidden">
+
+<header style="min-height: 56px; display: flex; flex-wrap: wrap; align-items: center; column-gap: 14px; row-gap: 6px; padding: 6px 12px; border-bottom: 1px solid #4A2F16; color: #EDE3D1">
+  <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><path d="M27 3C19 4.5 13.5 10 12.5 17.5L15 20C22.5 19 27.5 12 27 3Z" fill="#B87333"></path><path d="M26 4.5L13.8 18.8" stroke="#000000" stroke-width="1.2"></path><path d="M13 19.5L15 21.5L4 30Z" fill="#B87333"></path><path d="M10.6 18.6L15.6 23.6" stroke="#B87333" stroke-width="2"></path></svg>
+  <div style="display: flex; flex-direction: column"><span style="font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #A89A86">Session Zero</span><span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 16px; line-height: 20px">{{campaign}}</span></div>
+  <span style="display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border: 1px solid {{roleBd}}; color: {{roleFg}}; background: {{roleBg}}; font-size: 12px; font-weight: 600">{{roleLabel}}</span>
+  <div style="margin-left: auto; display: flex; align-items: center; gap: 12px">
+    <span style="font-size: 13px; color: #A89A86">Signed in as {{handle}}</span>
+    <button type="button" aria-label="Report a bug" style="width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid #85705A; color: #EDE3D1"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8.5 7a3.5 3.5 0 0 1 7 0"></path><rect x="7" y="8" width="10" height="12" rx="5"></rect><path d="M12 12v8M3 13h4M17 13h4M4 8l3 2M20 8l-3 2M4 20l3-2.5M20 20l-3-2.5"></path></svg></button>
+    <button type="button" style="height: 36px; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px; background: transparent; border: 1px solid #B87333; color: #B87333; font: 600 13px 'IBM Plex Sans', Arial, sans-serif; white-space: nowrap"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M9 5v14M15 5v14"></path></svg>Pause · Add a line</button>
+  </div>
+</header>
+
+<div style="flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(230px, 18%) minmax(0, 1fr); background: #D8CFBA">
+
+  <!-- RAIL -->
+  <nav aria-label="Session Zero steps" style="min-height: 0; overflow-y: auto; border-right: 1px solid #1F1B16; padding: 18px 14px; display: flex; flex-direction: column; gap: 4px">
+    <span style="padding: 0 6px 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Host</span>
+    <sc-for list="{{railHost}}" as="r" hint-placeholder-count="4">
+      <div aria-current="{{r.current}}" style="display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px; align-items: center; padding: 8px 6px; background: {{r.bg}}; color: {{r.fg}}">
+        <span style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border: 1px solid {{r.numBd}}; background: {{r.numBg}}; color: {{r.numFg}}; font-size: 12px; font-weight: 600">{{r.mark}}</span>
+        <span style="font-size: 14px; font-weight: {{r.weight}}">{{r.label}}</span>
+      </div>
+    </sc-for>
+    <span style="padding: 16px 6px 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Each player</span>
+    <sc-for list="{{railPlayer}}" as="r" hint-placeholder-count="6">
+      <div aria-current="{{r.current}}" style="display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 6px; background: {{r.bg}}; color: {{r.fg}}">
+        <span style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border: 1px solid {{r.numBd}}; background: {{r.numBg}}; color: {{r.numFg}}; font-size: 12px; font-weight: 600">{{r.mark}}</span>
+        <span style="font-size: 14px; font-weight: {{r.weight}}">{{r.label}}</span>
+        <sc-if value="{{r.private}}" hint-placeholder-val="{{false}}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" role="img" aria-label="Private"><rect x="5" y="11" width="14" height="9" rx="1"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg></sc-if>
+      </div>
+    </sc-for>
+    <p style="margin: 16px 6px 0; font-size: 12px; line-height: 17px; color: #4D463B">Private steps are seen by you alone. The host never sees your character pick, goal or brief.</p>
+  </nav>
+
+  <main style="min-height: 0; overflow-y: auto; background: #F2ECDF; padding: 28px 40px 40px">
+    <div style="max-width: 1060px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px">
+
+      <!-- ===== 1 PITCH ===== -->
+      <sc-if value="{{s1}}" hint-placeholder-val="{{true}}">
+        <div style="display: flex; flex-direction: column; gap: 8px; max-width: 720px">
+          <h1 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 30px; line-height: 36px">Pitch the war you want to play</h1>
+          <p style="margin: 0; font-size: 15px; line-height: 23px; color: #4D463B">One line. As loose as "WWII" or as exact as "Philippines, MacArthur, December 1941". The engine reads it and proposes a setting you can change.</p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px; max-width: 720px">
+          <div style="display: flex; align-items: baseline"><label for="sz-pitch" style="font-size: 14px; font-weight: 600">Pitch</label><span style="margin-left: auto; font-size: 12px; color: #4D463B; font-feature-settings: 'tnum'">26 / 200</span></div>
+          <textarea id="sz-pitch" rows="2" maxlength="200" value="Britain alone, summer 1940" style="padding: 12px 14px; background: #FAF7F0; border: 2px solid #2A3D66; border-radius: 2px; font: 400 20px/30px 'Courier Prime', 'Courier New', monospace; color: #1F1B16; resize: vertical"></textarea>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px">
+            <span style="color: #4D463B">Try:</span>
+            <button type="button" style="height: 28px; padding: 0 10px; background: #FAF7F0; border: 1px solid #7A705F; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">WWII</button>
+            <button type="button" style="height: 28px; padding: 0 10px; background: #FAF7F0; border: 1px solid #7A705F; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">Philippines, MacArthur, December 1941</button>
+            <button type="button" style="height: 28px; padding: 0 10px; background: #FAF7F0; border: 1px solid #7A705F; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">The Eastern Front, winter 1941</button>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 14px">
+          <button type="button" style="height: 40px; padding: 0 20px; background: #1F1B16; color: #F2ECDF; border: 0; border-radius: 2px; font: 500 15px 'IBM Plex Sans', Arial, sans-serif">Read the pitch</button>
+          <span style="font-size: 13px; color: #4D463B">Takes up to 30 seconds. Nothing is fixed until you confirm.</span>
+        </div>
+      </sc-if>
+
+      <!-- ===== 2 SETTING CARD ===== -->
+      <sc-if value="{{s2}}" hint-placeholder-val="{{false}}">
+        <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px">
+          <h1 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 30px; line-height: 36px">Setting card</h1>
+          <span style="font-size: 14px; color: #4D463B">From your pitch: "Britain alone, summer 1940"</span>
+        </div>
+        <div style="background: #FAF7F0; border: 1px solid #1F1B16; padding: 14px 18px; display: flex; flex-direction: column; gap: 6px">
+          <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">How the engine read it</span>
+          <p style="margin: 0; font-family: 'Courier Prime', 'Courier New', monospace; font-size: 15px; line-height: 24px">Britain facing Germany alone as France falls, May to December 1940. Western Europe, the Channel and the Atlantic. As political as it is military.</p>
+        </div>
+        <fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 8px">
+          <legend style="padding: 0; margin-bottom: 8px; font-size: 14px; font-weight: 600">Start points</legend>
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+            <label style="display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; background: #FAF7F0; border: 1px solid #7A705F; cursor: pointer"><span style="display: flex; align-items: center; gap: 8px"><input type="radio" name="sz-start" style="margin: 0; accent-color: #1F1B16"><span style="font-weight: 600; font-feature-settings: 'tnum'">10 May 1940</span></span><span style="font-size: 13px; color: #4D463B">Churchill becomes Prime Minister as Germany attacks in the west.</span></label>
+            <label style="display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; background: #FAF7F0; border: 2px solid #1F1B16; cursor: pointer"><span style="display: flex; align-items: center; gap: 8px"><input type="radio" name="sz-start" checked="" style="margin: 0; accent-color: #1F1B16"><span style="font-weight: 600; font-feature-settings: 'tnum'">26 May 1940</span></span><span style="font-size: 13px; color: #4D463B">Operation Dynamo begins. The army is trapped at Dunkirk.</span></label>
+            <label style="display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; background: #FAF7F0; border: 1px solid #7A705F; cursor: pointer"><span style="display: flex; align-items: center; gap: 8px"><input type="radio" name="sz-start" style="margin: 0; accent-color: #1F1B16"><span style="font-weight: 600; font-feature-settings: 'tnum'">10 July 1940</span></span><span style="font-size: 13px; color: #4D463B">France is out. The Battle of Britain opens.</span></label>
+          </div>
+        </fieldset>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px">
+          <div style="background: #FAF7F0; border: 1px solid #1F1B16; padding: 14px 18px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; line-height: 19px">
+            <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Contests and powers</span>
+            <span><strong style="font-weight: 600">Battle of France</strong> · France and Britain against Germany</span>
+            <span><strong style="font-weight: 600">Battle of the Atlantic</strong> · Britain against Germany</span>
+            <span><strong style="font-weight: 600">Battle of Britain</strong> · Britain against Germany, from July</span>
+            <span style="color: #4D463B; padding-top: 6px; border-top: 1px solid #DDD4C2">Powers: Britain, France, Germany, Italy (neutral, for now), United States (neutral), USSR (neutral)</span>
+          </div>
+          <div style="background: #FAF7F0; border: 1px solid #1F1B16; padding: 14px 18px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; line-height: 19px">
+            <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">People named</span>
+            <span>Winston Churchill, Paul Reynaud, Charles de Gaulle, Lord Halifax, Hugh Dowding, Alan Brooke, Stewart Menzies, Benito Mussolini, Wilhelm Canaris, Franklin D. Roosevelt, Adolf Hitler</span>
+            <span style="color: #4D463B; padding-top: 6px; border-top: 1px solid #DDD4C2">Players can also name anyone who qualifies at the start date.</span>
+          </div>
+        </div>
+        <section aria-label="History schedule" style="background: #FAF7F0; border: 1px solid #1F1B16; display: flex; flex-direction: column">
+          <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 12px 18px; border-bottom: 1px solid #1F1B16">
+            <span style="font-size: 14px; font-weight: 600">History schedule</span>
+            <span style="font-size: 13px; color: #4D463B">Events that happen on their real dates unless players break what they depend on. Strike any you don't want scheduled.</span>
+          </div>
+          <sc-for list="{{schedule}}" as="h" hint-placeholder-count="8">
+            <div style="display: grid; grid-template-columns: 90px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 8px 18px; border-bottom: 1px solid #DDD4C2; font-size: 14px; background: {{h.bg}}">
+              <span style="font-weight: 600; font-feature-settings: 'tnum'; text-decoration: {{h.deco}}; color: {{h.fg}}">{{h.date}}</span>
+              <span style="text-decoration: {{h.deco}}; color: {{h.fg}}">{{h.event}}</span>
+              <button type="button" style="height: 28px; padding: 0 10px; background: transparent; border: 1px solid #1F1B16; font: 500 12px 'IBM Plex Sans', Arial, sans-serif">{{h.action}}</button>
+            </div>
+          </sc-for>
+          <span style="padding: 10px 18px; font-size: 12px; color: #4D463B">A struck event won't happen on its own. Players can still bring it about.</span>
+        </section>
+        <div style="display: flex; gap: 12px">
+          <button type="button" style="height: 40px; padding: 0 20px; background: #1F1B16; color: #F2ECDF; border: 0; border-radius: 2px; font: 500 15px 'IBM Plex Sans', Arial, sans-serif">Continue to confirm</button>
+          <button type="button" style="height: 40px; padding: 0 18px; background: transparent; border: 1px solid #1F1B16; border-radius: 2px; font: 500 15px 'IBM Plex Sans', Arial, sans-serif">Change the pitch</button>
+        </div>
+      </sc-if>
+
+      <!-- ===== 3 CONFIRM ===== -->
+      <sc-if value="{{s3}}" hint-placeholder-val="{{false}}">
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <h1 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 30px; line-height: 36px">Confirm and lock the table</h1>
+          <p style="margin: 0; font-size: 15px; color: #4D463B">These settings hold for the whole season and are visible to every player at the table.</p>
+        </div>
+        <div style="display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 20px; align-items: start">
+          <div style="background: #FAF7F0; border: 1px solid #1F1B16; padding: 16px 18px; display: flex; flex-direction: column; gap: 14px">
+            <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">The season</span>
+            <div style="display: flex; flex-direction: column; gap: 4px"><label for="sz-start2" style="font-size: 13px; font-weight: 600">Start point</label><select id="sz-start2" style="height: 38px; padding: 0 8px; background: #FFFFFF; border: 1px solid #7A705F; font: 400 14px 'IBM Plex Sans', Arial, sans-serif"><option>26 May 1940 · Operation Dynamo begins</option></select></div>
+            <div style="display: flex; flex-direction: column; gap: 2px; font-size: 13px"><span style="font-weight: 600">Struck from the schedule</span><span style="color: #4D463B">1 event: 3 July, Mers-el-Kébir</span></div>
+            <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+              <div style="display: flex; flex-direction: column; gap: 4px"><label for="sz-end" style="font-size: 13px; font-weight: 600">In-world end date</label><input id="sz-end" type="text" value="31 December 1940" style="height: 38px; padding: 0 10px; background: #FFFFFF; border: 1px solid #7A705F; font: 400 14px 'IBM Plex Sans', Arial, sans-serif"></div>
+              <div style="display: flex; flex-direction: column; gap: 4px"><label for="sz-len" style="font-size: 13px; font-weight: 600">Real-life length</label><select id="sz-len" style="height: 38px; padding: 0 8px; background: #FFFFFF; border: 1px solid #7A705F; font: 400 14px 'IBM Plex Sans', Arial, sans-serif"><option>About 6 weeks</option></select></div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px">
+              <span style="font-size: 13px; font-weight: 600">Tick interval</span>
+              <div role="radiogroup" aria-label="Tick interval" style="display: inline-flex; align-self: flex-start; border: 1px solid #1F1B16">
+                <button type="button" role="radio" aria-checked="false" style="height: 32px; padding: 0 12px; background: #FFFFFF; border: 0; border-right: 1px solid #1F1B16; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">12 h</button>
+                <button type="button" role="radio" aria-checked="true" style="height: 32px; padding: 0 12px; background: #1F1B16; color: #F2ECDF; border: 0; border-right: 1px solid #1F1B16; font: 600 13px 'IBM Plex Sans', Arial, sans-serif">24 h</button>
+                <button type="button" role="radio" aria-checked="false" style="height: 32px; padding: 0 12px; background: #FFFFFF; border: 0; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">48 h</button>
+              </div>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 13px"><input type="checkbox" checked="" style="width: 18px; height: 18px; margin: 0; accent-color: #1F1B16">Tick early once every seat has filed</label>
+            </div>
+          </div>
+          <div style="background: #FAF7F0; border: 1px solid #1F1B16; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px">
+            <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Table settings</span>
+            <sc-for list="{{seg}}" as="g" hint-placeholder-count="5">
+              <div style="display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; align-items: center">
+                <span style="font-size: 13px; font-weight: 600">{{g.label}}</span>
+                <div role="radiogroup" aria-label="{{g.label}}" style="display: inline-flex; justify-self: start; border: 1px solid #1F1B16">
+                  <sc-for list="{{g.opts}}" as="o" hint-placeholder-count="3">
+                    <button type="button" role="radio" aria-checked="{{o.on}}" style="height: 30px; padding: 0 12px; background: {{o.bg}}; color: {{o.fg}}; border: 0; border-right: 1px solid #1F1B16; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">{{o.name}}</button>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+            <div style="display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid #DDD4C2">
+              <span style="font-size: 13px; font-weight: 600">Lines and veils</span>
+              <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px"><span style="width: 52px; color: #4D463B">Lines</span><span style="padding: 2px 8px; border: 1px solid #1F1B16">Sexual violence</span><span style="padding: 2px 8px; border: 1px solid #1F1B16">Harm to children</span></div>
+              <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px"><span style="width: 52px; color: #4D463B">Veils</span><span style="padding: 2px 8px; border: 1px dashed #1F1B16">Atrocity</span><span style="padding: 2px 8px; border: 1px dashed #1F1B16">Torture</span><span style="padding: 2px 8px; border: 1px dashed #1F1B16">Executions</span></div>
+              <div style="display: flex; gap: 8px"><label for="sz-line" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Add a line or veil</label><input id="sz-line" type="text" placeholder="Add a line or veil" style="flex: 1; height: 32px; padding: 0 10px; background: #FFFFFF; border: 1px solid #7A705F; font: 400 13px 'IBM Plex Sans', Arial, sans-serif"><button type="button" style="height: 32px; padding: 0 12px; background: transparent; border: 1px solid #1F1B16; font: 500 12px 'IBM Plex Sans', Arial, sans-serif">Add</button></div>
+              <span style="font-size: 12px; line-height: 17px; color: #4D463B">Lines never appear. Veils happen off screen. Any player can add one later, anonymously; the strictest setting wins.</span>
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 14px 18px; background: #E4DCCB; border: 1px solid #1F1B16">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1F1B16" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="1"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+          <span style="flex: 1 1 300px; font-size: 14px">Locking fixes these settings for the season. Lines can still be added; nothing can be loosened.</span>
+          <button type="button" style="height: 40px; padding: 0 20px; background: #1F1B16; color: #F2ECDF; border: 0; border-radius: 2px; font: 500 15px 'IBM Plex Sans', Arial, sans-serif">Lock and build the world</button>
+        </div>
+      </sc-if>
+
+      <!-- ===== 4 DRAFT ===== -->
+      <sc-if value="{{s4}}" hint-placeholder-val="{{false}}">
+        <div style="display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 4fr); gap: 24px; align-items: start">
+          <section aria-label="Building the world" style="display: flex; flex-direction: column; gap: 16px">
+            <h1 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 30px; line-height: 36px">Building the world</h1>
+            <div style="display: flex; flex-direction: column; gap: 6px">
+              <div role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="45" aria-label="World build progress" style="height: 10px; background: #FAF7F0; border: 1px solid #1F1B16"><div style="width: 45%; height: 100%; background: #1F1B16"></div></div>
+              <span style="font-size: 13px; color: #4D463B; font-feature-settings: 'tnum'">0:52 so far · usually under 2 minutes</span>
+            </div>
+            <ol role="status" aria-live="polite" style="margin: 0; padding: 18px 20px; list-style: none; background: #FAF7F0; border: 1px solid #1F1B16; display: flex; flex-direction: column; gap: 10px; font-family: 'Courier Prime', 'Courier New', monospace; font-size: 16px; line-height: 24px">
+              <li style="display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1F1B16" stroke-width="2.4" aria-hidden="true" style="margin-top: 3px"><path d="m4 12 5 5L20 6"></path></svg><span>Outline done.</span></li>
+              <li style="display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1F1B16" stroke-width="2.4" aria-hidden="true" style="margin-top: 3px"><path d="m4 12 5 5L20 6"></path></svg><span>Contests set: France, the Atlantic, Britain.</span></li>
+              <li style="display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; font-weight: 700"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="margin-top: 3px"><circle cx="12" cy="12" r="8" fill="#F2ECDF" stroke="#1F1B16" stroke-width="2"></circle><path d="M12 4a8 8 0 0 1 0 16Z" fill="#1F1B16"></path></svg><span>Drafting assets, roster, schedule…</span></li>
+              <li style="display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; color: #5F574A"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="margin-top: 3px"><circle cx="12" cy="12" r="8" fill="none" stroke="#5F574A" stroke-width="2" stroke-dasharray="3 3"></circle></svg><span>Checking each seat's view for leaks.</span></li>
+              <li style="display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; color: #5F574A"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="margin-top: 3px"><circle cx="12" cy="12" r="8" fill="none" stroke="#5F574A" stroke-width="2" stroke-dasharray="3 3"></circle></svg><span>Seats ready.</span></li>
+            </ol>
+            <div aria-hidden="true" style="position: relative; height: 3px; background: #C9BFA8; overflow: hidden"><span class="rev-anim" style="position: absolute; left: 0; top: 0; bottom: 0; width: 30%; background: #1F1B16; animation: rev-drafting 1.6s linear infinite"></span></div>
+            <span style="font-size: 13px; color: #4D463B">You can leave this page. The build carries on and the campaign list will show when it's ready.</span>
+          </section>
+          <aside style="background: #FAF7F0; border: 1px solid #1F1B16; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px">
+            <span style="font-size: 14px; font-weight: 600">Invite your players while you wait</span>
+            <div style="display: flex; align-items: center; gap: 10px"><code style="flex: 1; padding: 10px 12px; background: #F2ECDF; border: 1px solid #7A705F; font: 500 20px 'IBM Plex Mono', ui-monospace, Menlo, monospace; letter-spacing: 0.08em">WOLF-7QK2</code><button type="button" style="height: 40px; padding: 0 12px; background: transparent; border: 1px solid #1F1B16; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">Copy</button></div>
+            <span style="font-size: 13px; line-height: 19px; color: #4D463B">One code per player; each works once. Issue more from the host console.</span>
+            <span style="font-size: 13px; line-height: 19px; padding-top: 10px; border-top: 1px solid #DDD4C2">You'll pick your own character like everyone else, once the world is ready.</span>
+          </aside>
+        </div>
+      </sc-if>
+
+      <!-- ===== 5 JOIN ===== -->
+      <sc-if value="{{s5}}" hint-placeholder-val="{{false}}">
+        <h1 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 30px; line-height: 36px">Join a campaign</h1>
+        <form aria-label="Join with an invite code" style="display: flex; flex-direction: column; gap: 6px; max-width: 480px">
+          <label for="sz-code" style="font-size: 14px; font-weight: 600">Invite code</label>
+          <div style="display: flex"><input id="sz-code" type="text" value="WOLF-7QK2" style="flex: 1; min-width: 0; height: 44px; padding: 0 12px; background: #FAF7F0; border: 1px solid #7A705F; border-right: 0; font: 500 18px 'IBM Plex Mono', ui-monospace, Menlo, monospace; letter-spacing: 0.08em"><button type="submit" style="height: 44px; padding: 0 20px; background: #1F1B16; color: #F2ECDF; border: 0; font: 500 15px 'IBM Plex Sans', Arial, sans-serif">Check</button></div>
+          <span style="font-size: 13px; color: #2E5A3C; font-weight: 600; display: inline-flex; align-items: center; gap: 6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m4 12 5 5L20 6"></path></svg>Code is good. Here's the table.</span>
+        </form>
+        <article style="background: #FAF7F0; border: 2px solid #1F1B16; display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr)">
+          <div style="padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; border-right: 1px solid #DDD4C2">
+            <h2 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 24px">Their Finest Hour</h2>
+            <dl style="margin: 0; display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 6px 12px; font-size: 14px; line-height: 20px">
+              <dt style="color: #4D463B">Host</dt><dd style="margin: 0">ironside</dd>
+              <dt style="color: #4D463B">Starts</dt><dd style="margin: 0">26 May 1940 · Operation Dynamo begins</dd>
+              <dt style="color: #4D463B">Ends</dt><dd style="margin: 0">31 December 1940 · about 6 weeks</dd>
+              <dt style="color: #4D463B">Ticks</dt><dd style="margin: 0">Every 24 hours, or sooner when everyone has filed</dd>
+              <dt style="color: #4D463B">Settings</dt><dd style="margin: 0">Plausible · Grounded · Moderate · Historical lethality · Medium betrayal</dd>
+              <dt style="color: #4D463B">Lines and veils</dt><dd style="margin: 0">2 lines, 3 veils · <a href="#" style="color: #2A3D66">read them</a></dd>
+            </dl>
+          </div>
+          <div style="padding: 18px 20px; display: flex; flex-direction: column; gap: 8px">
+            <span style="font-size: 13px; font-weight: 600">At the table</span>
+            <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 14px">
+              <li>ironside <span style="color: #4D463B">· host</span></li><li>marne_taxi</li><li>quietcorner</li><li>lisbon_rose</li>
+            </ul>
+            <span style="font-size: 12px; line-height: 17px; color: #4D463B; padding-top: 8px; border-top: 1px solid #DDD4C2">Handles are shown only here, at Session Zero. In play, everyone sees characters.</span>
+          </div>
+        </article>
+        <button type="button" style="align-self: flex-start; height: 40px; padding: 0 20px; background: #1F1B16; color: #F2ECDF; border: 0; border-radius: 2px; font: 500 15px 'IBM Plex Sans', Arial, sans-serif">Take a seat</button>
+      </sc-if>
+
+      <!-- ===== 6 CHARACTER ===== -->
+      <sc-if value="{{s6}}" hint-placeholder-val="{{false}}">
+        <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px">
+          <h1 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 30px; line-height: 36px">Choose your character</h1>
+          <span style="font-size: 14px; color: #4D463B">Anyone who could act on 26 May 1940. Sides shown for each contest.</span>
+        </div>
+        <div style="display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; align-items: start">
+          <div style="display: flex; flex-direction: column; gap: 12px">
+            <div style="display: flex; flex-direction: column; gap: 4px">
+              <label for="sz-search" style="font-size: 13px; font-weight: 600">Describe who you want to play</label>
+              <input id="sz-search" type="search" value="someone who runs Britain's spies" style="height: 40px; padding: 0 12px; background: #FAF7F0; border: 1px solid #7A705F; font: 400 15px 'IBM Plex Sans', Arial, sans-serif">
+              <span style="font-size: 12px; color: #4D463B">1 match, marked below.</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px">
+              <sc-for list="{{roster}}" as="c" hint-placeholder-count="12">
+                <article style="background: {{c.bg}}; border: {{c.border}}; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; opacity: {{c.op}}">
+                  <div style="display: flex; align-items: flex-start; gap: 8px">
+                    <div style="display: flex; flex-direction: column; flex: 1; min-width: 0"><span style="font-size: 14px; font-weight: 600">{{c.name}}</span><span style="font-size: 12px; color: #4D463B">{{c.office}}</span></div>
+                    <sc-if value="{{c.tag}}" hint-placeholder-val="{{false}}"><span style="flex: none; font-size: 11px; font-weight: 600; padding: 1px 6px; border: 1px solid #1F1B16; background: {{c.tagBg}}; color: {{c.tagFg}}">{{c.tagText}}</span></sc-if>
+                  </div>
+                  <span style="font-family: 'Courier Prime', 'Courier New', monospace; font-size: 13px; line-height: 19px">{{c.pitch}}</span>
+                  <span style="font-size: 12px; color: #4D463B">{{c.sides}}</span>
+                </article>
+              </sc-for>
+            </div>
+          </div>
+          <aside style="display: flex; flex-direction: column; gap: 12px">
+            <div style="background: #FAF7F0; border: 1px solid #1F1B16; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+              <label for="sz-name" style="font-size: 13px; font-weight: 600">Or name anyone</label>
+              <input id="sz-name" type="text" value="Bomber Harris" style="height: 36px; padding: 0 10px; background: #FFFFFF; border: 1px solid #7A705F; font: 400 14px 'IBM Plex Sans', Arial, sans-serif">
+              <div style="display: flex; flex-direction: column; gap: 4px; padding: 10px; background: #F2ECDF; font-size: 13px; line-height: 19px">
+                <span>Found <strong style="font-weight: 600">Arthur Harris</strong>, Air Vice-Marshal commanding 5 Group, Bomber Command. Qualifies.</span>
+                <button type="button" style="align-self: flex-start; height: 30px; padding: 0 10px; background: #1F1B16; color: #F2ECDF; border: 0; font: 500 12px 'IBM Plex Sans', Arial, sans-serif">Choose Arthur Harris</button>
+              </div>
+            </div>
+            <div style="background: #FAF7F0; border: 1px solid #1F1B16; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+              <label for="sz-name2" style="font-size: 13px; font-weight: 600">Or name anyone</label>
+              <input id="sz-name2" type="text" value="Eisenhower" style="height: 36px; padding: 0 10px; background: #FFFFFF; border: 1px solid #7A705F; font: 400 14px 'IBM Plex Sans', Arial, sans-serif">
+              <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px; background: #F2ECDF; border-left: 0; font-size: 13px; line-height: 19px">
+                <span><strong style="font-weight: 600">Not at this start date.</strong> On 26 May 1940 Lieutenant-Colonel Eisenhower holds no post that could act.</span>
+                <span>Nearest who qualifies: <strong style="font-weight: 600">George C. Marshall</strong>, US Army Chief of Staff.</span>
+                <button type="button" style="align-self: flex-start; height: 30px; padding: 0 10px; background: transparent; border: 1px solid #1F1B16; font: 500 12px 'IBM Plex Sans', Arial, sans-serif">Choose Marshall</button>
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px; background: #E4DCCB; border: 2px solid #1F1B16">
+              <span style="font-size: 13px">Selected: <strong style="font-weight: 600">Winston Churchill</strong></span>
+              <button type="button" style="height: 38px; background: #1F1B16; color: #F2ECDF; border: 0; font: 500 14px 'IBM Plex Sans', Arial, sans-serif">Continue as Churchill</button>
+            </div>
+          </aside>
+        </div>
+      </sc-if>
+
+      <!-- ===== 7 GOAL ===== -->
+      <sc-if value="{{s7}}" hint-placeholder-val="{{false}}">
+        <div style="display: flex; flex-direction: column; gap: 8px; max-width: 760px">
+          <h1 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 30px; line-height: 36px">A secret goal, if you want one</h1>
+          <p style="margin: 0; font-size: 15px; line-height: 23px; color: #4D463B">A personal wager on top of your mandates. Nobody sees it until the Reveal. You can play without one.</p>
+        </div>
+        <fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 8px; max-width: 860px">
+          <legend style="padding: 0; margin-bottom: 8px; font-size: 14px; font-weight: 600">Suggested for Winston Churchill</legend>
+          <label style="display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 12px 14px; background: #FAF7F0; border: 2px solid #1F1B16"><input type="radio" name="sz-goal" checked="" style="margin: 0; accent-color: #1F1B16"><span style="font-family: 'Courier Prime', 'Courier New', monospace; font-size: 15px">Keep the United States supplying Britain by 1 January 1941</span><span style="font-size: 12px; font-weight: 600; padding: 2px 8px; border: 1px solid #1F1B16">Lasting</span></label>
+          <label style="display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 12px 14px; background: #FAF7F0; border: 1px solid #7A705F"><input type="radio" name="sz-goal" style="margin: 0; accent-color: #1F1B16"><span style="font-family: 'Courier Prime', 'Courier New', monospace; font-size: 15px">Keep France in the war past 1 August 1940</span><span style="font-size: 12px; font-weight: 600; padding: 2px 8px; border: 1px dashed #1F1B16">Undoable</span></label>
+          <label style="display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 12px 14px; background: #FAF7F0; border: 1px solid #7A705F"><input type="radio" name="sz-goal" style="margin: 0; accent-color: #1F1B16"><span style="font-family: 'Courier Prime', 'Courier New', monospace; font-size: 15px">Keep the French fleet out of German hands to season's end</span><span style="font-size: 12px; font-weight: 600; padding: 2px 8px; border: 1px dashed #1F1B16">Undoable</span></label>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px 24px; font-size: 13px; color: #4D463B; padding: 4px 2px"><span><strong style="font-weight: 600; color: #1F1B16">Lasting</strong>: once met, it stays met.</span><span><strong style="font-weight: 600; color: #1F1B16">Undoable</strong>: must still hold at season's end.</span></div>
+        </fieldset>
+        <div style="display: flex; flex-direction: column; gap: 6px; max-width: 860px">
+          <label for="sz-own" style="font-size: 14px; font-weight: 600">Or write your own</label>
+          <textarea id="sz-own" rows="2" value="Be made a Knight of the Garter before the season ends" style="padding: 10px 12px; background: #FAF7F0; border: 1px solid #7A705F; font: 400 15px/23px 'Courier Prime', 'Courier New', monospace; resize: vertical"></textarea>
+          <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; background: #FAF7F0; border: 2px solid #7A4E0C; font-size: 13px; line-height: 19px">
+            <span style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #7A4E0C"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 3 2 20h20Z"></path><path d="M12 10v4M12 17v.5"></path></svg>Not tied to any contest</span>
+            <span>You can keep this goal. It just won't pull on the war much, so it may be hard to steer toward. Hartley reads it as <strong style="font-weight: 600">Lasting</strong>.</span>
+          </div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 16px; background: #E4DCCB; border: 1px solid #1F1B16; max-width: 860px">
+          <span style="flex: 1 1 300px; font-size: 14px">Your goal: <strong style="font-weight: 600">Keep the United States supplying Britain by 1 January 1941</strong> · Lasting</span>
+          <button type="button" style="height: 38px; padding: 0 18px; background: #1F1B16; color: #F2ECDF; border: 0; border-radius: 2px; font: 500 14px 'IBM Plex Sans', Arial, sans-serif">Confirm goal</button>
+          <button type="button" style="height: 38px; padding: 0 14px; background: transparent; border: 1px solid #1F1B16; border-radius: 2px; font: 500 14px 'IBM Plex Sans', Arial, sans-serif">Play without one</button>
+        </div>
+      </sc-if>
+
+      <!-- ===== 8 BRIEF ===== -->
+      <sc-if value="{{s8}}" hint-placeholder-val="{{false}}">
+        <article aria-label="Historical brief" style="background: #FAF7F0; border: 1px solid #1F1B16; padding: 26px 32px; display: flex; flex-direction: column; gap: 16px; max-width: 900px">
+          <div style="display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px 16px; padding-bottom: 12px; border-bottom: 1px solid #1F1B16">
+            <div style="display: flex; flex-direction: column; gap: 2px">
+              <span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase">Historical brief</span>
+              <h1 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 26px; line-height: 32px">Winston Churchill, to 26 May 1940</h1>
+            </div>
+            <span style="margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border: 2px solid #1F1B16; font: 700 12px 'Courier Prime', monospace; letter-spacing: 0.12em"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="1"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>PRIVATE</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 12px; font-family: 'Courier Prime', 'Courier New', monospace; font-size: 15px; line-height: 24px; max-width: 72ch">
+            <p style="margin: 0">First Lord of the Admiralty again from September 1939. Prime Minister since 10 May, after the failure in Norway brought Chamberlain down. You lead a coalition with Labour and a Conservative party that does not entirely trust you.</p>
+            <p style="margin: 0">The German attack in the west has cut the British army off around Dunkirk. The evacuation begins today.</p>
+            <div style="position: relative; padding: 10px 12px; border: 1px dashed #7A4E0C; background: #F2ECDF">
+              <span style="font-family: 'IBM Plex Sans', Arial, sans-serif; display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border: 1px solid #7A4E0C; color: #7A4E0C; font-size: 11px; font-weight: 600; margin-bottom: 6px">Thin record</span>
+              <p style="margin: 0">What passed between you and Lord Halifax in the War Cabinet over the next three days survives only in partial minutes and later memoirs. Treat this part as uncertain.</p>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; padding-top: 12px; border-top: 1px solid #DDD4C2">
+            <div style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 20px">
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Your contests and side</span>
+              <span><strong style="font-weight: 600">Battle of France</strong> · France and Britain</span>
+              <span><strong style="font-weight: 600">Battle of the Atlantic</strong> · Britain</span>
+              <span><strong style="font-weight: 600">Battle of Britain</strong> · Britain, from July</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 20px">
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">What history says comes next</span>
+              <span><strong style="font-weight: 600; font-feature-settings: 'tnum'">4 June</strong> · Dunkirk ends; 338,000 home</span>
+              <span><strong style="font-weight: 600; font-feature-settings: 'tnum'">10 June</strong> · Italy declares war</span>
+              <span><strong style="font-weight: 600; font-feature-settings: 'tnum'">22 June</strong> · France signs an armistice</span>
+              <span><strong style="font-weight: 600; font-feature-settings: 'tnum'">10 July</strong> · The Battle of Britain opens</span>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; background: #E4DCCB">
+            <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">One route you could take</span>
+            <span style="font-family: 'Courier Prime', 'Courier New', monospace; font-size: 15px; line-height: 23px">Get the army home. Keep France fighting for as long as it helps. Then make America the arsenal before the money runs out.</span>
+          </div>
+          <button type="button" style="align-self: flex-start; height: 40px; padding: 0 20px; background: #1F1B16; color: #F2ECDF; border: 0; border-radius: 2px; font: 500 15px 'IBM Plex Sans', Arial, sans-serif">Continue to your agent</button>
+        </article>
+      </sc-if>
+
+      <!-- ===== 9 AGENT ===== -->
+      <sc-if value="{{s9}}" hint-placeholder-val="{{false}}">
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <h1 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 30px; line-height: 36px">Design your agent</h1>
+          <p style="margin: 0; font-size: 15px; color: #4D463B">Your aide writes your briefings, drafts your orders and plays your seat when you're away.</p>
+        </div>
+        <div style="display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start">
+          <form aria-label="Agent design" style="background: #FAF7F0; border: 1px solid #1F1B16; padding: 18px 20px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px">
+            <div style="display: flex; flex-direction: column; gap: 4px"><label for="ag-name" style="font-size: 13px; font-weight: 600">Name</label><input id="ag-name" type="text" value="Hartley" style="height: 38px; padding: 0 10px; background: #FFFFFF; border: 1px solid #7A705F; font: 400 14px 'IBM Plex Sans', Arial, sans-serif"></div>
+            <div style="display: flex; flex-direction: column; gap: 4px"><label for="ag-role" style="font-size: 13px; font-weight: 600">Role</label><input id="ag-role" type="text" value="Private secretary" style="height: 38px; padding: 0 10px; background: #FFFFFF; border: 1px solid #7A705F; font: 400 14px 'IBM Plex Sans', Arial, sans-serif"></div>
+            <div style="display: flex; flex-direction: column; gap: 4px"><label for="ag-pers" style="font-size: 13px; font-weight: 600">Personality</label><input id="ag-pers" type="text" value="Dry and exact. Never flatters." style="height: 38px; padding: 0 10px; background: #FFFFFF; border: 1px solid #7A705F; font: 400 14px 'IBM Plex Sans', Arial, sans-serif"></div>
+            <div style="display: flex; flex-direction: column; gap: 4px"><label for="ag-voice" style="font-size: 13px; font-weight: 600">Voice</label><input id="ag-voice" type="text" value="Short sentences. Facts first, then one opinion, marked as his." style="height: 38px; padding: 0 10px; background: #FFFFFF; border: 1px solid #7A705F; font: 400 14px 'IBM Plex Sans', Arial, sans-serif"></div>
+            <div style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 4px"><label for="ag-back" style="font-size: 13px; font-weight: 600">Backstory</label><textarea id="ag-back" rows="2" value="A Treasury man, moved to Downing Street in 1939. Knows where every file is and who wrote it." style="padding: 8px 10px; background: #FFFFFF; border: 1px solid #7A705F; font: 400 14px/20px 'IBM Plex Sans', Arial, sans-serif; resize: vertical"></textarea></div>
+            <div style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 4px"><label for="ag-rel" style="font-size: 13px; font-weight: 600">Relationship to Churchill</label><textarea id="ag-rel" rows="2" value="Loyal to the office more than to the man. Will say no, once, and then do as he's told." style="padding: 8px 10px; background: #FFFFFF; border: 1px solid #7A705F; font: 400 14px/20px 'IBM Plex Sans', Arial, sans-serif; resize: vertical"></textarea></div>
+            <div style="grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding-top: 6px">
+              <button type="submit" style="height: 40px; padding: 0 20px; background: #1F1B16; color: #F2ECDF; border: 0; border-radius: 2px; font: 500 15px 'IBM Plex Sans', Arial, sans-serif">Save agent</button>
+              <span style="font-size: 13px; color: #4D463B">Prefer your own AI agent? You can connect one later in Settings.</span>
+            </div>
+          </form>
+          <aside style="display: flex; flex-direction: column; gap: 14px">
+            <div style="display: flex; align-items: center; gap: 14px">
+              <div aria-hidden="true" style="width: 80px; height: 100px; border: 1px solid #1F1B16; outline: 1px solid #1F1B16; outline-offset: 4px; background: #E4DCCB; display: flex; align-items: center; justify-content: center; font-family: 'Libre Caslon Text', Georgia, serif; font-size: 32px">H</div>
+              <span style="font-size: 12px; line-height: 17px; color: #4D463B">Portrait placeholder. Engraved-style portraits come later, labelled as AI-made fiction.</span>
+            </div>
+            <div style="background: #E4DCCB; border: 1px solid #B5AA93; padding: 12px; display: flex; flex-direction: column; gap: 6px">
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">How Hartley sounds</span>
+              <span style="font-family: 'Courier Prime', 'Courier New', monospace; font-size: 14px; line-height: 21px">The army is coming home, Prime Minister. Its rifles are not. I'd ask the Americans for both, in that order.</span>
+            </div>
+          </aside>
+        </div>
+      </sc-if>
+
+      <!-- ===== 10 WAITING ===== -->
+      <sc-if value="{{s10}}" hint-placeholder-val="{{false}}">
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <h1 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 30px; line-height: 36px">Waiting for the host to begin</h1>
+          <p style="margin: 0; font-size: 15px; color: #4D463B">You're ready. You can close this tab; we'll let you know when play starts.</p>
+        </div>
+        <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start">
+          <section aria-label="Your seat" style="background: #FAF7F0; border: 2px solid #1F1B16; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px">
+            <div style="display: flex; align-items: center; gap: 8px"><span style="font-size: 14px; font-weight: 600">Your seat</span><span style="margin-left: auto; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="1"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>Only you</span></div>
+            <div style="display: flex; align-items: center; gap: 12px">
+              <svg width="22" height="26" viewBox="0 0 22 26" role="img" aria-label="Seat colour: azure"><path d="M1 1h20v11c0 7-5 11.5-10 13C6 23.5 1 19 1 12Z" fill="#234A8A"></path></svg>
+              <div style="display: flex; flex-direction: column"><span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 20px">Winston Churchill</span><span style="font-size: 13px; color: #4D463B">Prime Minister</span></div>
+            </div>
+            <dl style="margin: 0; display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 4px 12px; font-size: 13px">
+              <dt style="color: #4D463B">Goal</dt><dd style="margin: 0">Set · Lasting</dd>
+              <dt style="color: #4D463B">Brief</dt><dd style="margin: 0">Read</dd>
+              <dt style="color: #4D463B">Agent</dt><dd style="margin: 0">Hartley, private secretary</dd>
+            </dl>
+          </section>
+          <section aria-label="The table" style="background: #FAF7F0; border: 1px solid #1F1B16; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px">
+            <div style="display: flex; align-items: baseline"><span style="font-size: 14px; font-weight: 600">The table</span><span style="margin-left: auto; font-size: 13px; color: #4D463B">4 of 5 ready</span></div>
+            <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; font-size: 14px">
+              <li style="display: flex; padding: 6px 0; border-bottom: 1px solid #DDD4C2"><span>ironside <span style="color: #4D463B">· host</span></span><span style="margin-left: auto; font-weight: 600">Ready</span></li>
+              <li style="display: flex; padding: 6px 0; border-bottom: 1px solid #DDD4C2"><span>bulldog_40 <span style="color: #4D463B">· you</span></span><span style="margin-left: auto; font-weight: 600">Ready</span></li>
+              <li style="display: flex; padding: 6px 0; border-bottom: 1px solid #DDD4C2"><span>marne_taxi</span><span style="margin-left: auto; font-weight: 600">Ready</span></li>
+              <li style="display: flex; padding: 6px 0; border-bottom: 1px solid #DDD4C2"><span>quietcorner</span><span style="margin-left: auto; font-weight: 600">Ready</span></li>
+              <li style="display: flex; padding: 6px 0"><span>lisbon_rose</span><span style="margin-left: auto; color: #4D463B">Still choosing</span></li>
+            </ul>
+            <span style="font-size: 12px; color: #4D463B">Nobody sees anyone else's character until play begins, and then only as characters.</span>
+          </section>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px 20px; padding: 12px 16px; background: #E4DCCB; font-size: 13px">
+          <span style="font-weight: 600">Table settings</span><span>Plausible · Grounded · Moderate · Historical lethality · Medium betrayal · ticks every 24 h</span><a href="#" style="color: #2A3D66">Lines and veils</a>
+        </div>
+      </sc-if>
+    </div>
+  </main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"step":{"editor":"enum","options":["1","2","3","4","5","6","7","8","9","10"],"default":"1"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var step = parseInt(this.props.step ?? '1', 10) || 1;
+    var labels = ['Pitch', 'Setting card', 'Confirm and lock', 'Build the world', 'Join', 'Character', 'Secret goal', 'Historical brief', 'Your agent', 'Wait to begin'];
+    var priv = [false, false, false, false, false, true, true, true, true, false];
+    var isHost = step <= 4;
+    var rail = labels.map(function (l, i) {
+      var n = i + 1, cur = n === step, done = isHost ? n < step : (n < step && n >= 5);
+      var visible = isHost ? n <= 4 : n >= 5;
+      return {
+        label: l, private: priv[i], current: cur ? 'step' : 'false',
+        mark: done ? '✓' : String(n),
+        bg: cur ? '#1F1B16' : 'transparent', fg: cur ? '#F2ECDF' : (visible ? '#1F1B16' : '#5F574A'),
+        numBd: cur ? '#F2ECDF' : '#1F1B16', numBg: done ? '#1F1B16' : 'transparent', numFg: done ? '#F2ECDF' : (cur ? '#F2ECDF' : '#1F1B16'),
+        weight: cur ? 600 : 500
+      };
+    });
+    var sched = [
+      ['26 May', 'Operation Dynamo begins', false], ['28 May', 'Belgium capitulates', false], ['10 June', 'Italy declares war', false],
+      ['14 June', 'German troops enter Paris', false], ['22 June', 'France signs an armistice', false], ['3 July', 'The Royal Navy attacks the French fleet at Mers-el-Kébir', true],
+      ['10 July', 'The Battle of Britain opens', false], ['2 Sept', 'Destroyers-for-bases agreement', false]
+    ].map(function (s) { return { date: s[0], event: s[1], deco: s[2] ? 'line-through' : 'none', fg: s[2] ? '#5F574A' : '#1F1B16', bg: s[2] ? '#EDE6D6' : '#FAF7F0', action: s[2] ? 'Restore' : 'Strike' }; });
+    var mk = function (label, opts, on) { return { label: label, opts: opts.map(function (o) { var a = o === on; return { name: o, on: a ? 'true' : 'false', bg: a ? '#1F1B16' : '#FFFFFF', fg: a ? '#F2ECDF' : '#1F1B16' }; }) }; };
+    var seg = [
+      mk('Plausibility', ['Strict', 'Plausible', 'Pulp'], 'Plausible'),
+      mk('Tone', ['Grounded', 'Satirical', 'Grim'], 'Grounded'),
+      mk('Content rating', ['Mild', 'Moderate', 'Mature'], 'Moderate'),
+      mk('Lethality', ['Low', 'Historical', 'High'], 'Historical'),
+      mk('Betrayal intensity', ['Low', 'Medium', 'High'], 'Medium')
+    ];
+    var card = function (name, office, pitch, sides, kind) {
+      var sel = kind === 'selected', match = kind === 'match', comp = kind === 'composite', un = kind === 'unavailable';
+      return { name: name, office: office, pitch: pitch, sides: sides,
+        tag: sel || match || comp || un, tagText: sel ? 'Selected' : match ? 'Matches' : comp ? 'Composite' : 'Unavailable',
+        tagBg: sel ? '#1F1B16' : '#FAF7F0', tagFg: sel ? '#F2ECDF' : '#1F1B16',
+        bg: sel ? '#FAF7F0' : (match ? '#FAF7F0' : '#FAF7F0'), border: sel ? '2px solid #1F1B16' : (match ? '2px dashed #2A3D66' : '1px solid #B5AA93'), op: un ? '0.7' : '1' };
+    };
+    var roster = [
+      card('Winston Churchill', 'Prime Minister', 'Holds Britain together while France falls.', 'France: Allies · Atlantic: Britain', 'selected'),
+      card('Stewart Menzies', 'Chief of SIS', "Runs Britain's spies, and knows it.", 'France: Allies · Atlantic: Britain', 'match'),
+      card('Paul Reynaud', 'Prime Minister of France', 'Fight on from Africa, or ask for terms.', 'France: Allies', 'unavailable'),
+      card('Charles de Gaulle', 'Under-Secretary for War', 'A junior minister with a cause and a microphone.', 'France: Allies', ''),
+      card('Alan Brooke', 'Commander, II Corps', 'Holds the flank so the army can get away.', 'France: Allies', ''),
+      card('Hugh Dowding', 'Fighter Command', 'Guards every last squadron.', 'France: Allies · Britain: Britain', ''),
+      card('Lord Halifax', 'Foreign Secretary', 'Would hear terms, if they were offered.', 'France: Allies', ''),
+      card('Benito Mussolini', 'Duce of Italy', 'Waits to join the winning side.', 'France: neutral, for now', ''),
+      card('Wilhelm Canaris', 'Head of the Abwehr', 'Serves Hitler. Mostly.', 'France: Germany · Atlantic: Germany', ''),
+      card('Franklin D. Roosevelt', 'President of the United States', 'Wants to help. Faces an election.', 'Atlantic: neutral', ''),
+      card('A convoy commodore', 'Royal Navy Reserve', 'Drawn from several real officers; no single life.', 'Atlantic: Britain', 'composite')
+    ];
+    return {
+      s1: step === 1, s2: step === 2, s3: step === 3, s4: step === 4, s5: step === 5, s6: step === 6, s7: step === 7, s8: step === 8, s9: step === 9, s10: step === 10,
+      railHost: rail.slice(0, 4), railPlayer: rail.slice(4),
+      campaign: step <= 1 ? 'New campaign' : 'Their Finest Hour',
+      handle: isHost ? 'ironside' : 'bulldog_40',
+      roleLabel: isHost ? 'Host only' : (priv[step - 1] ? 'Private · only you see this' : 'Player'),
+      roleBg: isHost ? '#B87333' : 'transparent', roleFg: isHost ? '#000000' : '#EDE3D1', roleBd: isHost ? '#B87333' : '#85705A',
+      schedule: sched, seg: seg, roster: roster
+    };
+  }
+}
+</script>
+</body>
+</html>

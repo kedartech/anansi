@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Your campaigns, none yet</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&amp;family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&amp;family=Courier+Prime:wght@400;700&amp;display=swap">
+<style>
+body{margin:0;background:#000}
+a{color:#2A3D66}a:hover{color:#1F1B16}
+input::placeholder{color:#5F574A}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; background: #000000; padding: 0 8px 8px; display: flex; flex-direction: column; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; color: #1F1B16">
+  <header style="height: 64px; flex: none; display: flex; align-items: center; gap: 14px; padding: 0 16px; border-bottom: 1px solid #4A2F16; color: #EDE3D1">
+    <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><path d="M27 3C19 4.5 13.5 10 12.5 17.5L15 20C22.5 19 27.5 12 27 3Z" fill="#B87333"></path><path d="M26 4.5L13.8 18.8" stroke="#000000" stroke-width="1.2"></path><path d="M13 19.5L15 21.5L4 30Z" fill="#B87333"></path><path d="M10.6 18.6L15.6 23.6" stroke="#B87333" stroke-width="2"></path></svg>
+    <span style="font-size: 13px; font-weight: 600; letter-spacing: 0.32em; color: #B87333">REVISIONIST</span>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 12px">
+      <a href="#" style="font-size: 14px; color: #B87333">Settings</a>
+      <button type="button" aria-label="Report a bug" style="width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid #85705A; color: #EDE3D1; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8.5 7a3.5 3.5 0 0 1 7 0"></path><rect x="7" y="8" width="10" height="12" rx="5"></rect><path d="M12 12v8M3 13h4M17 13h4M4 8l3 2M20 8l-3 2M4 20l3-2.5M20 20l-3-2.5"></path></svg></button>
+      <button type="button" style="height: 36px; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px; background: #120F0C; border: 1px solid #85705A; color: #EDE3D1; font: 500 13px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer">bulldog_40<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>
+    </div>
+  </header>
+
+  <main style="flex: 1; background: #D8CFBA; padding: 40px 24px 56px; display: flex; flex-direction: column">
+    <div style="width: 100%; max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; flex: 1">
+      <h1 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 32px; line-height: 38px">Your campaigns</h1>
+
+      <section aria-labelledby="ce-title" style="flex: 1; min-height: 480px; background: #F2ECDF; border: 1px solid #1F1B16; display: flex; align-items: center; justify-content: center; padding: 48px 24px">
+        <div style="width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 22px">
+          <span style="align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border: 2px solid #1F1B16; font: 700 12px 'Courier Prime', monospace; letter-spacing: 0.12em">NO SEATS HELD</span>
+          <h2 id="ce-title" style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 26px; line-height: 32px">You don't hold a seat anywhere yet.</h2>
+          <p style="margin: 0; font-size: 15px; line-height: 23px; color: #4D463B">Ask the host of a campaign for an invite code and enter it here. You'll choose your character, an optional secret goal and your agent at Session Zero.</p>
+          <form aria-label="Join with an invite code" style="display: flex; flex-direction: column; gap: 6px">
+            <label for="ce-invite" style="font-size: 14px; font-weight: 600">Invite code</label>
+            <div style="display: flex">
+              <input id="ce-invite" type="text" placeholder="e.g. WOLF-7QK2" style="flex: 1; min-width: 0; height: 44px; padding: 0 12px; background: #FAF7F0; border: 1px solid #7A705F; border-right: 0; border-radius: 2px 0 0 2px; font: 400 15px 'IBM Plex Sans', Arial, sans-serif; color: #1F1B16">
+              <button type="submit" style="height: 44px; padding: 0 22px; background: #1F1B16; color: #F2ECDF; border: 0; border-radius: 0 2px 2px 0; font: 500 15px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer">Join</button>
+            </div>
+          </form>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px 20px; padding-top: 16px; border-top: 1px solid #B5AA93; font-size: 14px">
+            <span style="color: #4D463B">Running the game for your table?</span>
+            <a href="#" style="font-weight: 600">Start a new campaign as host</a>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

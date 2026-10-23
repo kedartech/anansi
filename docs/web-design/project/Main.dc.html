@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Revisionist design system</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&amp;family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&amp;family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&amp;display=swap">
+<style>
+body{margin:0;background:#000}
+a{color:#2A3D66}a:hover{color:#1F1B16}
+</style>
+</helmet>
+<div style="width: 1440px; min-height: 3000px; box-sizing: border-box; background: #000000; padding: 0 8px 8px; display: flex; flex-direction: column; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; color: #1F1B16">
+
+<!-- FRAME HEADER -->
+<header style="height: 64px; display: flex; align-items: center; gap: 16px; padding: 0 16px; border-bottom: 1px solid #4A2F16">
+  <svg width="32" height="32" viewBox="0 0 32 32" role="img" aria-label="Revisionist mark (placeholder)">
+    <path d="M27 3C19 4.5 13.5 10 12.5 17.5L15 20C22.5 19 27.5 12 27 3Z" fill="#B87333"></path>
+    <path d="M26 4.5L13.8 18.8" stroke="#000000" stroke-width="1.2"></path>
+    <path d="M13 19.5L15 21.5L4 30Z" fill="#B87333"></path>
+    <path d="M10.6 18.6L15.6 23.6" stroke="#B87333" stroke-width="2" stroke-linecap="square"></path>
+  </svg>
+  <span style="font-size: 13px; line-height: 16px; font-weight: 600; letter-spacing: 0.32em; color: #B87333">REVISIONIST</span>
+  <span style="width: 1px; height: 24px; background: #4A2F16"></span>
+  <span style="font-size: 14px; color: #A89A86">Interface system · Round 1</span>
+  <span style="margin-left: auto; font-size: 13px; color: #A89A86">Base 1440 × 900 · checked at 1280 × 800 and 1920 × 1080</span>
+</header>
+
+<!-- PAPER INTERIOR -->
+<main style="flex: 1; background: #D8CFBA; padding: 48px; display: flex; flex-direction: column; gap: 56px">
+
+  <!-- INTRO -->
+  <section style="display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 48px; align-items: start">
+    <div style="display: flex; flex-direction: column; gap: 16px">
+      <h1 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 40px; line-height: 46px">Two layers: a bronze frame and a paper war room.</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 24px; color: #4D463B; max-width: 520px">The frame (black, matte bronze) is Revisionist itself: header, outer margin, account screens. Everything that belongs to a campaign sits inside it on paper and ink, like a 1940s cabinet office. Dispatches and the agent's voice use the typewriter. Buttons, errors, settings and numbers stay plain IBM Plex Sans.</p>
+    </div>
+    <div style="background: #F2ECDF; border: 1px solid #1F1B16; padding: 20px 24px; display: flex; flex-direction: column; gap: 12px">
+      <span style="font-size: 11px; line-height: 16px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #9B2C22">Rules these components never break</span>
+      <ol style="margin: 0; padding-left: 20px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 32px; row-gap: 8px; font-size: 13px; line-height: 19px; color: #1F1B16">
+        <li>Everything comes from the seat's own view. Unseen means absent.</li>
+        <li>A false fact looks identical to a true one: no badge, colour, order or tooltip differs.</li>
+        <li>Other seats are characters only. Nothing shows human, AI or deputy.</li>
+        <li>Odds are bands, after filing, never percentages.</li>
+        <li>Rival goals show only the pieces uncovered.</li>
+        <li>Visibility and certainty always carry an icon and a label.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 01 COLOUR -->
+  <section style="display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; align-items: baseline; gap: 16px; border-bottom: 1px solid #1F1B16; padding-bottom: 8px">
+      <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: #4D463B">01</span>
+      <h2 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 24px; line-height: 30px">Colour tokens</h2>
+      <p style="margin: 0 0 0 auto; font-size: 13px; color: #4D463B">Ratios are against the named ground. Every text pairing passes WCAG AA (4.5:1); controls and borders pass 3:1.</p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Frame — identity layer</span>
+      <div style="display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 12px">
+        <sc-for list="{{frameSw}}" as="s" hint-placeholder-count="8">
+          <div style="display: flex; flex-direction: column; background: #F2ECDF; border: 1px solid #B5AA93">
+            <div style="height: 56px; background: {{s.hex}}; border-bottom: 1px solid #B5AA93"></div>
+            <div style="padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 2px">
+              <code style="font-family: 'IBM Plex Sans', Arial, sans-serif; font-size: 12px; line-height: 16px; font-weight: 600">{{s.name}}</code>
+              <span style="font-size: 12px; line-height: 16px; color: #4D463B; font-feature-settings: 'tnum'">{{s.hex}}</span>
+              <span style="font-size: 12px; line-height: 16px; color: #4D463B">{{s.use}}</span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Paper and ink — era layer</span>
+      <div style="display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 12px">
+        <sc-for list="{{paperSw}}" as="s" hint-placeholder-count="9">
+          <div style="display: flex; flex-direction: column; background: #F2ECDF; border: 1px solid #B5AA93">
+            <div style="height: 56px; background: {{s.hex}}; border-bottom: 1px solid #B5AA93"></div>
+            <div style="padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 2px">
+              <code style="font-family: 'IBM Plex Sans', Arial, sans-serif; font-size: 12px; line-height: 16px; font-weight: 600">{{s.name}}</code>
+              <span style="font-size: 12px; line-height: 16px; color: #4D463B; font-feature-settings: 'tnum'">{{s.hex}}</span>
+              <span style="font-size: 12px; line-height: 16px; color: #4D463B">{{s.use}}</span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Signal and seat heraldry</span>
+      <div style="display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 12px">
+        <sc-for list="{{signalSw}}" as="s" hint-placeholder-count="9">
+          <div style="display: flex; flex-direction: column; background: #F2ECDF; border: 1px solid #B5AA93">
+            <div style="height: 56px; background: {{s.hex}}; border-bottom: 1px solid #B5AA93"></div>
+            <div style="padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 2px">
+              <code style="font-family: 'IBM Plex Sans', Arial, sans-serif; font-size: 12px; line-height: 16px; font-weight: 600">{{s.name}}</code>
+              <span style="font-size: 12px; line-height: 16px; color: #4D463B; font-feature-settings: 'tnum'">{{s.hex}}</span>
+              <span style="font-size: 12px; line-height: 16px; color: #4D463B">{{s.use}}</span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <p style="margin: 4px 0 0; font-size: 13px; line-height: 19px; color: #4D463B; max-width: 900px">Signal colours always travel with an icon and a word. Seat heraldry marks the player's own seat (a 4 px band under the header and the shield beside the character) and identifies rivals in the dossier. It is never used for status.</p>
+    </div>
+  </section>
+
+  <!-- 02 TYPE -->
+  <section style="display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; align-items: baseline; gap: 16px; border-bottom: 1px solid #1F1B16; padding-bottom: 8px">
+      <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: #4D463B">02</span>
+      <h2 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 24px; line-height: 30px">Type</h2>
+      <p style="margin: 0 0 0 auto; font-size: 13px; color: #4D463B">Three families. Numbers always use Plex Sans with tabular figures.</p>
+    </div>
+    <div style="display: grid; grid-template-columns: minmax(0, 8fr) minmax(0, 4fr); gap: 48px; align-items: start">
+      <div style="display: flex; flex-direction: column; background: #F2ECDF; border: 1px solid #B5AA93">
+        <div style="display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 24px; align-items: baseline; padding: 14px 20px; border-bottom: 1px solid #B5AA93">
+          <div style="display: flex; flex-direction: column"><code style="font-size: 12px; font-weight: 600">type/display</code><span style="font-size: 12px; color: #4D463B">Caslon 28/34 · 400</span></div>
+          <span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 28px; line-height: 34px">Their Finest Hour</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 24px; align-items: baseline; padding: 14px 20px; border-bottom: 1px solid #B5AA93">
+          <div style="display: flex; flex-direction: column"><code style="font-size: 12px; font-weight: 600">type/title</code><span style="font-size: 12px; color: #4D463B">Caslon 20/26 · 400</span></div>
+          <span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 20px; line-height: 26px">Briefing for the Prime Minister</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 24px; align-items: baseline; padding: 14px 20px; border-bottom: 1px solid #B5AA93">
+          <div style="display: flex; flex-direction: column"><code style="font-size: 12px; font-weight: 600">type/dispatch</code><span style="font-size: 12px; color: #4D463B">Courier Prime 15/24</span></div>
+          <span style="font-family: 'Courier Prime', 'Courier New', monospace; font-size: 15px; line-height: 24px">Operation Dynamo closed at 02:23 this morning.</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 24px; align-items: baseline; padding: 14px 20px; border-bottom: 1px solid #B5AA93">
+          <div style="display: flex; flex-direction: column"><code style="font-size: 12px; font-weight: 600">type/dispatch-sm</code><span style="font-size: 12px; color: #4D463B">Courier Prime 13/20</span></div>
+          <span style="font-family: 'Courier Prime', 'Courier New', monospace; font-size: 13px; line-height: 20px">THE TIMES · 4 JUNE 1940</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 24px; align-items: baseline; padding: 14px 20px; border-bottom: 1px solid #B5AA93">
+          <div style="display: flex; flex-direction: column"><code style="font-size: 12px; font-weight: 600">type/ui-lg</code><span style="font-size: 12px; color: #4D463B">Plex Sans 16/24 · 500</span></div>
+          <span style="font-size: 16px; line-height: 24px; font-weight: 500">File order</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 24px; align-items: baseline; padding: 14px 20px; border-bottom: 1px solid #B5AA93">
+          <div style="display: flex; flex-direction: column"><code style="font-size: 12px; font-weight: 600">type/ui</code><span style="font-size: 12px; color: #4D463B">Plex Sans 14/20 · 400</span></div>
+          <span style="font-size: 14px; line-height: 20px">Uses one slot. Odds appear once the order is filed.</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 24px; align-items: baseline; padding: 14px 20px; border-bottom: 1px solid #B5AA93">
+          <div style="display: flex; flex-direction: column"><code style="font-size: 12px; font-weight: 600">type/ui-sm</code><span style="font-size: 12px; color: #4D463B">Plex Sans 13/18 · 400</span></div>
+          <span style="font-size: 13px; line-height: 18px">Expected to finish at tick 8</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 24px; align-items: baseline; padding: 14px 20px; border-bottom: 1px solid #B5AA93">
+          <div style="display: flex; flex-direction: column"><code style="font-size: 12px; font-weight: 600">type/label</code><span style="font-size: 12px; color: #4D463B">Plex Sans 11/16 · 600 · caps +0.08em</span></div>
+          <span style="font-size: 11px; line-height: 16px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase">Next tick</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 24px; align-items: baseline; padding: 14px 20px; border-bottom: 1px solid #B5AA93">
+          <div style="display: flex; flex-direction: column"><code style="font-size: 12px; font-weight: 600">type/numeral</code><span style="font-size: 12px; color: #4D463B">Plex Sans 22/28 · 600 · tnum</span></div>
+          <span style="font-size: 22px; line-height: 28px; font-weight: 600; font-feature-settings: 'tnum'">14 h 22 m · −62 · 6 of 10</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 24px; align-items: center; padding: 14px 20px; background: #000000">
+          <div style="display: flex; flex-direction: column"><code style="font-size: 12px; font-weight: 600; color: #EDE3D1">type/wordmark</code><span style="font-size: 12px; color: #A89A86">Plex Sans 13/16 · 600 · +0.32em</span></div>
+          <span style="font-size: 13px; line-height: 16px; font-weight: 600; letter-spacing: 0.32em; color: #B87333">REVISIONIST</span>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 20px; font-size: 13px; line-height: 20px; color: #1F1B16">
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 18px">Libre Caslon Text</span>
+          <span style="color: #4D463B">Period serif for in-world titles: campaign names, letterheads, section heads inside the war room. Never on buttons.</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <span style="font-family: 'Courier Prime', 'Courier New', monospace; font-size: 18px">Courier Prime</span>
+          <span style="color: #4D463B">The typewriter. Briefings, the agent's chat replies, telegrams, chronicle copy. Cleaner than a distressed face, so it holds up for hours of reading.</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <span style="font-size: 18px; font-weight: 500">IBM Plex Sans</span>
+          <span style="color: #4D463B">System voice: controls, errors, settings, numbers, labels. Tabular figures for every counter and countdown.</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px; padding-top: 12px; border-top: 1px solid #B5AA93">
+          <span style="font-weight: 600">Minimum sizes</span>
+          <span style="color: #4D463B">Labels 11 px caps; body copy 13 px; dispatch 15 px. Line length in dispatches capped at 72 characters.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 SPACING + FRAME -->
+  <section style="display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; align-items: baseline; gap: 16px; border-bottom: 1px solid #1F1B16; padding-bottom: 8px">
+      <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: #4D463B">03</span>
+      <h2 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 24px; line-height: 30px">Spacing, radius, the frame</h2>
+    </div>
+    <div style="display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 3fr) minmax(0, 5fr); gap: 40px; align-items: start">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Spacing — 4 px base</span>
+        <sc-for list="{{space}}" as="sp" hint-placeholder-count="7">
+          <div style="display: grid; grid-template-columns: 80px 40px minmax(0, 1fr); gap: 12px; align-items: center; font-size: 12px">
+            <code style="font-weight: 600">{{sp.name}}</code>
+            <span style="color: #4D463B; font-feature-settings: 'tnum'">{{sp.px}} px</span>
+            <span style="height: 12px; width: {{sp.w}}; background: #1F1B16"></span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 14px; font-size: 12px">
+        <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Radius and rules</span>
+        <div style="display: flex; align-items: center; gap: 12px"><span style="width: 48px; height: 32px; background: #000000"></span><div style="display: flex; flex-direction: column"><code style="font-weight: 600">radius/frame · 0</code><span style="color: #4D463B">Frame, header, account panels</span></div></div>
+        <div style="display: flex; align-items: center; gap: 12px"><span style="width: 48px; height: 32px; background: #F2ECDF; border: 1px solid #1F1B16; border-radius: 2px"></span><div style="display: flex; flex-direction: column"><code style="font-weight: 600">radius/paper · 2</code><span style="color: #4D463B">Sheets, fields, buttons, chips</span></div></div>
+        <div style="display: flex; align-items: center; gap: 12px"><span style="width: 48px; height: 1px; background: #B5AA93"></span><div style="display: flex; flex-direction: column"><code style="font-weight: 600">rule/hair</code><span style="color: #4D463B">1 px ink/rule, row dividers</span></div></div>
+        <div style="display: flex; align-items: center; gap: 12px"><span style="width: 48px; height: 1px; background: #1F1B16"></span><div style="display: flex; flex-direction: column"><code style="font-weight: 600">rule/strong</code><span style="color: #4D463B">1 px ink/primary, panel edges</span></div></div>
+        <div style="display: flex; align-items: center; gap: 12px"><span style="width: 48px; height: 32px; background: #F2ECDF; outline: 2px solid #2A3D66; outline-offset: 2px; border-radius: 2px"></span><div style="display: flex; flex-direction: column"><code style="font-weight: 600">focus/paper</code><span style="color: #4D463B">2 px signal/link, 2 px offset</span></div></div>
+        <span style="color: #4D463B; line-height: 18px">No shadows, gradients or blur. Depth comes from paper on desk and ink rules.</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">The frame</span>
+        <div style="background: #000000; padding: 0 6px 6px; display: flex; flex-direction: column">
+          <div style="height: 40px; display: flex; align-items: center; gap: 10px; padding: 0 8px; border-bottom: 1px solid #4A2F16">
+            <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><path d="M27 3C19 4.5 13.5 10 12.5 17.5L15 20C22.5 19 27.5 12 27 3Z" fill="#B87333"></path><path d="M26 4.5L13.8 18.8" stroke="#000000" stroke-width="1.2"></path><path d="M13 19.5L15 21.5L4 30Z" fill="#B87333"></path><path d="M10.6 18.6L15.6 23.6" stroke="#B87333" stroke-width="2"></path></svg>
+            <span style="font-size: 10px; font-weight: 600; letter-spacing: 0.3em; color: #B87333">REVISIONIST</span>
+            <span style="margin-left: auto; font-size: 11px; color: #A89A86">header · 56 px</span>
+          </div>
+          <div style="height: 4px; background: #234A8A"></div>
+          <div style="height: 132px; background: #D8CFBA; display: grid; grid-template-columns: 1fr 2fr 1.3fr; gap: 1px; border: 1px solid #000000">
+            <div style="background: #D8CFBA; border-right: 1px solid #B5AA93; padding: 8px; font-size: 11px; color: #4D463B">Position</div>
+            <div style="background: #F2ECDF; padding: 8px; font-size: 11px; color: #4D463B">Briefing on paper/sheet</div>
+            <div style="background: #D8CFBA; border-left: 1px solid #B5AA93; padding: 8px; font-size: 11px; color: #4D463B">Agent · Chronicle</div>
+          </div>
+        </div>
+        <span style="font-size: 12px; line-height: 18px; color: #4D463B">8 px of frame/ground around the paper interior. The 4 px band is the seat's heraldic colour (here seat/azure, Churchill).</span>
+        <div style="display: flex; align-items: center; gap: 16px; padding-top: 8px">
+          <div style="width: 72px; height: 72px; background: #000000; display: flex; align-items: center; justify-content: center">
+            <svg width="48" height="48" viewBox="0 0 32 32" role="img" aria-label="Placeholder mark"><path d="M27 3C19 4.5 13.5 10 12.5 17.5L15 20C22.5 19 27.5 12 27 3Z" fill="#B87333"></path><path d="M26 4.5L13.8 18.8" stroke="#000000" stroke-width="1.2"></path><path d="M13 19.5L15 21.5L4 30Z" fill="#B87333"></path><path d="M10.6 18.6L15.6 23.6" stroke="#B87333" stroke-width="2"></path></svg>
+          </div>
+          <span style="font-size: 12px; line-height: 18px; color: #4D463B">Placeholder mark: a quill vane whose shaft turns into a dagger blade, flat bronze, no wordmark. Swap for the final artwork at the same 1:1 box.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 CONTROLS -->
+  <section style="display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; align-items: baseline; gap: 16px; border-bottom: 1px solid #1F1B16; padding-bottom: 8px">
+      <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: #4D463B">04</span>
+      <h2 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 24px; line-height: 30px">Controls</h2>
+      <p style="margin: 0 0 0 auto; font-size: 13px; color: #4D463B">Controls are 36 px tall (compact 28 px in dense lists). System voice only.</p>
+    </div>
+    <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; align-items: start">
+      <div style="display: flex; flex-direction: column; gap: 20px">
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Buttons on paper</span>
+          <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center">
+            <button type="button" style="height: 36px; padding: 0 16px; background: #1F1B16; color: #F2ECDF; border: 1px solid #1F1B16; border-radius: 2px; font: 500 14px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer">File order</button>
+            <button type="button" style="height: 36px; padding: 0 16px; background: transparent; color: #1F1B16; border: 1px solid #1F1B16; border-radius: 2px; font: 500 14px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer">Ask Hartley</button>
+            <a href="#" style="height: 36px; display: inline-flex; align-items: center; padding: 0 4px; color: #2A3D66; font: 500 14px 'IBM Plex Sans', Arial, sans-serif; text-decoration: underline; text-underline-offset: 3px">See order 5·1</a>
+            <button type="button" style="height: 36px; padding: 0 16px; background: #1F1B16; color: #F2ECDF; border: 1px solid #1F1B16; border-radius: 2px; font: 500 14px 'IBM Plex Sans', Arial, sans-serif; outline: 2px solid #2A3D66; outline-offset: 2px">Focused</button>
+            <button type="button" disabled="" style="height: 36px; padding: 0 16px; background: #C9C0AC; color: #4D463B; border: 1px solid #C9C0AC; border-radius: 2px; font: 500 14px 'IBM Plex Sans', Arial, sans-serif">Disabled</button>
+          </div>
+          <div style="display: flex; gap: 24px; font-size: 12px; color: #4D463B"><span>Primary</span><span>Secondary</span><span>Quiet link</span><span>Focus ring</span><span>Disabled</span></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Buttons on the frame</span>
+          <div style="background: #000000; padding: 16px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center">
+            <button type="button" style="height: 36px; padding: 0 16px; background: #B87333; color: #000000; border: 1px solid #B87333; border-radius: 0; font: 600 14px 'IBM Plex Sans', Arial, sans-serif">Create account</button>
+            <button type="button" style="height: 36px; padding: 0 16px; background: transparent; color: #B87333; border: 1px solid #B87333; border-radius: 0; font: 500 14px 'IBM Plex Sans', Arial, sans-serif">Report a bug</button>
+            <button type="button" style="height: 36px; padding: 0 16px; background: transparent; color: #EDE3D1; border: 1px solid #85705A; border-radius: 0; font: 500 14px 'IBM Plex Sans', Arial, sans-serif; display: inline-flex; align-items: center; gap: 8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 5v14M15 5v14"></path></svg>Pause · Add a line</button>
+            <button type="button" style="height: 36px; padding: 0 16px; background: #B87333; color: #000000; border: 1px solid #B87333; font: 600 14px 'IBM Plex Sans', Arial, sans-serif; outline: 2px solid #D08A49; outline-offset: 2px">Focused</button>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Tabs</span>
+          <div role="tablist" style="display: flex; gap: 24px; border-bottom: 1px solid #B5AA93">
+            <button type="button" role="tab" aria-selected="true" style="height: 40px; padding: 0 2px; background: none; border: 0; border-bottom: 2px solid #1F1B16; margin-bottom: -1px; font: 600 14px 'IBM Plex Sans', Arial, sans-serif; color: #1F1B16">Briefing</button>
+            <button type="button" role="tab" aria-selected="false" style="height: 40px; padding: 0 2px; background: none; border: 0; font: 500 14px 'IBM Plex Sans', Arial, sans-serif; color: #4D463B">Map</button>
+            <button type="button" role="tab" aria-selected="false" style="height: 40px; padding: 0 2px; background: none; border: 0; font: 500 14px 'IBM Plex Sans', Arial, sans-serif; color: #4D463B">Ledger</button>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Visibility picker (segmented, one choice)</span>
+          <div role="radiogroup" aria-label="Visibility" style="display: inline-flex; border: 1px solid #1F1B16; border-radius: 2px; align-self: flex-start">
+            <button type="button" role="radio" aria-checked="false" style="height: 32px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px; background: #FAF7F0; color: #1F1B16; border: 0; border-right: 1px solid #1F1B16; font: 500 13px 'IBM Plex Sans', Arial, sans-serif"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="2"></circle><path d="M8 8a5.7 5.7 0 0 0 0 8M16 8a5.7 5.7 0 0 1 0 8M5.2 5.2a9.6 9.6 0 0 0 0 13.6M18.8 5.2a9.6 9.6 0 0 1 0 13.6"></path></svg>Public</button>
+            <button type="button" role="radio" aria-checked="true" style="height: 32px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px; background: #1F1B16; color: #F2ECDF; border: 0; border-right: 1px solid #1F1B16; font: 600 13px 'IBM Plex Sans', Arial, sans-serif"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><path d="M3.5 19a5.5 5.5 0 0 1 11 0"></path><circle cx="17" cy="9" r="2.5"></circle><path d="M16 14.1a4.6 4.6 0 0 1 5 4.4"></path></svg>Restricted</button>
+            <button type="button" role="radio" aria-checked="false" style="height: 32px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px; background: #FAF7F0; color: #1F1B16; border: 0; border-right: 1px solid #1F1B16; font: 500 13px 'IBM Plex Sans', Arial, sans-serif"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="1"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>Private</button>
+            <button type="button" role="radio" aria-checked="false" style="height: 32px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px; background: #FAF7F0; color: #1F1B16; border: 0; font: 500 13px 'IBM Plex Sans', Arial, sans-serif"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"></path><circle cx="12" cy="12" r="2.8"></circle><path d="M4 20 20 4"></path></svg>Covert</button>
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 18px">
+        <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Inputs</span>
+        <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px">
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label for="ds-handle" style="font-size: 13px; font-weight: 600">Handle</label>
+            <input id="ds-handle" type="text" value="bulldog_40" style="height: 40px; padding: 0 12px; background: #FAF7F0; border: 1px solid #7A705F; border-radius: 2px; font: 400 14px 'IBM Plex Sans', Arial, sans-serif; color: #1F1B16">
+            <span style="font-size: 12px; color: #4D463B">Shown to the table at Session Zero. Not your real name.</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label for="ds-code" style="font-size: 13px; font-weight: 600">Recovery code</label>
+            <input id="ds-code" type="text" value="KXQ4-77" aria-invalid="true" aria-describedby="ds-code-err" style="height: 40px; padding: 0 12px; background: #FAF7F0; border: 2px solid #9B2C22; border-radius: 2px; font: 400 14px 'IBM Plex Sans', Arial, sans-serif; color: #1F1B16">
+            <span id="ds-code-err" style="font-size: 12px; color: #9B2C22; display: flex; gap: 6px; align-items: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3 2 20h20Z"></path><path d="M12 10v4M12 17v.5"></path></svg>That code isn't complete. Codes are 10 characters.</span>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="display: flex; align-items: baseline"><label for="ds-spin" style="font-size: 13px; font-weight: 600">Public spin line <span style="font-weight: 400; color: #4D463B">(optional)</span></label><span style="margin-left: auto; font-size: 12px; color: #4D463B; font-feature-settings: 'tnum'">58 / 280</span></div>
+          <textarea id="ds-spin" rows="2" style="padding: 10px 12px; background: #FAF7F0; border: 1px solid #7A705F; border-radius: 2px; font: 400 14px/20px 'IBM Plex Sans', Arial, sans-serif; color: #1F1B16; resize: none">We shall go on to the end. Britain will not be bargained.</textarea>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <label for="ds-order" style="font-size: 13px; font-weight: 600">Order to Hartley</label>
+          <textarea id="ds-order" rows="3" placeholder="Write the order in your own words." style="padding: 10px 12px; background: #FAF7F0; border: 1px solid #7A705F; border-radius: 2px; font: 400 15px/24px 'Courier Prime', 'Courier New', monospace; color: #1F1B16; resize: none"></textarea>
+          <span style="font-size: 12px; color: #4D463B">Order text is typed in the typewriter face: it's the character speaking. Placeholder text is ink/muted.</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px">
+          <input id="ds-check" type="checkbox" checked="" style="width: 20px; height: 20px; margin: 0; accent-color: #1F1B16">
+          <label for="ds-check" style="font-size: 14px">I've saved my recovery codes somewhere safe</label>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 GAME COMPONENTS -->
+  <section style="display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; align-items: baseline; gap: 16px; border-bottom: 1px solid #1F1B16; padding-bottom: 8px">
+      <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: #4D463B">05</span>
+      <h2 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 24px; line-height: 30px">Game components</h2>
+    </div>
+    <div style="display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 6fr); gap: 40px; align-items: start">
+
+      <!-- dispatch card -->
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Dispatch card</span>
+        <article style="background: #F2ECDF; border: 1px solid #1F1B16; padding: 24px 28px; display: flex; flex-direction: column; gap: 14px">
+          <div style="display: flex; align-items: flex-start; gap: 16px; padding-bottom: 12px; border-bottom: 1px solid #1F1B16">
+            <div style="display: flex; flex-direction: column; gap: 2px">
+              <span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase">10 Downing Street · Private Office</span>
+              <span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 20px; line-height: 26px">Briefing for the Prime Minister</span>
+              <span style="font-size: 12px; color: #4D463B; font-feature-settings: 'tnum'">Tick 6 · 4 June 1940 · covering 4–11 June</span>
+            </div>
+            <span style="margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border: 2px solid #1F1B16; font: 700 12px 'Courier Prime', monospace; letter-spacing: 0.12em"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="1"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>PRIVATE</span>
+          </div>
+          <p style="margin: 0; font-family: 'Courier Prime', 'Courier New', monospace; font-size: 15px; line-height: 24px">Prime Minister,</p>
+          <p style="margin: 0; font-family: 'Courier Prime', 'Courier New', monospace; font-size: 15px; line-height: 24px">Operation Dynamo closed at 02:23 this morning. The Admiralty's figure is 338,226 men landed since 26 May. We have the army; we do not have its guns.</p>
+          <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: #E4DCCB; font-size: 13px">
+            <span style="display: inline-flex; align-items: center; gap: 4px; padding: 0 6px; height: 22px; border: 1px solid #2E5A3C; color: #2E5A3C; font-weight: 600; font-size: 12px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m4 12 5 5L20 6"></path></svg>Success</span>
+            <span>Result of your order</span>
+            <a href="#" style="color: #2A3D66; font-weight: 600">Order 5·1 · Call out the little ships</a>
+          </div>
+          <span style="font-family: 'Courier Prime', 'Courier New', monospace; font-size: 15px">— Hartley</span>
+        </article>
+        <span style="font-size: 12px; line-height: 18px; color: #4D463B">Letterhead in Caslon, body in Courier Prime, a classification stamp with icon and word. Every result links to the order that caused it, with its outcome tier.</span>
+      </div>
+
+      <!-- meters, track, clocks, odds -->
+      <div style="display: flex; flex-direction: column; gap: 26px">
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Standing meter · value of max</span>
+          <div style="display: flex; flex-direction: column; gap: 6px; max-width: 360px">
+            <div style="display: flex; align-items: baseline"><span style="font-size: 13px; font-weight: 500">Commons confidence</span><span style="margin-left: auto; font-size: 13px; font-weight: 600; font-feature-settings: 'tnum'">6 of 10</span></div>
+            <div role="img" aria-label="Commons confidence 6 of 10" style="display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 3px">
+              <sc-for list="{{meterSegs}}" as="m" hint-placeholder-count="10">
+                <span style="height: 10px; background: {{m.bg}}; border: 1px solid #1F1B16"></span>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Contest track · −100 to +100</span>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="display: flex; align-items: baseline; gap: 10px">
+              <span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 16px">Battle of France</span>
+              <span style="margin-left: auto; font-size: 20px; font-weight: 600; font-feature-settings: 'tnum'">−62</span>
+              <span style="font-size: 13px; font-weight: 600">favours Germany</span>
+            </div>
+            <div role="img" aria-label="Battle of France track at minus 62, favours Germany" style="position: relative; height: 18px; background: #F2ECDF; border: 1px solid #1F1B16">
+              <span style="position: absolute; left: 19%; width: 31%; top: 0; bottom: 0; background: #4D463B"></span>
+              <span style="position: absolute; left: 25%; top: 0; bottom: 0; width: 1px; background: #B5AA93"></span>
+              <span style="position: absolute; left: 75%; top: 0; bottom: 0; width: 1px; background: #B5AA93"></span>
+              <span style="position: absolute; left: calc(50% - 1px); top: -5px; bottom: -5px; width: 2px; background: #1F1B16"></span>
+              <span style="position: absolute; left: calc(19% - 2px); top: -6px; bottom: -6px; width: 4px; background: #1F1B16"></span>
+            </div>
+            <div style="display: flex; font-size: 12px; color: #4D463B"><span>← Germany</span><span style="margin: 0 auto">0</span><span>France and Britain →</span></div>
+            <div style="display: flex; gap: 16px; font-size: 13px">
+              <span style="display: inline-flex; align-items: center; gap: 6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 3h10M7 21h10M8 3c0 5 8 6 8 9s-8 4-8 9M16 3c0 5-8 6-8 9"></path></svg>9 days to decision</span>
+              <span style="display: inline-flex; align-items: center; gap: 6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 12H4M10 6l-6 6 6 6"></path></svg>Momentum −6 a turn</span>
+            </div>
+          </div>
+          <span style="font-size: 12px; line-height: 18px; color: #4D463B">Positive favours the first side, drawn on the right. Trials use the same bar, 0 to 100, with the pass line at 100.</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Clock · 1 to 12 segments</span>
+          <div style="display: flex; gap: 24px; align-items: flex-end">
+            <sc-for list="{{clocks}}" as="c" hint-placeholder-count="5">
+              <div style="display: flex; flex-direction: column; align-items: center; gap: 6px">
+                <svg width="40" height="40" viewBox="0 0 40 40" role="img" aria-label="{{c.label}}">
+                  <circle cx="20" cy="20" r="18" fill="#F2ECDF" stroke="#1F1B16" stroke-width="1.5"></circle>
+                  <path d="{{c.k.ink}}" stroke="#1F1B16" stroke-width="1" fill="none"></path>
+                  <path d="{{c.k.fill}}" fill="#1F1B16"></path>
+                  <path d="{{c.k.paper}}" stroke="#F2ECDF" stroke-width="1.5" fill="none"></path>
+                </svg>
+                <span style="font-size: 12px; font-feature-settings: 'tnum'">{{c.label}}</span>
+              </div>
+            </sc-for>
+            <div style="display: flex; flex-direction: column; gap: 6px; margin-left: 12px">
+              <div role="img" aria-label="Exposure 2 of 5" style="display: flex; gap: 3px">
+                <span style="width: 14px; height: 14px; background: #9B2C22; border: 1px solid #9B2C22"></span>
+                <span style="width: 14px; height: 14px; background: #9B2C22; border: 1px solid #9B2C22"></span>
+                <span style="width: 14px; height: 14px; background: #F2ECDF; border: 1px solid #9B2C22"></span>
+                <span style="width: 14px; height: 14px; background: #F2ECDF; border: 1px solid #9B2C22"></span>
+                <span style="width: 14px; height: 14px; background: #F2ECDF; border: 1px solid #9B2C22"></span>
+              </div>
+              <span style="font-size: 12px">Exposure 2 of 5 (covert only)</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Perceived odds · five bands, shown after filing</span>
+          <div style="display: flex; flex-wrap: wrap; gap: 10px">
+            <sc-for list="{{odds}}" as="o" hint-placeholder-count="5">
+              <span style="display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 10px; background: #F2ECDF; border: 1px solid #1F1B16; border-radius: 2px">
+                <span aria-hidden="true" style="display: inline-flex; gap: 2px; align-items: flex-end">
+                  <sc-for list="{{o.notches}}" as="n" hint-placeholder-count="4">
+                    <span style="width: 5px; height: {{n.h}}; background: {{n.bg}}; border: 1px solid #1F1B16"></span>
+                  </sc-for>
+                </span>
+                <span style="font-size: 13px; font-weight: 600">{{o.name}}</span>
+              </span>
+            </sc-for>
+          </div>
+          <span style="font-size: 12px; line-height: 18px; color: #4D463B">The notches rise with the band; the word carries the meaning. Never a percentage, never shown before an order is filed.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 06 VISIBILITY / CERTAINTY / CHIPS -->
+  <section style="display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; align-items: baseline; gap: 16px; border-bottom: 1px solid #1F1B16; padding-bottom: 8px">
+      <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: #4D463B">06</span>
+      <h2 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 24px; line-height: 30px">Visibility, certainty and status</h2>
+      <p style="margin: 0 0 0 auto; font-size: 13px; color: #4D463B">Icon and word every time. Colour is a third cue, never the only one.</p>
+    </div>
+    <div style="display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 4fr) minmax(0, 4fr); gap: 40px; align-items: start">
+
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Visibility levels</span>
+        <div style="display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 12px; align-items: center">
+          <span style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; border: 2px solid #1F1B16; font: 700 12px 'Courier Prime', monospace; letter-spacing: 0.1em; justify-self: start"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="2"></circle><path d="M8 8a5.7 5.7 0 0 0 0 8M16 8a5.7 5.7 0 0 1 0 8M5.2 5.2a9.6 9.6 0 0 0 0 13.6M18.8 5.2a9.6 9.6 0 0 1 0 13.6"></path></svg>PUBLIC</span>
+          <span style="font-size: 13px">The world sees it.</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; border: 2px solid #1F1B16; font: 700 12px 'Courier Prime', monospace; letter-spacing: 0.1em; justify-self: start"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><path d="M3.5 19a5.5 5.5 0 0 1 11 0"></path><circle cx="17" cy="9" r="2.5"></circle><path d="M16 14.1a4.6 4.6 0 0 1 5 4.4"></path></svg>RESTRICTED</span>
+          <span style="font-size: 13px">Named seats only: a cabinet, an alliance.</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; border: 2px solid #1F1B16; font: 700 12px 'Courier Prime', monospace; letter-spacing: 0.1em; justify-self: start"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="1"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>PRIVATE</span>
+          <span style="font-size: 13px">You only. Its effects may still show.</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; border: 2px solid #9B2C22; color: #9B2C22; font: 700 12px 'Courier Prime', monospace; letter-spacing: 0.1em; justify-self: start"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"></path><circle cx="12" cy="12" r="2.8"></circle><path d="M4 20 20 4"></path></svg>COVERT</span>
+          <span style="font-size: 13px">Actively concealed. Carries exposure risk.</span>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Map certainty states</span>
+        <div style="display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 12px; align-items: center">
+          <span style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1F1B16" stroke-width="1.8" aria-hidden="true"><rect x="4" y="4" width="16" height="16" fill="#1F1B16"></rect></svg>Known</span>
+          <span style="font-size: 13px">Seen directly or held by the seat. Solid marker.</span>
+          <span style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1F1B16" stroke-width="1.8" aria-hidden="true"><rect x="4" y="4" width="16" height="16"></rect><path d="M4 20 20 4V20Z" fill="#1F1B16"></path></svg>Reported</span>
+          <span style="font-size: 13px">From intelligence or another seat. Half-filled. Same look true or forged.</span>
+          <span style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1F1B16" stroke-width="1.8" aria-hidden="true"><rect x="4" y="4" width="16" height="16" stroke-dasharray="3 2.5"></rect><path d="M12 8.5V12l2.5 1.8"></path></svg>Stale · t3</span>
+          <span style="font-size: 13px">Last seen at tick N. Dashed, with the age in the label.</span>
+          <span style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5F574A" stroke-width="1.8" aria-hidden="true"><rect x="4" y="4" width="16" height="16" stroke-dasharray="1.2 2.4"></rect><path d="M10 10a2 2 0 1 1 2.8 1.8c-.5.3-.8.7-.8 1.3"></path><path d="M12 16v.4"></path></svg>Unknown</span>
+          <span style="font-size: 13px">Nothing known. Fogged area, never drawn as empty.</span>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Status chips</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <span style="display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px; background: #9B2C22; color: #F2ECDF; border-radius: 2px; font-size: 12px; font-weight: 600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M7 3h10M7 21h10M8 3c0 5 8 6 8 9s-8 4-8 9M16 3c0 5-8 6-8 9"></path></svg>Needs an answer</span>
+          <span style="display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px; border: 1px solid #1F1B16; border-radius: 2px; font-size: 12px; font-weight: 600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16Z"></path></svg>Drafting</span>
+          <span style="display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px; border: 1px solid #1F1B16; border-radius: 2px; font-size: 12px; font-weight: 600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>In progress</span>
+          <span style="display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px; border: 1px dashed #1F1B16; border-radius: 2px; font-size: 12px; font-weight: 600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"></path></svg>Queued</span>
+          <span style="display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px; border: 1px solid #7A4E0C; color: #7A4E0C; border-radius: 2px; font-size: 12px; font-weight: 600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M3 7l6 6 4-4 8 8M21 11v6h-6"></path></svg>Degraded</span>
+          <span style="display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px; border: 1px solid #1F1B16; border-radius: 2px; font-size: 12px; font-weight: 600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="1"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>Owner only</span>
+          <span style="display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px; border: 1px solid #1F1B16; border-radius: 2px; font-size: 12px; font-weight: 600">Lasting</span>
+          <span style="display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px; border: 1px solid #1F1B16; border-radius: 2px; font-size: 12px; font-weight: 600">Undoable</span>
+        </div>
+        <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B; padding-top: 6px">Outcome tiers</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <span style="display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px; border: 1px solid #2E5A3C; color: #2E5A3C; border-radius: 2px; font-size: 12px; font-weight: 600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m4 12 5 5L20 6"></path><path d="M17 3v4M15 5h4"></path></svg>Success with an opportunity</span>
+          <span style="display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px; border: 1px solid #2E5A3C; color: #2E5A3C; border-radius: 2px; font-size: 12px; font-weight: 600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m4 12 5 5L20 6"></path></svg>Success</span>
+          <span style="display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px; border: 1px solid #7A4E0C; color: #7A4E0C; border-radius: 2px; font-size: 12px; font-weight: 600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M12 4v16"></path></svg>Partial</span>
+          <span style="display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px; border: 1px solid #9B2C22; color: #9B2C22; border-radius: 2px; font-size: 12px; font-weight: 600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>Fail with a complication</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":3000}}'>
+function clockPaths(filled, total, size) {
+  var c = size / 2, r = size / 2 - 2;
+  function pt(i) { var a = -Math.PI / 2 + 2 * Math.PI * i / total; return (c + r * Math.cos(a)).toFixed(2) + ' ' + (c + r * Math.sin(a)).toFixed(2); }
+  var fill = 'M0 0';
+  if (filled >= total) { fill = 'M' + c + ' ' + (c - r) + ' A' + r + ' ' + r + ' 0 1 1 ' + c + ' ' + (c + r) + ' A' + r + ' ' + r + ' 0 1 1 ' + c + ' ' + (c - r) + ' Z'; }
+  else if (filled > 0) { fill = 'M' + c + ' ' + c + ' L' + pt(0) + ' A' + r + ' ' + r + ' 0 ' + (filled / total > 0.5 ? 1 : 0) + ' 1 ' + pt(filled) + ' Z'; }
+  var ink = '', paper = '';
+  if (total > 1) {
+    for (var i = 0; i < total; i++) {
+      var s = 'M' + c + ' ' + c + ' L' + pt(i) + ' ';
+      if (filled >= total || (i > 0 && i < filled)) { paper += s; } else { ink += s; }
+    }
+  }
+  return { fill: fill, ink: ink || 'M0 0', paper: paper || 'M0 0' };
+}
+class Component extends DCLogic {
+  renderVals() {
+    var sw = function (name, hex, use) { return { name: name, hex: hex, use: use }; };
+    var frameSw = [
+      sw('frame/ground', '#000000', 'Frame background'),
+      sw('frame/surface', '#120F0C', 'Panels on the frame'),
+      sw('frame/bronze', '#B87333', 'Mark, wordmark, frame actions · 5.5:1'),
+      sw('frame/bronze-strong', '#D08A49', 'Hover, focus on frame · 7.4:1'),
+      sw('frame/rule', '#4A2F16', 'Decorative rules only'),
+      sw('frame/text', '#EDE3D1', 'Text on frame · 16:1'),
+      sw('frame/text-muted', '#A89A86', 'Secondary on frame · 7.6:1'),
+      sw('frame/field-border', '#85705A', 'Field edges on frame · 4:1')
+    ];
+    var paperSw = [
+      sw('paper/desk', '#D8CFBA', 'Interior ground, columns'),
+      sw('paper/sheet', '#F2ECDF', 'Dispatches, cards'),
+      sw('paper/field', '#FAF7F0', 'Inputs'),
+      sw('paper/carbon', '#E4DCCB', 'Agent replies, result strips'),
+      sw('ink/primary', '#1F1B16', 'Text · 14.6:1 sheet, 11:1 desk'),
+      sw('ink/secondary', '#4D463B', 'Secondary · 7.9:1 sheet, 6:1 desk'),
+      sw('ink/muted', '#5F574A', 'Meta text · 6:1 sheet, 4.6:1 desk'),
+      sw('ink/field-border', '#7A705F', 'Input edges · 4.1:1'),
+      sw('ink/rule', '#B5AA93', 'Hairlines, decorative')
+    ];
+    var signalSw = [
+      sw('signal/stamp', '#9B2C22', 'Deadlines, errors, covert · 6.4:1'),
+      sw('signal/link', '#2A3D66', 'Links, focus ring · 9.1:1'),
+      sw('signal/settled', '#2E5A3C', 'Success tiers · 6.7:1'),
+      sw('signal/caution', '#7A4E0C', 'Degraded, partial · 6.1:1'),
+      sw('seat/azure', '#234A8A', 'Churchill (shown) · 7.4:1'),
+      sw('seat/gules', '#8E2A2A', 'Seat accent · 7:1'),
+      sw('seat/vert', '#3B5E1F', 'Seat accent · 6.3:1'),
+      sw('seat/purpure', '#5A3A70', 'Seat accent · 7.9:1'),
+      sw('seat/or', '#8A6410', 'Fills and shields only')
+    ];
+    var space = [1, 2, 3, 4, 5, 6, 7].map(function (n) {
+      var px = [4, 8, 12, 16, 24, 32, 48][n - 1];
+      return { name: 'space/' + n, px: px, w: (px * 4) + 'px' };
+    });
+    var meterSegs = [];
+    for (var i = 0; i < 10; i++) { meterSegs.push({ bg: i < 6 ? '#1F1B16' : '#F2ECDF' }); }
+    var clocks = [[0, 1], [1, 4], [3, 6], [5, 8], [12, 12]].map(function (p) {
+      return { k: clockPaths(p[0], p[1], 40), label: p[0] + ' of ' + p[1] };
+    });
+    var odds = ['Impossible', 'Long shot', 'Contested', 'Likely', 'Assured'].map(function (name, idx) {
+      var notches = [];
+      for (var j = 0; j < 4; j++) { notches.push({ h: (6 + j * 3) + 'px', bg: j < idx ? '#1F1B16' : '#F2ECDF' }); }
+      return { name: name, notches: notches };
+    });
+    return { frameSw: frameSw, paperSw: paperSw, signalSw: signalSw, space: space, meterSegs: meterSegs, clocks: clocks, odds: odds };
+  }
+}
+</script>
+</body>
+</html>

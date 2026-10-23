@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Your campaigns</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&amp;family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&amp;display=swap">
+<style>
+body{margin:0;background:#000}
+a{color:#2A3D66}a:hover{color:#1F1B16}
+input::placeholder{color:#5F574A}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; background: #000000; padding: 0 8px 8px; display: flex; flex-direction: column; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; color: #1F1B16">
+  <header style="height: 64px; flex: none; display: flex; align-items: center; gap: 14px; padding: 0 16px; border-bottom: 1px solid #4A2F16; color: #EDE3D1">
+    <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><path d="M27 3C19 4.5 13.5 10 12.5 17.5L15 20C22.5 19 27.5 12 27 3Z" fill="#B87333"></path><path d="M26 4.5L13.8 18.8" stroke="#000000" stroke-width="1.2"></path><path d="M13 19.5L15 21.5L4 30Z" fill="#B87333"></path><path d="M10.6 18.6L15.6 23.6" stroke="#B87333" stroke-width="2"></path></svg>
+    <span style="font-size: 13px; font-weight: 600; letter-spacing: 0.32em; color: #B87333">REVISIONIST</span>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 12px">
+      <a href="#" style="font-size: 14px; color: #B87333">Settings</a>
+      <button type="button" aria-label="Report a bug" style="width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid #85705A; color: #EDE3D1; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8.5 7a3.5 3.5 0 0 1 7 0"></path><rect x="7" y="8" width="10" height="12" rx="5"></rect><path d="M12 12v8M3 13h4M17 13h4M4 8l3 2M20 8l-3 2M4 20l3-2.5M20 20l-3-2.5"></path></svg></button>
+      <button type="button" style="height: 36px; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px; background: #120F0C; border: 1px solid #85705A; color: #EDE3D1; font: 500 13px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer">bulldog_40<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>
+    </div>
+  </header>
+
+  <main style="flex: 1; background: #D8CFBA; padding: 40px 24px 56px">
+    <div style="max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px">
+      <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 20px 32px">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <h1 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 32px; line-height: 38px">Your campaigns</h1>
+          <span style="font-size: 14px; color: #4D463B">One seat in each. 2 need an answer.</span>
+        </div>
+        <form aria-label="Join with an invite code" style="margin-left: auto; display: flex; flex-direction: column; gap: 6px">
+          <label for="cp-invite" style="font-size: 13px; font-weight: 600">Join with an invite code</label>
+          <div style="display: flex">
+            <input id="cp-invite" type="text" placeholder="e.g. WOLF-7QK2" style="width: 220px; height: 40px; padding: 0 12px; background: #FAF7F0; border: 1px solid #7A705F; border-right: 0; border-radius: 2px 0 0 2px; font: 400 14px 'IBM Plex Sans', Arial, sans-serif; color: #1F1B16">
+            <button type="submit" style="height: 40px; padding: 0 16px; background: #1F1B16; color: #F2ECDF; border: 0; border-radius: 0 2px 2px 0; font: 500 14px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer">Join</button>
+          </div>
+        </form>
+      </div>
+
+      <div style="overflow-x: auto; background: #F2ECDF; border: 1px solid #1F1B16">
+        <table style="width: 100%; min-width: 980px; border-collapse: collapse; font-size: 14px; line-height: 20px">
+          <thead>
+            <tr style="text-align: left; border-bottom: 1px solid #1F1B16">
+              <th scope="col" style="padding: 12px 16px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Campaign</th>
+              <th scope="col" style="padding: 12px 16px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Your character</th>
+              <th scope="col" style="padding: 12px 16px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">In-world date</th>
+              <th scope="col" style="padding: 12px 16px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Phase</th>
+              <th scope="col" style="padding: 12px 16px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Next tick</th>
+              <th scope="col" style="padding: 12px 16px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Needs an answer</th>
+              <th scope="col" style="padding: 12px 16px"><span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Open</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom: 1px solid #B5AA93">
+              <td style="padding: 16px; font-family: 'Libre Caslon Text', Georgia, serif; font-size: 17px">Their Finest Hour</td>
+              <td style="padding: 16px"><div style="display: flex; align-items: center; gap: 10px"><svg width="16" height="19" viewBox="0 0 22 26" aria-hidden="true"><path d="M1 1h20v11c0 7-5 11.5-10 13C6 23.5 1 19 1 12Z" fill="#234A8A"></path></svg><div style="display: flex; flex-direction: column"><span style="font-weight: 600">Winston Churchill</span><span style="font-size: 13px; color: #4D463B">Prime Minister</span></div></div></td>
+              <td style="padding: 16px; font-feature-settings: 'tnum'"><div style="display: flex; flex-direction: column"><span>4 June 1940</span><span style="font-size: 13px; color: #4D463B">Tick 6</span></div></td>
+              <td style="padding: 16px"><span style="display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px; border: 1px solid #1F1B16; border-radius: 2px; font-size: 12px; font-weight: 600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>In play</span></td>
+              <td style="padding: 16px; font-weight: 600; font-feature-settings: 'tnum'">14 h 22 m</td>
+              <td style="padding: 16px"><span style="display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px; background: #9B2C22; color: #F2ECDF; border-radius: 2px; font-size: 12px; font-weight: 600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M7 3h10M7 21h10M8 3c0 5 8 6 8 9s-8 4-8 9M16 3c0 5-8 6-8 9"></path></svg>1</span></td>
+              <td style="padding: 16px; text-align: right"><a href="WarRoom.dc.html" style="display: inline-flex; align-items: center; height: 36px; padding: 0 14px; background: #1F1B16; color: #F2ECDF; text-decoration: none; border-radius: 2px; font-size: 14px; font-weight: 500; white-space: nowrap">Open war room</a></td>
+            </tr>
+            <tr style="border-bottom: 1px solid #B5AA93">
+              <td style="padding: 16px; font-family: 'Libre Caslon Text', Georgia, serif; font-size: 17px">The Long Retreat</td>
+              <td style="padding: 16px"><div style="display: flex; align-items: center; gap: 10px"><svg width="16" height="19" viewBox="0 0 22 26" aria-hidden="true"><path d="M1 1h20v11c0 7-5 11.5-10 13C6 23.5 1 19 1 12Z" fill="#8A6410"></path></svg><div style="display: flex; flex-direction: column"><span style="font-weight: 600">Douglas MacArthur</span><span style="font-size: 13px; color: #4D463B">Commander, US Army Forces in the Far East</span></div></div></td>
+              <td style="padding: 16px; font-feature-settings: 'tnum'"><div style="display: flex; flex-direction: column"><span>9 December 1941</span><span style="font-size: 13px; color: #4D463B">Tick 2</span></div></td>
+              <td style="padding: 16px"><span style="display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px; border: 1px solid #1F1B16; border-radius: 2px; font-size: 12px; font-weight: 600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>In play</span></td>
+              <td style="padding: 16px; font-weight: 600; font-feature-settings: 'tnum'">2 d 4 h</td>
+              <td style="padding: 16px; font-size: 13px; color: #4D463B">Nothing</td>
+              <td style="padding: 16px; text-align: right"><a href="#" style="display: inline-flex; align-items: center; height: 36px; padding: 0 14px; border: 1px solid #1F1B16; color: #1F1B16; text-decoration: none; border-radius: 2px; font-size: 14px; font-weight: 500; white-space: nowrap">Open war room</a></td>
+            </tr>
+            <tr style="border-bottom: 1px solid #B5AA93">
+              <td style="padding: 16px; font-family: 'Libre Caslon Text', Georgia, serif; font-size: 17px">Winter Line</td>
+              <td style="padding: 16px; font-size: 13px; color: #4D463B">Not chosen yet</td>
+              <td style="padding: 16px; font-feature-settings: 'tnum'"><div style="display: flex; flex-direction: column"><span>Opens 1 October 1941</span><span style="font-size: 13px; color: #4D463B">Not started</span></div></td>
+              <td style="padding: 16px"><span style="display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px; border: 1px dashed #1F1B16; border-radius: 2px; font-size: 12px; font-weight: 600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16Z"></path></svg>Session Zero</span></td>
+              <td style="padding: 16px; font-size: 13px; color: #4D463B">After Session Zero</td>
+              <td style="padding: 16px"><span style="display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px; background: #9B2C22; color: #F2ECDF; border-radius: 2px; font-size: 12px; font-weight: 600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M7 3h10M7 21h10M8 3c0 5 8 6 8 9s-8 4-8 9M16 3c0 5-8 6-8 9"></path></svg>Pick a character</span></td>
+              <td style="padding: 16px; text-align: right"><a href="#" style="display: inline-flex; align-items: center; height: 36px; padding: 0 14px; border: 1px solid #1F1B16; color: #1F1B16; text-decoration: none; border-radius: 2px; font-size: 14px; font-weight: 500; white-space: nowrap">Continue setup</a></td>
+            </tr>
+            <tr>
+              <td style="padding: 16px; font-family: 'Libre Caslon Text', Georgia, serif; font-size: 17px">Operation Torch</td>
+              <td style="padding: 16px"><div style="display: flex; align-items: center; gap: 10px"><svg width="16" height="19" viewBox="0 0 22 26" aria-hidden="true"><path d="M1 1h20v11c0 7-5 11.5-10 13C6 23.5 1 19 1 12Z" fill="#5A3A70"></path></svg><div style="display: flex; flex-direction: column"><span style="font-weight: 600">Dwight D. Eisenhower</span><span style="font-size: 13px; color: #4D463B">Commander, Allied Force</span></div></div></td>
+              <td style="padding: 16px; font-feature-settings: 'tnum'"><div style="display: flex; flex-direction: column"><span>31 December 1942</span><span style="font-size: 13px; color: #4D463B">Final tick 14</span></div></td>
+              <td style="padding: 16px"><span style="display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px; border: 1px solid #1F1B16; border-radius: 2px; font-size: 12px; font-weight: 600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m4 12 5 5L20 6"></path></svg>Season over</span></td>
+              <td style="padding: 16px; font-size: 13px; color: #4D463B">None</td>
+              <td style="padding: 16px; font-size: 13px; color: #4D463B">Nothing</td>
+              <td style="padding: 16px; text-align: right"><a href="#" style="display: inline-flex; align-items: center; height: 36px; padding: 0 14px; border: 1px solid #1F1B16; color: #1F1B16; text-decoration: none; border-radius: 2px; font-size: 14px; font-weight: 500; white-space: nowrap">Read the Reveal</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin: 0; font-size: 13px; line-height: 19px; color: #4D463B">Other players see your character, never your handle, except at Session Zero.</p>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

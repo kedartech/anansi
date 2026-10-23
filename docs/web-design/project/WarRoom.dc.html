@@ -1,0 +1,765 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>War room</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&amp;family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&amp;family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&amp;display=swap">
+<style>
+body{margin:0;background:#000}
+@keyframes rev-drafting{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
+@media (prefers-reduced-motion: reduce){.rev-anim{animation:none !important;transform:none !important}}
+</style>
+</helmet>
+<div style="height: 100vh; min-height: 720px; box-sizing: border-box; display: flex; flex-direction: column; background: #000000; padding: 0 6px 6px; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; color: #1F1B16; overflow: hidden">
+
+<!-- ============ HEADER (frame) ============ -->
+<header style="min-height: 56px; display: flex; flex-wrap: wrap; align-items: center; column-gap: 14px; row-gap: 6px; padding: 6px 10px; border-bottom: 1px solid #4A2F16; color: #EDE3D1">
+  <a href="Campaigns.dc.html" aria-label="All campaigns" style="display: flex; align-items: center; width: 36px; height: 36px; justify-content: center">
+    <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><path d="M27 3C19 4.5 13.5 10 12.5 17.5L15 20C22.5 19 27.5 12 27 3Z" fill="#B87333"></path><path d="M26 4.5L13.8 18.8" stroke="#000000" stroke-width="1.2"></path><path d="M13 19.5L15 21.5L4 30Z" fill="#B87333"></path><path d="M10.6 18.6L15.6 23.6" stroke="#B87333" stroke-width="2"></path></svg>
+  </a>
+  <div style="display: flex; flex-direction: column; min-width: 0">
+    <span style="font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #A89A86">Campaign</span>
+    <span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 16px; line-height: 20px; white-space: nowrap">Their Finest Hour</span>
+  </div>
+  <span aria-hidden="true" style="width: 1px; height: 32px; background: #4A2F16"></span>
+  <div style="display: flex; align-items: center; gap: 10px">
+    <svg width="22" height="26" viewBox="0 0 22 26" role="img" aria-label="Seat colour: azure"><path d="M1 1h20v11c0 7-5 11.5-10 13C6 23.5 1 19 1 12Z" fill="#234A8A" stroke="#B87333" stroke-width="1.2"></path></svg>
+    <div style="display: flex; flex-direction: column">
+      <span style="font-size: 14px; line-height: 18px; font-weight: 600; white-space: nowrap">Winston Churchill</span>
+      <span style="font-size: 12px; line-height: 16px; color: #A89A86; white-space: nowrap">Prime Minister</span>
+    </div>
+  </div>
+  <span aria-hidden="true" style="width: 1px; height: 32px; background: #4A2F16"></span>
+  <div style="display: flex; flex-direction: column">
+    <span style="font-size: 14px; line-height: 18px; font-weight: 600; white-space: nowrap; font-feature-settings: 'tnum'">{{dateMain}}</span>
+    <span style="font-size: 12px; line-height: 16px; color: #A89A86; white-space: nowrap; font-feature-settings: 'tnum'">{{dateSub}}</span>
+  </div>
+
+  <div style="margin-left: auto; display: flex; flex-wrap: wrap; align-items: center; column-gap: 12px; row-gap: 6px">
+    <sc-if value="{{notSeason}}" hint-placeholder-val="{{true}}">
+      <div style="display: flex; flex-direction: column; align-items: flex-end">
+        <span style="font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #A89A86">Next tick in</span>
+        <span style="font-size: 20px; line-height: 24px; font-weight: 600; color: #D08A49; font-feature-settings: 'tnum'; white-space: nowrap">14 h 22 m</span>
+      </div>
+      <a href="#dilemma" style="display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; background: {{naBg}}; color: {{naFg}}; border: 1px solid {{naBd}}; text-decoration: none; font-size: 13px; font-weight: 600; white-space: nowrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M7 3h10M7 21h10M8 3c0 5 8 6 8 9s-8 4-8 9M16 3c0 5-8 6-8 9"></path></svg>{{naLabel}}
+      </a>
+    </sc-if>
+    <sc-if value="{{isSeason}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; flex-direction: column; align-items: flex-end">
+        <span style="font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #A89A86">Ticks</span>
+        <span style="font-size: 20px; line-height: 24px; font-weight: 600; color: #D08A49; white-space: nowrap">Season over</span>
+      </div>
+    </sc-if>
+    <div style="display: flex; flex-direction: column; align-items: flex-end; padding-left: 12px; border-left: 1px solid #4A2F16">
+      <span style="font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #A89A86">Divergence</span>
+      <span style="font-size: 20px; line-height: 24px; font-weight: 600; font-feature-settings: 'tnum'">{{divergence}}</span>
+    </div>
+    <button type="button" aria-label="Report a bug" title="Report a bug" style="width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid #85705A; color: #EDE3D1; cursor: pointer">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8.5 7a3.5 3.5 0 0 1 7 0"></path><rect x="7" y="8" width="10" height="12" rx="5"></rect><path d="M12 12v8M3 13h4M17 13h4M4 8l3 2M20 8l-3 2M4 20l3-2.5M20 20l-3-2.5"></path></svg>
+    </button>
+    <button type="button" style="height: 36px; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px; background: transparent; border: 1px solid #B87333; color: #B87333; font: 600 13px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer; white-space: nowrap">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M9 5v14M15 5v14"></path></svg>Pause · Add a line
+    </button>
+    <button type="button" aria-label="Account: bulldog_40" style="width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; background: #120F0C; border: 1px solid #85705A; color: #EDE3D1; font: 600 13px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer">B</button>
+  </div>
+</header>
+
+<!-- seat band -->
+<div aria-hidden="true" style="height: 4px; background: #234A8A; flex: none"></div>
+
+<!-- ============ CONTEST BAND ============ -->
+<section aria-label="Contests" style="flex: none; background: #E4DCCB; border-bottom: 1px solid #1F1B16; padding: 10px 20px 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr)); column-gap: 40px; row-gap: 10px">
+  <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+    <div style="display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 10px; row-gap: 2px">
+      <span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 16px; line-height: 20px">Battle of France</span>
+      <span style="font-size: 18px; line-height: 20px; font-weight: 600; font-feature-settings: 'tnum'">{{franceVal}}</span>
+      <span style="font-size: 13px; font-weight: 600">favours Germany</span>
+      <span style="margin-left: auto; display: inline-flex; gap: 14px; font-size: 12px; color: #4D463B; white-space: nowrap">
+        <span style="display: inline-flex; align-items: center; gap: 4px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M7 3h10M7 21h10M8 3c0 5 8 6 8 9s-8 4-8 9M16 3c0 5-8 6-8 9"></path></svg>{{franceDays}}</span>
+        <span style="display: inline-flex; align-items: center; gap: 4px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M20 12H4M10 6l-6 6 6 6"></path></svg>Momentum −6 a turn</span>
+      </span>
+    </div>
+    <div style="display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center">
+      <span style="font-size: 12px; font-weight: 600">Germany</span>
+      <div role="img" aria-label="Track at {{franceVal}} of minus 100 to plus 100, favours Germany" style="position: relative; height: 14px; background: #F2ECDF; border: 1px solid #1F1B16">
+        <span style="position: absolute; left: {{franceLeft}}; width: {{franceWidth}}; top: 0; bottom: 0; background: #4D463B"></span>
+        <span style="position: absolute; left: 25%; top: 0; bottom: 0; width: 1px; background: #B5AA93"></span>
+        <span style="position: absolute; left: 75%; top: 0; bottom: 0; width: 1px; background: #B5AA93"></span>
+        <span style="position: absolute; left: calc(50% - 1px); top: -4px; bottom: -4px; width: 2px; background: #1F1B16"></span>
+        <span style="position: absolute; left: calc({{franceLeft}} - 2px); top: -5px; bottom: -5px; width: 4px; background: #1F1B16"></span>
+      </div>
+      <span style="font-size: 12px; font-weight: 600">France and Britain</span>
+    </div>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+    <div style="display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 10px; row-gap: 2px">
+      <span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 16px; line-height: 20px">Battle of the Atlantic</span>
+      <span style="font-size: 18px; line-height: 20px; font-weight: 600; font-feature-settings: 'tnum'">{{atlanticVal}}</span>
+      <span style="font-size: 13px; font-weight: 600">favours Britain</span>
+      <span style="margin-left: auto; display: inline-flex; gap: 14px; font-size: 12px; color: #4D463B; white-space: nowrap">
+        <span style="display: inline-flex; align-items: center; gap: 4px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M7 3h10M7 21h10M8 3c0 5 8 6 8 9s-8 4-8 9M16 3c0 5-8 6-8 9"></path></svg>{{atlanticDays}}</span>
+        <span style="display: inline-flex; align-items: center; gap: 4px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M20 12H4M10 6l-6 6 6 6"></path></svg>Momentum −2 a turn</span>
+      </span>
+    </div>
+    <div style="display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center">
+      <span style="font-size: 12px; font-weight: 600">Germany</span>
+      <div role="img" aria-label="Track at {{atlanticVal}} of minus 100 to plus 100, favours Britain" style="position: relative; height: 14px; background: #F2ECDF; border: 1px solid #1F1B16">
+        <span style="position: absolute; left: 50%; width: {{atlanticWidth}}; top: 0; bottom: 0; background: #4D463B"></span>
+        <span style="position: absolute; left: 25%; top: 0; bottom: 0; width: 1px; background: #B5AA93"></span>
+        <span style="position: absolute; left: 75%; top: 0; bottom: 0; width: 1px; background: #B5AA93"></span>
+        <span style="position: absolute; left: calc(50% - 1px); top: -4px; bottom: -4px; width: 2px; background: #1F1B16"></span>
+        <span style="position: absolute; left: calc({{atlanticLeft}} - 2px); top: -5px; bottom: -5px; width: 4px; background: #1F1B16"></span>
+      </div>
+      <span style="font-size: 12px; font-weight: 600">Britain</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ BODY ============ -->
+<div style="flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(296px, 22%) minmax(0, 1fr) minmax(352px, 27%); background: #D8CFBA">
+
+  <!-- ===== LEFT: POSITION ===== -->
+  <aside aria-label="Your position" style="min-height: 0; overflow-y: auto; border-right: 1px solid #1F1B16; padding: 14px 16px 24px; display: flex; flex-direction: column; gap: 18px">
+
+    <!-- operations -->
+    <section style="display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <h2 style="margin: 0; font-size: 11px; line-height: 16px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase">Operations</h2>
+        <div role="img" aria-label="{{slotLabel}}" style="margin-left: auto; display: flex; gap: 3px">
+          <sc-for list="{{slots}}" as="s" hint-placeholder-count="3">
+            <span style="width: 16px; height: 12px; background: {{s.bg}}; border: 1px solid #1F1B16"></span>
+          </sc-for>
+        </div>
+        <span style="font-size: 12px; font-weight: 600; font-feature-settings: 'tnum'">{{slotLabel}}</span>
+      </div>
+
+      <article style="background: #F2ECDF; border: 1px solid #1F1B16; padding: 10px 12px; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px">
+        <svg width="34" height="34" viewBox="0 0 34 34" role="img" aria-label="2 of 6 segments">
+          <circle cx="17" cy="17" r="15" fill="#F2ECDF" stroke="#1F1B16" stroke-width="1.5"></circle>
+          <path d="{{clkA.ink}}" stroke="#1F1B16" stroke-width="1" fill="none"></path>
+          <path d="{{clkA.fill}}" fill="#1F1B16"></path>
+          <path d="{{clkA.paper}}" stroke="#F2ECDF" stroke-width="1.5" fill="none"></path>
+        </svg>
+        <div style="display: flex; flex-direction: column; gap: 5px; min-width: 0">
+          <div style="display: flex; gap: 8px; align-items: baseline">
+            <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em">FUND</span>
+            <a href="#" style="margin-left: auto; font-size: 12px; color: #2A3D66">Order 5·2</a>
+          </div>
+          <span style="font-size: 13px; line-height: 18px; font-weight: 600">Fund the Purchasing Commission's orders for American aircraft</span>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 12px; color: #4D463B">
+            <span style="display: inline-flex; align-items: center; gap: 4px; color: #1F1B16"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><path d="M3.5 19a5.5 5.5 0 0 1 11 0"></path><circle cx="17" cy="9" r="2.5"></circle><path d="M16 14.1a4.6 4.6 0 0 1 5 4.4"></path></svg>Restricted</span>
+            <span style="font-feature-settings: 'tnum'">2 of 6 · finishes tick 8</span>
+          </div>
+          <span style="align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 7px; border: 1px solid #1F1B16; border-radius: 2px; background: #FAF7F0">
+            <span aria-hidden="true" style="display: inline-flex; gap: 2px; align-items: flex-end"><span style="width: 4px; height: 5px; background: #1F1B16; border: 1px solid #1F1B16"></span><span style="width: 4px; height: 7px; background: #1F1B16; border: 1px solid #1F1B16"></span><span style="width: 4px; height: 9px; background: #1F1B16; border: 1px solid #1F1B16"></span><span style="width: 4px; height: 11px; background: #FAF7F0; border: 1px solid #1F1B16"></span></span>
+            <span style="font-size: 12px; font-weight: 600">Likely</span>
+          </span>
+        </div>
+      </article>
+
+      <article style="background: #F2ECDF; border: 1px solid #1F1B16; padding: 10px 12px; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px">
+        <svg width="34" height="34" viewBox="0 0 34 34" role="img" aria-label="3 of 8 segments">
+          <circle cx="17" cy="17" r="15" fill="#F2ECDF" stroke="#1F1B16" stroke-width="1.5"></circle>
+          <path d="{{clkB.ink}}" stroke="#1F1B16" stroke-width="1" fill="none"></path>
+          <path d="{{clkB.fill}}" fill="#1F1B16"></path>
+          <path d="{{clkB.paper}}" stroke="#F2ECDF" stroke-width="1.5" fill="none"></path>
+        </svg>
+        <div style="display: flex; flex-direction: column; gap: 5px; min-width: 0">
+          <div style="display: flex; gap: 8px; align-items: baseline">
+            <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em">FORGE</span>
+            <a href="#" style="margin-left: auto; font-size: 12px; color: #2A3D66">Operation 5·3</a>
+          </div>
+          <span style="font-size: 13px; line-height: 18px; font-weight: 600">SIS: feed the Abwehr a false order of battle for home defence</span>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 12px; color: #4D463B">
+            <span style="display: inline-flex; align-items: center; gap: 4px; color: #9B2C22; font-weight: 600"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"></path><circle cx="12" cy="12" r="2.8"></circle><path d="M4 20 20 4"></path></svg>Covert</span>
+            <span style="font-feature-settings: 'tnum'">3 of 8 · finishes tick 9</span>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+            <span style="display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 7px; border: 1px solid #1F1B16; border-radius: 2px; background: #FAF7F0">
+              <span aria-hidden="true" style="display: inline-flex; gap: 2px; align-items: flex-end"><span style="width: 4px; height: 5px; background: #1F1B16; border: 1px solid #1F1B16"></span><span style="width: 4px; height: 7px; background: #1F1B16; border: 1px solid #1F1B16"></span><span style="width: 4px; height: 9px; background: #FAF7F0; border: 1px solid #1F1B16"></span><span style="width: 4px; height: 11px; background: #FAF7F0; border: 1px solid #1F1B16"></span></span>
+              <span style="font-size: 12px; font-weight: 600">Contested</span>
+            </span>
+            <span role="img" aria-label="Exposure 1 of 5" style="display: inline-flex; align-items: center; gap: 2px">
+              <span style="width: 9px; height: 9px; background: #9B2C22; border: 1px solid #9B2C22"></span>
+              <span style="width: 9px; height: 9px; background: #F2ECDF; border: 1px solid #9B2C22"></span>
+              <span style="width: 9px; height: 9px; background: #F2ECDF; border: 1px solid #9B2C22"></span>
+              <span style="width: 9px; height: 9px; background: #F2ECDF; border: 1px solid #9B2C22"></span>
+              <span style="width: 9px; height: 9px; background: #F2ECDF; border: 1px solid #9B2C22"></span>
+            </span>
+            <span style="font-size: 12px; color: #9B2C22; font-weight: 600">Exposure 1 of 5</span>
+          </div>
+        </div>
+      </article>
+
+      <sc-if value="{{isThinking}}" hint-placeholder-val="{{false}}">
+        <article style="background: #FAF7F0; border: 1px solid #1F1B16; padding: 10px 12px; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px">
+          <svg width="34" height="34" viewBox="0 0 34 34" role="img" aria-label="Clock not set yet"><circle cx="17" cy="17" r="15" fill="none" stroke="#5F574A" stroke-width="1.5" stroke-dasharray="3 3"></circle><path d="M12 22h3.5L23 14.5 19.5 11 12 18.5Z" fill="none" stroke="#1F1B16" stroke-width="1.6"></path></svg>
+          <div style="display: flex; flex-direction: column; gap: 5px; min-width: 0">
+            <span style="align-self: flex-start; display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 7px; border: 1px solid #1F1B16; border-radius: 2px; font-size: 12px; font-weight: 600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16Z"></path></svg>Drafting</span>
+            <span style="font-size: 13px; line-height: 18px; font-weight: 600">Send four fighter squadrons to France</span>
+            <span style="font-size: 12px; color: #4D463B">Holds slot 3 while Hartley drafts. Odds appear once it's filed.</span>
+          </div>
+        </article>
+      </sc-if>
+
+      <div style="display: flex; flex-direction: column; gap: 6px; padding-top: 2px">
+        <div style="display: flex; align-items: baseline"><h3 style="margin: 0; font-size: 12px; font-weight: 600">Queue</h3><span style="margin-left: auto; font-size: 12px; color: #4D463B; font-feature-settings: 'tnum'">{{queueCount}}</span></div>
+        <sc-if value="{{isThinking}}" hint-placeholder-val="{{false}}">
+          <div style="display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; padding: 8px 10px; border: 1px dashed #1F1B16; background: #E4DCCB">
+            <span style="font-size: 12px; font-weight: 600; font-feature-settings: 'tnum'">1</span>
+            <div style="display: flex; flex-direction: column; gap: 2px">
+              <span style="font-size: 13px; line-height: 18px; font-weight: 600">Demilitarise the Channel Islands</span>
+              <span style="font-size: 12px; color: #4D463B">Starts when a slot frees. Next due: tick 8.</span>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{notThinking}}" hint-placeholder-val="{{true}}">
+          <p style="margin: 0; font-size: 12px; line-height: 17px; color: #4D463B">Nothing waiting. A new order starts at once while a slot is free. Talk and negotiation never take a slot.</p>
+        </sc-if>
+      </div>
+    </section>
+
+    <!-- means -->
+    <section style="display: flex; flex-direction: column; gap: 8px; padding-top: 14px; border-top: 1px solid #B5AA93">
+      <h2 style="margin: 0; font-size: 11px; line-height: 16px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase">Means</h2>
+      <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column">
+        <sc-for list="{{means}}" as="m" hint-placeholder-count="4">
+          <li style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid #C9BFA8">
+            <span style="font-size: 13px; line-height: 18px; font-weight: 500">{{m.name}}</span>
+            <span role="img" aria-label="Tier {{m.tier}} of 5" style="display: inline-flex; align-items: center; gap: 2px">
+              <sc-for list="{{m.pips}}" as="p" hint-placeholder-count="5">
+                <span style="width: 8px; height: 10px; background: {{p.bg}}; border: 1px solid #1F1B16"></span>
+              </sc-for>
+              <span style="font-size: 12px; font-weight: 600; margin-left: 6px; font-feature-settings: 'tnum'">Tier {{m.tier}}</span>
+            </span>
+            <sc-if value="{{m.degraded}}" hint-placeholder-val="{{false}}">
+              <span style="grid-column: 1 / -1; justify-self: start; display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 6px; border: 1px solid #7A4E0C; color: #7A4E0C; border-radius: 2px; font-size: 12px; font-weight: 600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M3 7l6 6 4-4 8 8M21 11v6h-6"></path></svg>Degraded</span>
+            </sc-if>
+          </li>
+        </sc-for>
+      </ul>
+    </section>
+
+    <!-- standing -->
+    <section style="display: flex; flex-direction: column; gap: 10px; padding-top: 14px; border-top: 1px solid #B5AA93">
+      <h2 style="margin: 0; font-size: 11px; line-height: 16px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase">Standing</h2>
+      <sc-for list="{{meters}}" as="mt" hint-placeholder-count="3">
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; align-items: baseline"><span style="font-size: 13px; font-weight: 500">{{mt.name}}</span><span style="margin-left: auto; font-size: 13px; font-weight: 600; font-feature-settings: 'tnum'">{{mt.val}} of 10</span></div>
+          <div role="img" aria-label="{{mt.name}} {{mt.val}} of 10" style="display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 2px">
+            <sc-for list="{{mt.segs}}" as="sg" hint-placeholder-count="10">
+              <span style="height: 8px; background: {{sg.bg}}; border: 1px solid #1F1B16"></span>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </section>
+
+    <!-- secret goal -->
+    <section style="display: flex; flex-direction: column; gap: 8px; padding-top: 14px; border-top: 1px solid #B5AA93">
+      <div style="display: flex; align-items: center; gap: 8px">
+        <h2 style="margin: 0; font-size: 11px; line-height: 16px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase">Your secret goal</h2>
+        <span style="margin-left: auto; display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 6px; border: 1px solid #1F1B16; border-radius: 2px; font-size: 11px; font-weight: 600"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="1"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>Owner only</span>
+      </div>
+      <p style="margin: 0; font-family: 'Courier Prime', 'Courier New', monospace; font-size: 14px; line-height: 20px">Keep the United States supplying Britain by 1 January 1941.</p>
+      <div style="display: flex; align-items: center; gap: 8px">
+        <span role="img" aria-label="1 of 3 parts met" style="display: inline-flex; gap: 3px"><span style="width: 22px; height: 10px; background: #1F1B16; border: 1px solid #1F1B16"></span><span style="width: 22px; height: 10px; background: #F2ECDF; border: 1px solid #1F1B16"></span><span style="width: 22px; height: 10px; background: #F2ECDF; border: 1px solid #1F1B16"></span></span>
+        <span style="font-size: 13px; font-weight: 600">1 of 3 parts met</span>
+        <span style="margin-left: auto; display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border: 1px solid #1F1B16; border-radius: 2px; font-size: 11px; font-weight: 600">Lasting</span>
+      </div>
+    </section>
+
+    <!-- rival dossiers -->
+    <section style="display: flex; flex-direction: column; gap: 10px; padding-top: 14px; border-top: 1px solid #B5AA93">
+      <h2 style="margin: 0; font-size: 11px; line-height: 16px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase">Rival goals · what you've uncovered</h2>
+      <div style="background: #F2ECDF; border: 1px solid #1F1B16; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <svg width="14" height="17" viewBox="0 0 22 26" aria-hidden="true"><path d="M1 1h20v11c0 7-5 11.5-10 13C6 23.5 1 19 1 12Z" fill="#3B5E1F"></path></svg>
+          <span style="font-size: 13px; font-weight: 600">Benito Mussolini</span>
+          <span style="margin-left: auto; font-size: 12px; color: #4D463B; font-feature-settings: 'tnum'">2 of 4 pieces</span>
+        </div>
+        <ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 13px; line-height: 18px">
+          <li style="display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 8px; align-items: start"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1F1B16" stroke-width="2.4" aria-hidden="true" style="margin-top: 2px"><path d="m4 12 5 5L20 6"></path></svg><span><span style="color: #4D463B">Aim ·</span> Has an aim</span></li>
+          <li style="display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 8px; align-items: start"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1F1B16" stroke-width="2.4" aria-hidden="true" style="margin-top: 2px"><path d="m4 12 5 5L20 6"></path></svg><span><span style="color: #4D463B">Domain ·</span> Territory</span></li>
+          <li style="display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 8px; align-items: start; color: #4D463B"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5F574A" stroke-width="2" aria-hidden="true" style="margin-top: 2px"><circle cx="12" cy="12" r="7" stroke-dasharray="2.5 2.5"></circle></svg><span>Object · not uncovered</span></li>
+          <li style="display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 8px; align-items: start; color: #4D463B"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5F574A" stroke-width="2" aria-hidden="true" style="margin-top: 2px"><circle cx="12" cy="12" r="7" stroke-dasharray="2.5 2.5"></circle></svg><span>Full condition · not uncovered</span></li>
+        </ol>
+      </div>
+      <div style="background: #F2ECDF; border: 1px solid #1F1B16; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <svg width="14" height="17" viewBox="0 0 22 26" aria-hidden="true"><path d="M1 1h20v11c0 7-5 11.5-10 13C6 23.5 1 19 1 12Z" fill="#5A3A70"></path></svg>
+          <span style="font-size: 13px; font-weight: 600">Joseph Stalin</span>
+        </div>
+        <span style="font-size: 13px; color: #4D463B">Nothing uncovered yet. Spying on a rival reveals their goal one piece at a time.</span>
+      </div>
+    </section>
+  </aside>
+
+  <!-- ===== CENTER: BRIEFING / MAP / LEDGER + ORDER BOX ===== -->
+  <main style="min-height: 0; display: flex; flex-direction: column; background: #F2ECDF">
+    <div role="tablist" aria-label="Workspace" style="flex: none; display: flex; align-items: flex-end; gap: 24px; padding: 0 24px; border-bottom: 1px solid #1F1B16; background: #F2ECDF">
+      <button type="button" role="tab" aria-selected="{{tabBriefing}}" onClick="{{goBriefing}}" style="height: 42px; padding: 0 2px; background: none; border: 0; border-bottom: 3px solid {{tbBriefing}}; font: 600 14px 'IBM Plex Sans', Arial, sans-serif; color: #1F1B16; cursor: pointer">Briefing</button>
+      <button type="button" role="tab" aria-selected="{{tabMap}}" onClick="{{goMap}}" style="height: 42px; padding: 0 2px; background: none; border: 0; border-bottom: 3px solid {{tbMap}}; font: 600 14px 'IBM Plex Sans', Arial, sans-serif; color: #1F1B16; cursor: pointer">Map</button>
+      <button type="button" role="tab" aria-selected="{{tabLedger}}" onClick="{{goLedger}}" style="height: 42px; padding: 0 2px; background: none; border: 0; border-bottom: 3px solid {{tbLedger}}; font: 600 14px 'IBM Plex Sans', Arial, sans-serif; color: #1F1B16; cursor: pointer">Ledger</button>
+    </div>
+
+    <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 18px 24px 28px">
+
+      <sc-if value="{{tabBriefing}}" hint-placeholder-val="{{true}}">
+        <div style="max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px">
+
+          <!-- live mandates -->
+          <sc-if value="{{isMandates}}" hint-placeholder-val="{{false}}">
+            <section aria-label="Live mandates" style="display: flex; flex-direction: column; gap: 10px">
+              <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px">
+                <h2 style="margin: 0; font-size: 15px; font-weight: 600">Live mandates</h2>
+                <span style="font-size: 13px; color: #4D463B">2 of 2 · answering is your choice</span>
+                <a href="Mandates.dc.html" style="margin-left: auto; font-size: 13px; color: #2A3D66">All mandates</a>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 12px">
+                <article style="background: #FAF7F0; border: 2px solid #9B2C22; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px">
+                  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9B2C22" stroke-width="1.8" aria-hidden="true"><path d="M12 3c1 4 6 6 6 11a6 6 0 0 1-12 0c0-3 2-4.5 2-7 1.5 1 2.5 2.2 2.5 4 1-2 1.5-5 1.5-8Z"></path></svg>
+                    <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.1em; color: #9B2C22">CRISIS</span>
+                    <span style="font-size: 12px; color: #4D463B">France</span>
+                    <span style="margin-left: auto; display: inline-flex; align-items: center; height: 22px; padding: 0 7px; background: #9B2C22; color: #F2ECDF; font-size: 12px; font-weight: 600">Expires at this tick</span>
+                  </div>
+                  <span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 17px; line-height: 23px">France asks for ten more fighter squadrons</span>
+                  <span style="font-size: 13px; line-height: 19px; color: #4D463B">If ignored, the crisis runs its course. No means granted.</span>
+                  <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+                    <a href="#dilemma" style="height: 30px; padding: 0 12px; display: inline-flex; align-items: center; background: #1F1B16; color: #F2ECDF; text-decoration: none; font-size: 13px; font-weight: 500">Answer in the briefing</a>
+                    <button type="button" style="height: 30px; padding: 0 6px; background: none; border: 0; color: #2A3D66; text-decoration: underline; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">Let it lapse</button>
+                  </div>
+                </article>
+                <article style="background: #FAF7F0; border: 1px solid #1F1B16; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px">
+                  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1F1B16" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="9" r="5.5"></circle><path d="M8.7 13.5 7 21l5-2.8 5 2.8-1.7-7.5"></path></svg>
+                    <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.1em">ORDER</span>
+                    <span style="font-size: 12px; color: #4D463B">House of Commons</span>
+                    <span style="margin-left: auto; font-size: 12px; font-weight: 600">Before tick 7</span>
+                  </div>
+                  <span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 17px; line-height: 23px">Make a statement to the House on the evacuation</span>
+                  <span style="font-size: 13px; line-height: 19px; color: #4D463B">If met, Commons confidence rises a step. If ignored, it falls.</span>
+                  <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+                    <button type="button" style="height: 30px; padding: 0 12px; background: #1F1B16; color: #F2ECDF; border: 0; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">Start an order</button>
+                    <button type="button" style="height: 30px; padding: 0 6px; background: none; border: 0; color: #2A3D66; text-decoration: underline; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">Let it lapse</button>
+                  </div>
+                </article>
+              </div>
+            </section>
+          </sc-if>
+
+          <!-- since you last looked -->
+          <sc-if value="{{showSince}}" hint-placeholder-val="{{true}}">
+            <section aria-label="Since you last looked" style="background: #E4DCCB; border: 1px solid #1F1B16; padding: 12px 16px 14px; display: flex; flex-direction: column; gap: 10px">
+              <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px">
+                <h2 style="margin: 0; font-size: 15px; line-height: 20px; font-weight: 600">Since you last looked</h2>
+                <span style="font-size: 13px; color: #4D463B">23 hours ago · tick 5 resolved</span>
+                <button type="button" style="margin-left: auto; height: 28px; padding: 0 10px; background: transparent; border: 1px solid #1F1B16; border-radius: 2px; font: 500 12px 'IBM Plex Sans', Arial, sans-serif; color: #1F1B16; cursor: pointer">Mark all read</button>
+              </div>
+              <ul style="margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); column-gap: 24px; font-size: 13px; line-height: 18px">
+                <li style="display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 10px; padding: 6px 0; border-top: 1px solid #C9BFA8"><span style="font-weight: 600">{{sinceNeedLabel}}</span><a href="{{sinceNeedHref}}" style="color: #2A3D66">{{sinceNeedText}}</a></li>
+                <li style="display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 10px; padding: 6px 0; border-top: 1px solid #C9BFA8"><span style="font-weight: 600">Resolved</span><span><a href="#" style="color: #2A3D66">Order 5·1</a> Call out the little ships · Success</span></li>
+                <li style="display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 10px; padding: 6px 0; border-top: 1px solid #C9BFA8"><span style="font-weight: 600">Advanced</span><span><a href="#" style="color: #2A3D66">Order 5·2</a> 0 → 2 of 6 · <a href="#" style="color: #2A3D66">Op 5·3</a> 1 → 3 of 8</span></li>
+                <li style="display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 10px; padding: 6px 0; border-top: 1px solid #C9BFA8"><span style="font-weight: 600">Contests</span><span style="font-feature-settings: 'tnum'">France −56 → −62 · Atlantic +10 → +8</span></li>
+                <li style="display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 10px; padding: 6px 0; border-top: 1px solid #C9BFA8"><span style="font-weight: 600">Standing</span><span style="font-feature-settings: 'tnum'">Public morale 4 → 5 · Cabinet unity 5 → 4</span></li>
+                <li style="display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 10px; padding: 6px 0; border-top: 1px solid #C9BFA8"><span style="font-weight: 600">Dossier</span><span>New piece on Benito Mussolini: domain</span></li>
+                <li style="display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 10px; padding: 6px 0; border-top: 1px solid #C9BFA8"><span style="font-weight: 600">Hartley</span><span>Answered your question on Fighter Command</span></li>
+                <li style="display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 10px; padding: 6px 0; border-top: 1px solid #C9BFA8"><span style="font-weight: 600">Chronicle</span><span>3 new public items</span></li>
+              </ul>
+            </section>
+          </sc-if>
+
+          <!-- dispatch -->
+          <article aria-label="Briefing, tick 6" style="background: #FAF7F0; border: 1px solid #1F1B16; padding: 22px 28px 24px; display: flex; flex-direction: column; gap: 14px">
+            <div style="display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px 16px; padding-bottom: 12px; border-bottom: 1px solid #1F1B16">
+              <div style="display: flex; flex-direction: column; gap: 2px">
+                <span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase">10 Downing Street · Private Office</span>
+                <h1 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 22px; line-height: 28px">Briefing for the Prime Minister</h1>
+                <span style="font-size: 12px; color: #4D463B; font-feature-settings: 'tnum'">Tick 6 · 4 June 1940 · this turn covers 4–11 June</span>
+              </div>
+              <span style="margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border: 2px solid #1F1B16; font: 700 12px 'Courier Prime', monospace; letter-spacing: 0.12em"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="1"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>PRIVATE</span>
+            </div>
+            <nav aria-label="Earlier briefings" style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 12px">
+              <span style="color: #4D463B; margin-right: 4px">Briefings by tick</span>
+              <span aria-current="page" style="height: 24px; padding: 0 8px; display: inline-flex; align-items: center; background: #1F1B16; color: #F2ECDF; font-weight: 600">6 · latest</span>
+              <a href="#" style="height: 24px; padding: 0 8px; display: inline-flex; align-items: center; border: 1px solid #7A705F; color: #1F1B16; text-decoration: none">5</a>
+              <a href="#" style="height: 24px; padding: 0 8px; display: inline-flex; align-items: center; border: 1px solid #7A705F; color: #1F1B16; text-decoration: none">4</a>
+              <a href="#" style="height: 24px; padding: 0 8px; display: inline-flex; align-items: center; border: 1px solid #7A705F; color: #1F1B16; text-decoration: none">3</a>
+              <a href="#" style="height: 24px; padding: 0 8px; display: inline-flex; align-items: center; border: 1px solid #7A705F; color: #1F1B16; text-decoration: none">2</a>
+              <a href="#" style="height: 24px; padding: 0 8px; display: inline-flex; align-items: center; border: 1px solid #7A705F; color: #1F1B16; text-decoration: none">1</a>
+            </nav>
+
+            <div style="display: flex; flex-direction: column; gap: 12px; font-family: 'Courier Prime', 'Courier New', monospace; font-size: 15px; line-height: 24px; max-width: 72ch">
+              <p style="margin: 0">Prime Minister,</p>
+              <p style="margin: 0">Operation Dynamo closed at 02:23 this morning. The Admiralty's figure is 338,226 men landed since 26 May, roughly a third of them French. We have the army. We do not have its guns, its transport, or most of its rifles.</p>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 10px; background: #E4DCCB; font-size: 13px">
+              <span style="display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 6px; border: 1px solid #2E5A3C; color: #2E5A3C; font-size: 12px; font-weight: 600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m4 12 5 5L20 6"></path></svg>Success</span>
+              <span>Result of</span><a href="#" style="color: #2A3D66; font-weight: 600">Order 5·1 · Call out the little ships</a>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px; font-family: 'Courier Prime', 'Courier New', monospace; font-size: 15px; line-height: 24px; max-width: 72ch">
+              <p style="margin: 0">The Purchasing Commission has placed the first of its orders. The Americans will sell for cash, and ask that we carry the aircraft away ourselves.</p>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 10px; background: #E4DCCB; font-size: 13px">
+              <span style="display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 6px; border: 1px solid #1F1B16; font-size: 12px; font-weight: 600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>In progress · 2 of 6</span>
+              <span>From</span><a href="#" style="color: #2A3D66; font-weight: 600">Order 5·2 · Fund the Purchasing Commission</a>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px; font-family: 'Courier Prime', 'Courier New', monospace; font-size: 15px; line-height: 24px; max-width: 72ch">
+              <p style="margin: 0">Rome radio announces that Signor Mussolini will speak on Monday. Our people in Rome read it as a declaration. I have nothing firmer than that.</p>
+              <p style="margin: 0">Cabinet unity has slipped. The Foreign Secretary let it be known on Thursday that he regards your line on negotiation as premature. He has not resigned and does not intend to.</p>
+            </div>
+
+            <!-- dilemma -->
+            <sc-if value="{{notQuiet}}" hint-placeholder-val="{{true}}">
+            <section id="dilemma" aria-label="Decision needed" style="margin-top: 4px; border: 2px solid #9B2C22; background: #F2ECDF; padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 12px">
+              <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px">
+                <span style="display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px; background: #9B2C22; color: #F2ECDF; font-size: 12px; font-weight: 600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M7 3h10M7 21h10M8 3c0 5 8 6 8 9s-8 4-8 9M16 3c0 5-8 6-8 9"></path></svg>Needs an answer</span>
+                <span style="font-size: 13px; font-weight: 600; color: #9B2C22; font-feature-settings: 'tnum'">{{deadline}}</span>
+              </div>
+              <h2 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 20px; line-height: 27px">The French ask for ten more fighter squadrons. Send them, or hold them for the defence of Britain?</h2>
+              <p style="margin: 0; font-family: 'Courier Prime', 'Courier New', monospace; font-size: 14px; line-height: 22px">Air Chief Marshal Dowding has asked to see you before you answer. Three ways you might go:</p>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr)); gap: 10px">
+                <div style="background: #FAF7F0; border: 1px solid #1F1B16; padding: 12px; display: flex; flex-direction: column; gap: 8px">
+                  <span style="font-size: 14px; line-height: 19px; font-weight: 600">Send four squadrons</span>
+                  <span style="font-family: 'Courier Prime', 'Courier New', monospace; font-size: 13px; line-height: 19px; color: #4D463B; flex: 1">A gesture to Reynaud that keeps Fighter Command above Dowding's floor.</span>
+                  <button type="button" style="align-self: flex-start; height: 32px; padding: 0 12px; background: #1F1B16; color: #F2ECDF; border: 0; border-radius: 2px; font: 500 13px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer">Start this order</button>
+                </div>
+                <div style="background: #FAF7F0; border: 1px solid #1F1B16; padding: 12px; display: flex; flex-direction: column; gap: 8px">
+                  <span style="font-size: 14px; line-height: 19px; font-weight: 600">Send none, and tell Reynaud plainly</span>
+                  <span style="font-family: 'Courier Prime', 'Courier New', monospace; font-size: 13px; line-height: 19px; color: #4D463B; flex: 1">Every fighter stays at home. Paris will take it badly, and say so.</span>
+                  <button type="button" style="align-self: flex-start; height: 32px; padding: 0 12px; background: #1F1B16; color: #F2ECDF; border: 0; border-radius: 2px; font: 500 13px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer">Start this order</button>
+                </div>
+                <div style="background: #FAF7F0; border: 1px solid #1F1B16; padding: 12px; display: flex; flex-direction: column; gap: 8px">
+                  <span style="font-size: 14px; line-height: 19px; font-weight: 600">Offer a union of the two nations</span>
+                  <span style="font-family: 'Courier Prime', 'Courier New', monospace; font-size: 13px; line-height: 19px; color: #4D463B; flex: 1">A political answer to a military request. The Cabinet is divided on it.</span>
+                  <button type="button" style="align-self: flex-start; height: 32px; padding: 0 12px; background: #1F1B16; color: #F2ECDF; border: 0; border-radius: 2px; font: 500 13px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer">Start this order</button>
+                </div>
+              </div>
+              <span style="font-size: 12px; color: #4D463B">Starting an order puts it in the order box for you to edit. Odds appear only after it's filed.</span>
+            </section>
+            </sc-if>
+
+            <!-- quiet tick: an open turn -->
+            <sc-if value="{{isQuiet}}" hint-placeholder-val="{{false}}">
+              <section id="opening" aria-label="An open turn" style="margin-top: 4px; border: 2px solid #1F1B16; background: #F2ECDF; padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 12px">
+                <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px">
+                  <span style="display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid #1F1B16; font-size: 12px; font-weight: 600">No mandate this tick</span>
+                  <span style="font-size: 13px; color: #4D463B">Nothing presses before the tick. The turn is yours.</span>
+                </div>
+                <h2 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 20px; line-height: 27px">An open turn. What would you like to start?</h2>
+                <p style="margin: 0; font-family: 'Courier Prime', 'Courier New', monospace; font-size: 14px; line-height: 22px">Nobody is asking anything of you this week, Prime Minister. That is rare and won't last. Three things I'd consider:</p>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr)); gap: 10px">
+                  <div style="background: #FAF7F0; border: 1px solid #1F1B16; padding: 12px; display: flex; flex-direction: column; gap: 8px">
+                    <span style="font-size: 14px; line-height: 19px; font-weight: 600">Press Washington for destroyers</span>
+                    <span style="font-family: 'Courier Prime', 'Courier New', monospace; font-size: 13px; line-height: 19px; color: #4D463B; flex: 1">The Purchasing Commission has a foot in the door. Fifty old destroyers would cover the convoys.</span>
+                    <button type="button" style="align-self: flex-start; height: 32px; padding: 0 12px; background: #1F1B16; color: #F2ECDF; border: 0; border-radius: 2px; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">Start this order</button>
+                  </div>
+                  <div style="background: #FAF7F0; border: 1px solid #1F1B16; padding: 12px; display: flex; flex-direction: column; gap: 8px">
+                    <span style="font-size: 14px; line-height: 19px; font-weight: 600">Ready the country for invasion</span>
+                    <span style="font-family: 'Courier Prime', 'Courier New', monospace; font-size: 13px; line-height: 19px; color: #4D463B; flex: 1">Volunteers, beach defences, the signposts down. The public would rather be busy than wait.</span>
+                    <button type="button" style="align-self: flex-start; height: 32px; padding: 0 12px; background: #1F1B16; color: #F2ECDF; border: 0; border-radius: 2px; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">Start this order</button>
+                  </div>
+                  <div style="background: #FAF7F0; border: 1px solid #1F1B16; padding: 12px; display: flex; flex-direction: column; gap: 8px">
+                    <span style="font-size: 14px; line-height: 19px; font-weight: 600">Send Cripps to Moscow</span>
+                    <span style="font-family: 'Courier Prime', 'Courier New', monospace; font-size: 13px; line-height: 19px; color: #4D463B; flex: 1">Stalin is no friend of ours. Nor, yet, is he Hitler's ally in anything but paper.</span>
+                    <button type="button" style="align-self: flex-start; height: 32px; padding: 0 12px; background: #1F1B16; color: #F2ECDF; border: 0; border-radius: 2px; font: 500 13px 'IBM Plex Sans', Arial, sans-serif">Start this order</button>
+                  </div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 1px solid #B5AA93">
+                  <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">What the record says comes next</span>
+                  <ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; font-size: 13px; line-height: 19px">
+                    <li style="display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 10px; padding: 4px 0"><span style="font-weight: 600; font-feature-settings: 'tnum'">10 June</span><span>Italy declares war on France and Britain</span></li>
+                    <li style="display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 10px; padding: 4px 0"><span style="font-weight: 600; font-feature-settings: 'tnum'">14 June</span><span>German troops enter Paris</span></li>
+                    <li style="display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 10px; padding: 4px 0"><span style="font-weight: 600; font-feature-settings: 'tnum'">22 June</span><span>France signs an armistice</span></li>
+                  </ol>
+                  <span style="font-size: 12px; color: #4D463B">History holds unless someone breaks what it depends on. Break it and divergence rises.</span>
+                </div>
+                <span style="font-size: 13px">Or write something of your own in the order box below.</span>
+              </section>
+            </sc-if>
+            <span style="font-family: 'Courier Prime', 'Courier New', monospace; font-size: 15px">— Hartley</span>
+          </article>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{tabMap}}" hint-placeholder-val="{{false}}">
+        <section aria-label="Map placeholder" style="min-height: 100%; box-sizing: border-box; border: 2px dashed #7A705F; background: #E4DCCB; padding: 24px; display: flex; flex-direction: column; gap: 14px">
+          <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Same renderer as the Brooke map (F1–F4)</span>
+          <h2 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 22px">Map · Western Europe, theatre level</h2>
+          <p style="margin: 0; font-size: 14px; line-height: 21px; max-width: 620px">Drawn only from this seat's view. Fronts render the same contest tracks shown above. Every element carries one of four certainty states, and the map has a list view for keyboard and screen-reader use.</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 18px; font-size: 13px; font-weight: 600">
+            <span style="display: inline-flex; align-items: center; gap: 6px"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" fill="#1F1B16"></rect></svg>Known</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1F1B16" stroke-width="1.8" aria-hidden="true"><rect x="4" y="4" width="16" height="16"></rect><path d="M4 20 20 4V20Z" fill="#1F1B16"></path></svg>Reported</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1F1B16" stroke-width="1.8" aria-hidden="true"><rect x="4" y="4" width="16" height="16" stroke-dasharray="3 2.5"></rect><path d="M12 8.5V12l2.5 1.8"></path></svg>Stale · tick N</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5F574A" stroke-width="1.8" aria-hidden="true"><rect x="4" y="4" width="16" height="16" stroke-dasharray="1.2 2.4"></rect><path d="M10 10a2 2 0 1 1 2.8 1.8c-.5.3-.8.7-.8 1.3"></path><path d="M12 16v.4"></path></svg>Unknown</span>
+          </div>
+          <div aria-hidden="true" style="flex: 1; min-height: 240px; border: 1px solid #B5AA93; background: #F2ECDF; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #4D463B">Map canvas</div>
+        </section>
+      </sc-if>
+
+      <sc-if value="{{tabLedger}}" hint-placeholder-val="{{false}}">
+        <section aria-label="Economic ledger" style="max-width: 880px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px">
+          <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; padding-bottom: 8px; border-bottom: 1px solid #1F1B16">
+            <h2 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 22px">Economic ledger · Britain</h2>
+            <span style="font-size: 13px; color: #4D463B">Britain's binding constraints are shipping and money. Figures as your departments report them at tick 6.</span>
+          </div>
+          <sc-for list="{{stocks}}" as="st" hint-placeholder-count="3">
+            <article aria-label="{{st.name}}" style="background: #FAF7F0; border: 1px solid #1F1B16; display: flex; flex-wrap: wrap">
+              <div style="flex: 1 1 200px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; border-right: 1px solid #DDD4C2">
+                <span style="font-size: 14px; font-weight: 600">{{st.name}}</span>
+                <span style="display: flex; align-items: baseline; gap: 6px"><span style="font-size: 28px; line-height: 34px; font-weight: 600; font-feature-settings: 'tnum'">{{st.value}}</span><span style="font-size: 13px; color: #4D463B">{{st.unit}}</span></span>
+                <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M4 7l7 7 4-4 5 5M20 10v5h-5"></path></svg>{{st.trend}}</span>
+              </div>
+              <div style="flex: 0 1 280px; padding: 10px 12px; display: flex; align-items: center; border-right: 1px solid #DDD4C2">
+                <svg width="260" height="84" viewBox="0 0 260 84" role="img" aria-label="{{st.chartLabel}}" style="max-width: 100%">
+                  <line x1="8" x2="252" y1="{{st.thY}}" y2="{{st.thY}}" stroke="#9B2C22" stroke-width="1.5" stroke-dasharray="5 4"></line>
+                  <text x="252" y="{{st.thLabelY}}" text-anchor="end" font-family="IBM Plex Sans, Arial" font-size="11" font-weight="600" fill="#9B2C22">≈ {{st.th}} threshold</text>
+                  <polyline points="{{st.points}}" fill="none" stroke="#1F1B16" stroke-width="2"></polyline>
+                  <circle cx="{{st.lastX}}" cy="{{st.lastY}}" r="3.5" fill="#1F1B16"></circle>
+                  <text x="10" y="82" font-family="IBM Plex Sans, Arial" font-size="10" fill="#4D463B">tick 1</text>
+                  <text x="250" y="82" text-anchor="end" font-family="IBM Plex Sans, Arial" font-size="10" fill="#4D463B">tick 6</text>
+                </svg>
+              </div>
+              <div style="flex: 1 1 220px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px">
+                <span style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><span style="font-size: 13px; font-weight: 600">Threshold ≈ {{st.th}}</span><span style="display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border: 1px dashed #1F1B16; font-size: 11px; font-weight: 600">Estimate</span></span>
+                <span style="font-size: 13px; line-height: 19px">{{st.below}}</span>
+                <span style="font-size: 12px; color: #4D463B">{{st.runway}}</span>
+              </div>
+            </article>
+          </sc-for>
+          <p style="margin: 0; font-size: 12px; line-height: 18px; color: #4D463B">Thresholds are estimates taken from the historical record and haven't been playtested. They may move.</p>
+        </section>
+      </sc-if>
+    </div>
+
+    <!-- ORDER BOX / SEASON REPORT -->
+    <sc-if value="{{notSeason}}" hint-placeholder-val="{{true}}">
+      <form aria-label="New order" style="flex: none; border-top: 2px solid #1F1B16; background: #E4DCCB; padding: 12px 24px 14px; display: flex; flex-direction: column; gap: 10px">
+        <sc-if value="{{isError}}" hint-placeholder-val="{{false}}">
+          <div role="alert" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 12px; background: #FAF7F0; border: 2px solid #9B2C22; color: #1F1B16; font-size: 14px; line-height: 20px">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9B2C22" stroke-width="2.2" aria-hidden="true"><path d="M12 3 2 20h20Z"></path><path d="M12 10v4M12 17v.5"></path></svg>
+            <span style="flex: 1; min-width: 220px">Your order wasn't sent because the game server didn't respond; your text is still here.</span>
+            <button type="button" style="height: 32px; padding: 0 14px; background: #1F1B16; color: #F2ECDF; border: 0; border-radius: 2px; font: 500 13px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer">Try again</button>
+          </div>
+        </sc-if>
+        <div style="display: flex; align-items: baseline; gap: 12px">
+          <label for="wr-order" style="font-size: 13px; font-weight: 600">Order to Hartley</label>
+          <span style="margin-left: auto; font-size: 12px; color: #4D463B; font-feature-settings: 'tnum'">{{slotHint}}</span>
+        </div>
+        <textarea id="wr-order" rows="2" disabled="{{isThinking}}" placeholder="Write it in your own words. Hartley turns it into an order card for you to confirm." style="padding: 10px 12px; background: #FAF7F0; border: 1px solid #7A705F; border-radius: 2px; font: 400 15px/23px 'Courier Prime', 'Courier New', monospace; color: #1F1B16; resize: vertical; min-height: 56px" value="{{orderText}}"></textarea>
+        <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 16px">
+          <fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 4px">
+            <legend style="padding: 0; margin-bottom: 4px; font-size: 12px; font-weight: 600">Visibility</legend>
+            <div role="radiogroup" aria-label="Visibility" style="display: inline-flex; border: 1px solid #1F1B16; border-radius: 2px">
+              <button type="button" role="radio" aria-checked="false" style="height: 32px; padding: 0 10px; display: inline-flex; align-items: center; gap: 5px; background: #FAF7F0; color: #1F1B16; border: 0; border-right: 1px solid #1F1B16; font: 500 12px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="2"></circle><path d="M8 8a5.7 5.7 0 0 0 0 8M16 8a5.7 5.7 0 0 1 0 8M5.2 5.2a9.6 9.6 0 0 0 0 13.6M18.8 5.2a9.6 9.6 0 0 1 0 13.6"></path></svg>Public</button>
+              <button type="button" role="radio" aria-checked="true" style="height: 32px; padding: 0 10px; display: inline-flex; align-items: center; gap: 5px; background: #1F1B16; color: #F2ECDF; border: 0; border-right: 1px solid #1F1B16; font: 600 12px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><path d="M3.5 19a5.5 5.5 0 0 1 11 0"></path><circle cx="17" cy="9" r="2.5"></circle><path d="M16 14.1a4.6 4.6 0 0 1 5 4.4"></path></svg>Restricted</button>
+              <button type="button" role="radio" aria-checked="false" style="height: 32px; padding: 0 10px; display: inline-flex; align-items: center; gap: 5px; background: #FAF7F0; color: #1F1B16; border: 0; border-right: 1px solid #1F1B16; font: 500 12px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="1"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>Private</button>
+              <button type="button" role="radio" aria-checked="false" style="height: 32px; padding: 0 10px; display: inline-flex; align-items: center; gap: 5px; background: #FAF7F0; color: #1F1B16; border: 0; font: 500 12px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"></path><circle cx="12" cy="12" r="2.8"></circle><path d="M4 20 20 4"></path></svg>Covert</button>
+            </div>
+          </fieldset>
+          <div style="flex: 1 1 220px; display: flex; flex-direction: column; gap: 4px; min-width: 0">
+            <div style="display: flex; align-items: baseline"><label for="wr-spin" style="font-size: 12px; font-weight: 600">Public spin line <span style="font-weight: 400; color: #4D463B">(optional)</span></label><span style="margin-left: auto; font-size: 12px; color: #4D463B; font-feature-settings: 'tnum'">{{spinCount}} / 280</span></div>
+            <input id="wr-spin" type="text" maxlength="280" disabled="{{isThinking}}" value="{{spinText}}" placeholder="What you'll say in public about it" style="height: 34px; padding: 0 10px; background: #FAF7F0; border: 1px solid #7A705F; border-radius: 2px; font: 400 13px 'IBM Plex Sans', Arial, sans-serif; color: #1F1B16; min-width: 0">
+          </div>
+          <button type="submit" disabled="{{isThinking}}" style="height: 36px; padding: 0 18px; background: {{fileBg}}; color: {{fileFg}}; border: 0; border-radius: 2px; font: 500 14px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer; white-space: nowrap">{{fileLabel}}</button>
+        </div>
+        <sc-if value="{{isThinking}}" hint-placeholder-val="{{false}}">
+          <div role="status" aria-live="polite" style="display: flex; flex-direction: column; gap: 6px">
+            <div aria-hidden="true" style="position: relative; height: 4px; background: #C9BFA8; overflow: hidden">
+              <span class="rev-anim" style="position: absolute; left: 0; top: 0; bottom: 0; width: 40%; background: #1F1B16; animation: rev-drafting 1.6s linear infinite"></span>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; font-size: 13px">
+              <span><strong style="font-weight: 600">Hartley is drafting the order card.</strong> This usually takes 10 to 30 seconds; you can keep reading meanwhile.</span>
+              <button type="button" style="margin-left: auto; height: 28px; padding: 0 4px; background: none; border: 0; color: #2A3D66; text-decoration: underline; font: 500 13px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer">Cancel</button>
+            </div>
+          </div>
+        </sc-if>
+      </form>
+    </sc-if>
+
+    <sc-if value="{{isSeason}}" hint-placeholder-val="{{false}}">
+      <section aria-label="Season report" style="flex: none; max-height: 58%; overflow-y: auto; border-top: 2px solid #1F1B16; background: #E4DCCB; padding: 16px 24px 18px; display: flex; flex-direction: column; gap: 12px">
+        <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px">
+          <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Season over · no more orders</span>
+          <h2 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 22px; line-height: 28px; flex-basis: 100%">Season report · Their Finest Hour</h2>
+        </div>
+        <p style="margin: 0; font-family: 'Courier Prime', 'Courier New', monospace; font-size: 15px; line-height: 23px; max-width: 72ch">Prime Minister, the season closes with the army home and France still fighting, though not for long on present showing. The Americans have not said yes. They have not said no.</p>
+        <dl style="margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr)); gap: 1px; background: #1F1B16; border: 1px solid #1F1B16">
+          <div style="background: #F2ECDF; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px"><dt style="font-size: 12px; color: #4D463B">Divergence</dt><dd style="margin: 0; font-size: 16px; font-weight: 600; font-feature-settings: 'tnum'">12 → 14</dd></div>
+          <div style="background: #F2ECDF; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px"><dt style="font-size: 12px; color: #4D463B">Your goal</dt><dd style="margin: 0; font-size: 14px; font-weight: 600">1 of 3 parts · Lasting, carries on</dd></div>
+          <div style="background: #F2ECDF; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px"><dt style="font-size: 12px; color: #4D463B">Battle of France</dt><dd style="margin: 0; font-size: 14px; font-weight: 600; font-feature-settings: 'tnum'">−71 · favours Germany</dd></div>
+          <div style="background: #F2ECDF; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px"><dt style="font-size: 12px; color: #4D463B">Battle of the Atlantic</dt><dd style="margin: 0; font-size: 14px; font-weight: 600; font-feature-settings: 'tnum'">+6 · favours Britain</dd></div>
+        </dl>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px">
+          <button type="button" style="height: 36px; padding: 0 16px; background: #1F1B16; color: #F2ECDF; border: 0; border-radius: 2px; font: 500 14px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer">Open the Reveal</button>
+          <button type="button" style="height: 36px; padding: 0 16px; background: transparent; color: #1F1B16; border: 1px solid #1F1B16; border-radius: 2px; font: 500 14px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer">Download report</button>
+          <span style="font-size: 13px; color: #4D463B; flex: 1 1 260px">The Reveal opens every goal and every dossier, false pieces included. It's the same for everyone at the table.</span>
+        </div>
+      </section>
+    </sc-if>
+  </main>
+
+  <!-- ===== RIGHT: AGENT + CHRONICLE ===== -->
+  <aside aria-label="Hartley and the Chronicle" style="min-height: 0; border-left: 1px solid #1F1B16; display: flex; flex-direction: column">
+    <section aria-label="Hartley" style="flex: 1 1 58%; min-height: 0; display: flex; flex-direction: column">
+      <div style="flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid #B5AA93">
+        <div aria-hidden="true" style="width: 36px; height: 36px; border: 1px solid #1F1B16; outline: 1px solid #1F1B16; outline-offset: 2px; background: #E4DCCB; display: flex; align-items: center; justify-content: center; font-family: 'Libre Caslon Text', Georgia, serif; font-size: 18px">H</div>
+        <div style="display: flex; flex-direction: column">
+          <span style="font-size: 14px; font-weight: 600">Hartley</span>
+          <span style="font-size: 12px; color: #4D463B">Private secretary · advice is free</span>
+        </div>
+        <span style="margin-left: auto; font-size: 12px; color: #4D463B; font-feature-settings: 'tnum'; text-align: right">17 of 20 questions<br>left this hour</span>
+      </div>
+      <div role="log" aria-label="Conversation with Hartley" style="flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px">
+        <span style="align-self: center; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Yesterday · tick 5</span>
+        <div style="align-self: flex-end; max-width: 85%; background: #F2ECDF; border: 1px solid #7A705F; padding: 8px 10px; font-size: 13px; line-height: 19px">What does Dowding actually have left?</div>
+        <div style="align-self: flex-start; max-width: 92%; background: #E4DCCB; border: 1px solid #B5AA93; padding: 9px 11px; font-family: 'Courier Prime', 'Courier New', monospace; font-size: 14px; line-height: 21px">Thirty-six squadrons fit to fly as of last night, Prime Minister. He says he needs fifty-two to hold the Island. That is why Fighter Command shows as degraded.</div>
+        <span style="align-self: center; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4D463B">Today</span>
+        <div style="align-self: flex-end; max-width: 85%; background: #F2ECDF; border: 1px solid #7A705F; padding: 8px 10px; font-size: 13px; line-height: 19px">And if I send four more to France?</div>
+        <div style="align-self: flex-start; max-width: 92%; background: #E4DCCB; border: 1px solid #B5AA93; padding: 9px 11px; font-family: 'Courier Prime', 'Courier New', monospace; font-size: 14px; line-height: 21px">Then thirty-two, until the factories catch up. Lord Beaverbrook says they will. He has said a good deal this week.</div>
+      </div>
+      <form aria-label="Ask Hartley" style="flex: none; display: flex; gap: 8px; padding: 10px 16px; border-top: 1px solid #B5AA93">
+        <label for="wr-ask" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Ask Hartley</label>
+        <input id="wr-ask" type="text" placeholder="Ask Hartley anything" style="flex: 1; min-width: 0; height: 36px; padding: 0 10px; background: #FAF7F0; border: 1px solid #7A705F; border-radius: 2px; font: 400 13px 'IBM Plex Sans', Arial, sans-serif; color: #1F1B16">
+        <button type="submit" style="height: 36px; padding: 0 14px; background: transparent; color: #1F1B16; border: 1px solid #1F1B16; border-radius: 2px; font: 500 13px 'IBM Plex Sans', Arial, sans-serif; cursor: pointer">Ask</button>
+      </form>
+    </section>
+
+    <section aria-label="The Chronicle" style="flex: 1 1 42%; min-height: 0; display: flex; flex-direction: column; border-top: 1px solid #1F1B16; background: #E4DCCB">
+      <div style="flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid #B5AA93">
+        <h2 style="margin: 0; font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; font-size: 16px">The Chronicle</h2>
+        <span style="display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 7px; border: 2px solid #1F1B16; font: 700 11px 'Courier Prime', monospace; letter-spacing: 0.1em"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="12" cy="12" r="2"></circle><path d="M8 8a5.7 5.7 0 0 0 0 8M16 8a5.7 5.7 0 0 1 0 8M5.2 5.2a9.6 9.6 0 0 0 0 13.6M18.8 5.2a9.6 9.6 0 0 1 0 13.6"></path></svg>PUBLIC</span>
+      </div>
+      <ol style="flex: 1; min-height: 0; overflow-y: auto; margin: 0; padding: 4px 16px 12px; list-style: none">
+        <sc-for list="{{chronicle}}" as="c" hint-placeholder-count="5">
+          <li style="padding: 9px 0; border-bottom: 1px solid #C9BFA8; display: flex; flex-direction: column; gap: 2px">
+            <div style="display: flex; align-items: baseline; gap: 8px">
+              <span style="font-family: 'Courier Prime', 'Courier New', monospace; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase">{{c.source}}</span>
+              <sc-if value="{{c.isNew}}" hint-placeholder-val="{{false}}"><span style="font-size: 11px; font-weight: 600; padding: 0 5px; background: #1F1B16; color: #F2ECDF">New</span></sc-if>
+              <span style="margin-left: auto; font-size: 12px; color: #4D463B; font-feature-settings: 'tnum'">Tick {{c.tick}}</span>
+            </div>
+            <span style="font-family: 'Libre Caslon Text', Georgia, serif; font-size: 14px; line-height: 20px">{{c.text}}</span>
+          </li>
+        </sc-for>
+      </ol>
+    </section>
+  </aside>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["default","thinking","season-over","error","mandates","quiet"],"default":"default"},"tab":{"editor":"enum","options":["briefing","map","ledger"],"default":"briefing"},"$preview":{"width":1440,"height":900}}'>
+function clockPaths(filled, total, size) {
+  var c = size / 2, r = size / 2 - 2;
+  function pt(i) { var a = -Math.PI / 2 + 2 * Math.PI * i / total; return (c + r * Math.cos(a)).toFixed(2) + ' ' + (c + r * Math.sin(a)).toFixed(2); }
+  var fill = 'M0 0';
+  if (filled >= total) { fill = 'M' + c + ' ' + (c - r) + ' A' + r + ' ' + r + ' 0 1 1 ' + c + ' ' + (c + r) + ' A' + r + ' ' + r + ' 0 1 1 ' + c + ' ' + (c - r) + ' Z'; }
+  else if (filled > 0) { fill = 'M' + c + ' ' + c + ' L' + pt(0) + ' A' + r + ' ' + r + ' 0 ' + (filled / total > 0.5 ? 1 : 0) + ' 1 ' + pt(filled) + ' Z'; }
+  var ink = '', paper = '';
+  if (total > 1) {
+    for (var i = 0; i < total; i++) {
+      var s = 'M' + c + ' ' + c + ' L' + pt(i) + ' ';
+      if (filled >= total || (i > 0 && i < filled)) { paper += s; } else { ink += s; }
+    }
+  }
+  return { fill: fill, ink: ink || 'M0 0', paper: paper || 'M0 0' };
+}
+function segs(n, max, on, off) { var a = []; for (var i = 0; i < max; i++) { a.push({ bg: i < n ? on : off }); } return a; }
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { tab: null }; }
+  renderVals() {
+    var mode = this.props.mode ?? 'default';
+    var isThinking = mode === 'thinking', isSeason = mode === 'season-over', isError = mode === 'error';
+    var isMandates = mode === 'mandates', isQuiet = mode === 'quiet';
+    var tab = this.state.tab || this.props.tab || 'briefing';
+    var spark = function (name, vals, th, unit, fmt, below, trend, runway) {
+      var all = vals.concat([th]);
+      var lo = Math.min.apply(null, all), hi = Math.max.apply(null, all);
+      var pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
+      var y = function (v) { return (8 + (1 - (v - lo) / (hi - lo)) * 60).toFixed(1); };
+      var pts = vals.map(function (v, i) { return (10 + i * 48) + ',' + y(v); }).join(' ');
+      var thY = y(th);
+      return { name: name, value: fmt(vals[vals.length - 1]), unit: unit, th: fmt(th), thY: thY, thLabelY: (parseFloat(thY) - 5).toFixed(1),
+        points: pts, lastX: 10 + (vals.length - 1) * 48, lastY: y(vals[vals.length - 1]), below: below, trend: trend, runway: runway,
+        chartLabel: name + ', ticks 1 to 6: ' + vals.map(fmt).join(', ') + '. Estimated threshold ' + fmt(th) + '.' };
+    };
+    var one = function (v) { return v.toFixed(1); };
+    var stocks = [
+      spark('Merchant shipping', [18.0, 17.9, 17.8, 17.7, 17.5, 17.2], 15.0, 'million gross tons', one, 'Below this, imports fall short of what the war economy needs, and forces in theatre degrade.', 'Falling, about 0.3 a turn', 'At this rate, about 7 turns to the threshold.'),
+      spark('Gold and dollar reserves', [4.1, 4.0, 3.8, 3.6, 3.4, 3.1], 1.0, 'billion dollars', one, 'Below this, Britain can no longer pay cash for American orders. Purchases stop unless credit is found.', 'Falling, about 0.2 a turn and quickening', 'At this rate, about 8 turns to the threshold.'),
+      spark('Imports landed', [4.1, 4.0, 3.9, 3.9, 3.7, 3.6], 3.0, 'million tons a month', one, 'Below this, rationing tightens and Public morale falls.', 'Falling, about 0.1 a turn', 'At this rate, about 6 turns to the threshold.')
+    ];
+    var self = this;
+    var ink = '#1F1B16', paper = '#F2ECDF';
+    var used = isThinking ? 3 : 2;
+    var franceVal = isSeason ? -71 : -62;
+    var atlanticVal = isSeason ? 6 : 8;
+    var fmt = function (v) { return (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v); };
+    var pos = function (v) { return ((v + 100) / 2) + '%'; };
+    var means = [
+      { name: 'Home Fleet', tier: 4, degraded: false },
+      { name: 'RAF Fighter Command', tier: 3, degraded: true },
+      { name: 'Treasury reserves', tier: 3, degraded: false },
+      { name: 'Secret Intelligence Service', tier: 2, degraded: false }
+    ].map(function (m) { m.pips = segs(m.tier, 5, ink, paper); return m; });
+    var meters = [
+      { name: 'Commons confidence', val: 6 },
+      { name: 'Public morale', val: 5 },
+      { name: 'Cabinet unity', val: 4 }
+    ].map(function (m) { m.segs = segs(m.val, 10, ink, paper); return m; });
+    var chronicle = [
+      { source: 'The Times', tick: 6, isNew: true, text: 'Dunkirk evacuation ends; 338,000 men brought home.' },
+      { source: 'Rome radio', tick: 6, isNew: true, text: 'Il Duce to address the nation on Monday.' },
+      { source: 'Havas', tick: 6, isNew: true, text: 'French line forms on the Somme and the Aisne.' },
+      { source: 'BBC Home Service', tick: 5, isNew: false, text: 'Belgian army lays down its arms.' },
+      { source: 'Reuters', tick: 5, isNew: false, text: 'Prime Minister to make a statement to the Commons.' }
+    ];
+    return {
+      isThinking: isThinking, notThinking: !isThinking, isSeason: isSeason, notSeason: !isSeason, isError: isError,
+      isMandates: isMandates, isQuiet: isQuiet, notQuiet: !isQuiet, showSince: !isSeason && !isMandates,
+      stocks: stocks,
+      naLabel: isQuiet ? 'Nothing due before the tick' : (isMandates ? '2 need an answer' : '1 needs an answer'),
+      naBg: isQuiet ? 'transparent' : '#9B2C22', naFg: isQuiet ? '#EDE3D1' : '#F2ECDF', naBd: isQuiet ? '#85705A' : '#9B2C22',
+      sinceNeedLabel: isQuiet ? 'This tick' : 'Needs an answer',
+      sinceNeedText: isQuiet ? 'No mandate. An open turn, with three openings' : 'French request for fighters, before the tick',
+      sinceNeedHref: isQuiet ? '#opening' : '#dilemma',
+      dateMain: isSeason ? '11 June 1940' : '4 June 1940',
+      dateSub: isSeason ? 'Final tick 6 · season closed' : 'Tick 6 · this turn 4–11 June',
+      divergence: isSeason ? '14' : '12',
+      franceVal: fmt(franceVal), franceLeft: pos(franceVal), franceWidth: (50 - (franceVal + 100) / 2) + '%',
+      atlanticVal: fmt(atlanticVal), atlanticLeft: pos(atlanticVal), atlanticWidth: (atlanticVal / 2) + '%',
+      franceDays: isSeason ? 'Undecided at season end' : '9 days to decision',
+      atlanticDays: isSeason ? 'Carries into next season' : '40 days to decision',
+      slots: segs(used, 3, ink, paper),
+      slotLabel: used + ' of 3 slots',
+      slotHint: isThinking ? 'All 3 slots in use · new orders will queue' : 'Uses a slot when filed · 1 of 3 free',
+      queueCount: isThinking ? '1 waiting' : 'Empty',
+      clkA: clockPaths(2, 6, 34), clkB: clockPaths(3, 8, 34),
+      means: means, meters: meters, chronicle: chronicle,
+      deadline: 'Decide before the tick · 14 h 22 m left',
+      orderText: isThinking ? 'Send four squadrons to France at once, and tell Reynaud they are the last until our own defence is settled.' : (isError ? 'Tell Reynaud plainly: no more squadrons. Every fighter we have is needed at home.' : ''),
+      spinText: isThinking ? 'Britain stands with France in the air.' : '',
+      spinCount: isThinking ? 38 : 0,
+      fileLabel: isThinking ? 'Drafting…' : 'Send to Hartley',
+      fileBg: isThinking ? '#C9C0AC' : '#1F1B16',
+      fileFg: isThinking ? '#4D463B' : '#F2ECDF',
+      tabBriefing: tab === 'briefing', tabMap: tab === 'map', tabLedger: tab === 'ledger',
+      tbBriefing: tab === 'briefing' ? '#1F1B16' : 'transparent',
+      tbMap: tab === 'map' ? '#1F1B16' : 'transparent',
+      tbLedger: tab === 'ledger' ? '#1F1B16' : 'transparent',
+      goBriefing: function () { self.setState({ tab: 'briefing' }); },
+      goMap: function () { self.setState({ tab: 'map' }); },
+      goLedger: function () { self.setState({ tab: 'ledger' }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

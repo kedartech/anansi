@@ -110,13 +110,12 @@ def _guard(store: EventStore, campaign_id: CampaignId, seat: SeatId) -> None:
     """
     if not cmp.is_postgres(cmp.db_target()):
         return
-    from revisionist.engine.discord.tables import SeatLinks
     from revisionist.engine.pg_store import PostgresEventStore
 
     assert isinstance(store, PostgresEventStore)
-    user = SeatLinks(store.conn).users(campaign_id).get(seat)
+    user = host_ops.held_seats(store.conn, campaign_id).get(seat)
     if user is not None and user != os.environ.get("REVISIONIST_DISCORD_HOST_ID"):
-        raise _fail("that seat is played from Discord by someone else", EXIT_REFUSED)
+        raise _fail("that seat is played from Discord or the web by someone else", EXIT_REFUSED)
 
 
 @app.callback()
@@ -1020,7 +1019,7 @@ def discord_invite(
     hours: Annotated[int, typer.Option("--hours", min=1, max=720)] = 72,
 ) -> None:
     """Issue a single-use code a player redeems with ``/join`` to take a human seat."""
-    from revisionist.engine.discord.tables import Invites, SeatLinks
+    from revisionist.engine.discord.tables import Invites
 
     store = _pg_store(*_DISCORD)
     try:
@@ -1031,7 +1030,7 @@ def discord_invite(
         else:
             campaign_id, seat_id = _bound_seat(store, campaign, seat)
             name = load_state(store, campaign_id).seats[seat_id].name
-        if seat_id in SeatLinks(store.conn).users(campaign_id):
+        if seat_id in host_ops.held_seats(store.conn, campaign_id):
             raise _fail(f"{seat_id} is already linked; unlink it first", EXIT_REFUSED)
         now = clock()
         code = Invites(store.conn).issue(campaign_id, seat_id, now, hours)
@@ -1129,6 +1128,45 @@ def discord_run() -> None:
         rest=rest,
     )
     bot.run(handlers, token, int(guild))
+
+
+web_app = typer.Typer(no_args_is_help=True, help="Play from the web client (Postgres only).")
+app.add_typer(web_app, name="web")
+
+WEB_STATIC = Path(__file__).resolve().parents[2] / "web"
+"""The client in the repo's ``web/`` folder, served as static files."""
+
+
+@web_app.command("serve")
+def web_serve(
+    host: Annotated[str, typer.Option("--host", help="Address to bind; keep it private")] = (
+        "127.0.0.1"
+    ),
+    port: Annotated[int, typer.Option("--port", min=1, max=65535)] = 8740,
+    static: Annotated[
+        Path | None, typer.Option("--static", help="The client folder (default: the repo's web/)")
+    ] = None,
+) -> None:
+    """The web client and its JSON API, in the foreground. Plain HTTP: bind it to
+    a private address such as the tailnet, never a public one."""
+    import logging
+
+    _pg_store("the web client", "").close()
+    from revisionist.engine.web.server import App, serve
+
+    root = static or WEB_STATIC
+    if not (root / "index.html").is_file():
+        raise _fail(f"no web client at {root} (index.html missing)")
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
+    app_ = App(
+        cmp.db_target(),
+        root,
+        transport_factory=lambda: transport_factory(),
+        clock=lambda: clock(),
+        briefings=cmp.briefings_dir(),
+    )
+    typer.echo(f"web client on http://{host}:{port}/", err=True)
+    serve(app_, host, port)
 
 
 __all__ = ["EXIT_ERROR", "EXIT_LEAK", "EXIT_REFUSED", "app", "transport_factory"]

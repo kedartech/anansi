@@ -1,0 +1,61 @@
+/* Revisionist design tokens, taken from the design system sheet (A, A2).
+   Every text pairing passes WCAG AA; contrast ratios are in the comments. */
+:root {
+  /* Frame: the identity layer */
+  --frame-ground: #000000;
+  --frame-surface: #120F0C;
+  --frame-bronze: #B87333;          /* 5.5:1 on ground */
+  --frame-bronze-strong: #D08A49;   /* hover, focus; 7.4:1 */
+  --frame-rule: #4A2F16;            /* decorative rules only */
+  --frame-text: #EDE3D1;            /* 16:1 */
+  --frame-text-muted: #A89A86;      /* 7.6:1 */
+  --frame-field-border: #85705A;    /* 4:1 on surface */
+
+  /* Paper and ink: the era layer */
+  --paper-desk: #D8CFBA;
+  --paper-sheet: #F2ECDF;
+  --paper-field: #FAF7F0;
+  --paper-carbon: #E4DCCB;
+  --ink-primary: #1F1B16;           /* 14.6:1 sheet, 11:1 desk */
+  --ink-secondary: #4D463B;         /* 7.9:1 sheet, 6:1 desk */
+  --ink-muted: #5F574A;             /* 6:1 sheet, 4.6:1 desk */
+  --ink-field-border: #7A705F;      /* 4.1:1 */
+  --ink-rule: #B5AA93;              /* decorative */
+
+  /* Signal: always with an icon and a word */
+  --signal-stamp: #9B2C22;          /* deadlines, errors, covert, hostile */
+  --signal-link: #2A3D66;           /* links, focus ring */
+  --signal-settled: #2E5A3C;        /* success tiers */
+  --signal-caution: #7A4E0C;        /* degraded, partial, estimates */
+
+  /* Seat heraldry: never used for status */
+  --seat-azure: #234A8A;            /* Churchill */
+  --seat-gules: #8E2A2A;            /* Brooke */
+  --seat-vert: #3B5E1F;             /* Mussolini */
+  --seat-purpure: #5A3A70;          /* Stalin */
+  --seat-or: #8A6410;               /* Menzies; fills and shields only */
+  --seat-sable: #2B2B2B;            /* Canaris */
+
+  /* Map */
+  --map-sea: #C9D1CC;
+  --map-land: #EFE8D8;
+  --map-water: #7E9AA0;
+
+  /* Blinded seat */
+  --blind-ground: #C9C6BF;
+  --blind-sheet: #E9E7E2;
+
+  /* Type */
+  --font-period: 'Libre Caslon Text', Georgia, serif;          /* in-world titles */
+  --font-dispatch: 'Courier Prime', 'Courier New', monospace;  /* agent voice, orders */
+  --font-ui: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; /* system voice, numbers (tnum) */
+  --font-code: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+
+  /* Spacing: 4 px base */
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 24px; --space-6: 32px; --space-7: 48px;
+
+  /* Radius */
+  --radius-frame: 0;
+  --radius-paper: 2px;
+}
