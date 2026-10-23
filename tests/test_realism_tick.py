@@ -177,3 +177,15 @@ def test_legacy_play_tick_is_not_diverted(tmp_path: Path) -> None:
         e.payload.stage for e in store.read(cid) if isinstance(e.payload, ev.TickStageCompleted)
     }
     assert TickStage.ADVANCE not in kinds and TickStage.DELIVER in kinds
+
+
+def test_a_feed_due_mid_stretch_issues_on_its_own_day() -> None:
+    """The walk issues each feed the day it falls due, so documents wait in the in-tray."""
+    from datetime import date
+
+    store = MemoryStore()
+    cid = seated(store, "autumn-1941", "roosevelt")
+    run_realism_tick(store, cid)
+    state = load_state(store, cid)
+    assert state.in_world_date == date(1941, 9, 4)
+    assert date(1941, 9, 3) in {d.view.issued for d in state.documents.values()}

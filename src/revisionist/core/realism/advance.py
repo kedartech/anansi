@@ -1,18 +1,18 @@
 """The event-driven advance (plan, Phase 2 unit B1).
 
 The world does not move a fixed number of days a turn. It wakes at the earliest
-thing that could need someone: a document arriving or falling due from a feed, an
-order's step falling due, a history event, or the horizon of the people at the
-table. The days in between pass unseen and are reported as collapsed.
+thing that could need someone: an order's step falling due, a history event, or the
+horizon of the people at the table. Routine paper does not wake the world: documents
+issue and arrive during the stretch and wait in the in-tray (Josh, 2026-10-23: a
+daily feed otherwise turns every tick into one day). The days in between pass unseen
+and are reported as collapsed.
 """
 
 from datetime import date, timedelta
 
 from revisionist.core import history
 from revisionist.core._base import Label, Model
-from revisionist.core.ids import FeedId
 from revisionist.core.ontology import Controller
-from revisionist.core.realism import feeds
 from revisionist.core.realism.pipeline import step_due
 from revisionist.core.realism.pipelines import waiting_on_human
 from revisionist.core.state import State
@@ -26,7 +26,7 @@ class WakeReason(Model):
 
     on: date
     what: Label
-    """"document", "feed", "step", "history" or "horizon"."""
+    """"step", "history" or "horizon"."""
     label: Label
     """For the clock line: "Rayburn's count expected ~14 Oct"."""
 
@@ -40,19 +40,13 @@ class Wake(Model):
     """Quiet days passed over: ``(to - today).days - 1``."""
 
 
-CATEGORIES = ("document", "feed", "step", "history", "horizon")
+CATEGORIES = ("step", "history", "horizon")
 
 
 def _reason(what: str, on: date, label: str, today: date) -> WakeReason:
     """A candidate, due no earlier than tomorrow: one on or before today is handled now."""
     due = on if on > today else today + timedelta(days=1)
     return WakeReason(on=due, what=what, label=label[:60])
-
-
-def _received(state: State) -> set[FeedId]:
-    """Feeds some seat's person has a card for. An unreceived feed is not a candidate."""
-    cards = (state.cards.get(seat.embodies) for seat in state.seats.values())
-    return {fid for card in cards if card for fid in card.feeds}
 
 
 def _horizon(state: State) -> int:
@@ -68,16 +62,6 @@ def _horizon(state: State) -> int:
 def next_wake(state: State, today: date) -> Wake:
     """Where the next advance stops. Pure: same state and day, same wake."""
     found: list[WakeReason] = []
-    for doc in state.documents.values():
-        view = doc.view
-        if view.arrives > today:
-            name = f"{view.title} arrives" if view.title else f"a {view.kind} arrives"
-            found.append(_reason("document", view.arrives, name, today))
-    received = _received(state)
-    for feed in state.feeds.values():
-        when = feeds.next_issue(state, feed) if feed.feed_id in received else None
-        if when is not None:
-            found.append(_reason("feed", when, f"{feed.name} expected", today))
     for order in state.orders.values():
         if waiting_on_human(state, order):
             continue

@@ -103,14 +103,14 @@ def test_no_human_seat_uses_the_default_horizon() -> None:
     assert next_wake(rig.state, today).to == today + timedelta(days=DEFAULT_HORIZON_DAYS)
 
 
-def test_a_received_feed_due_in_three_days_wakes_before_the_horizon() -> None:
+def test_a_feed_falling_due_does_not_wake_the_world() -> None:
+    """Routine paper waits in the in-tray (Josh, 2026-10-23)."""
     rig = Rig()
     rig.start("ada", "bram")
     today = rig.start_day - timedelta(days=3)
     wake = next_wake(rig.state, today)
-    assert wake.to == rig.start_day
-    assert wake.reason.what == "feed"
-    assert wake.reason.label == "Bram's count of the Council expected"
+    assert wake.reason.what == "horizon"
+    assert wake.to == today + timedelta(days=7)
 
 
 def test_an_unreceived_feed_does_not_count() -> None:
@@ -122,7 +122,7 @@ def test_an_unreceived_feed_does_not_count() -> None:
     assert wake.to == today + timedelta(days=7)
 
 
-def test_a_document_arriving_tomorrow_wins_over_everything_later() -> None:
+def test_a_document_arriving_tomorrow_does_not_wake_the_world() -> None:
     rig = Rig()
     rig.start("ada", "bram")
     today = rig.start_day - timedelta(days=30)
@@ -131,10 +131,8 @@ def test_a_document_arriving_tomorrow_wins_over_everything_later() -> None:
     assert doc is not None
     rig.add(doc)
     wake = next_wake(rig.state, today)
-    assert wake.to == today + timedelta(days=1)
-    assert wake.reason.what == "document"
-    assert wake.reason.label.endswith("arrives")
-    assert wake.collapsed_days == 0
+    assert wake.reason.what == "horizon"
+    assert wake.to == today + timedelta(days=7)
 
 
 def test_an_order_filed_mid_stretch_shortens_the_wake() -> None:
@@ -178,15 +176,14 @@ def test_a_step_held_by_a_human_adds_no_candidate_and_an_ai_step_does() -> None:
     assert wake.reason.what == "step" and wake.to == today + timedelta(days=5)
 
 
-def test_autumn_1941_wakes_at_the_overdue_feed_before_the_greer_event() -> None:
+def test_autumn_1941_first_wake_is_the_greer_event() -> None:
     rig = Rig("autumn-1941")
     rig.start("roosevelt")
     today = date(1941, 9, 1)
     wake = next_wake(rig.state, today)
-    assert wake.to == date(1941, 9, 2)
-    assert wake.reason.what == "feed"
-    assert wake.reason.label == "Atlantic reports from the Navy Department expected"
-    assert wake.collapsed_days == 0
+    assert wake.to == date(1941, 9, 4)
+    assert wake.reason.what == "history"
+    assert wake.collapsed_days == 2
 
 
 def test_a_past_due_candidate_clamps_to_tomorrow() -> None:

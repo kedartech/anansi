@@ -6,7 +6,8 @@ each landed in the log as one atomic batch ending in ``tick_stage_completed``:
     ADVANCE    the opening in-tray (first tick only), then ``date_advanced`` to the wake
     PIPELINES  day by day: orders move, history fires or skips, resolvers compute
     RESOLVE    goal changes, each private to the goal's owner
-    FEEDS      the documents that fell due, dated the new today
+    FEEDS      any document still owed on the new today (the walk issues each feed
+               on the day it falls due, so it waits in the in-tray until read)
 
 Resuming reads the tail of the log and continues from the first stage not marked
 complete, so a resumed run reaches the hash an uninterrupted one would. Prose and
@@ -182,7 +183,8 @@ def _feed_documents(em: _Emitter, today: date) -> list[Event]:
 def _walk(em: _Emitter, events: Sequence[Event], before: date, until: date) -> list[Event]:
     """Every day from ``before`` + 1 to ``until``, earliest first. Each day: orders
     move, history fires or skips what fell due (opinion reads fired incidents), the
-    orders enacted that day are resolved, then what moves with time. Each step sees
+    orders enacted that day are resolved, then what moves with time, then the feeds
+    that fall due issue, dated that day. Each step sees
     the state after the ones before it."""
     state = em.state
     out: list[Event] = []
@@ -209,6 +211,14 @@ def _walk(em: _Emitter, events: Sequence[Event], before: date, until: date) -> l
                 add(apply_changes(state, ON_ORDER[resolver_for(state, order)](state, order)))
         for on_day in ON_DAY.values():
             add(apply_changes(state, on_day(state, day)))
+        seed = seed_for_day(state.campaign_id, day)
+        docs: list[Event] = []
+        for feed in sorted(due_feeds(state, day), key=lambda f: f.feed_id):
+            doc = issue(state, feed, day, seed)
+            if doc is not None:
+                docs.append(em.event(doc, scope=doc.document.scope))
+        state = replay(docs, initial=state) if docs else state
+        out.extend(docs)
     return out
 
 
