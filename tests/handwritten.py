@@ -21,6 +21,8 @@ COUNSEL = RECORDINGS / "realism-counsel-autumn.json"
 AIDE = RECORDINGS / "realism-aide-autumn.json"
 AB = RECORDINGS / "realism-prose-ab.json"
 NOTE = "hand-written for tests; not a model reply"
+PRICE_PER_TOKEN = {"claude-haiku-5-5": (0.10e-6, 0.50e-6), "claude-sonnet-5-5": (2e-6, 10e-6)}
+"""List price per input and output token, used for the estimated cost on each reply."""
 
 PROSE_BY_TITLE: Mapping[str, str] = {
     "A note from Bram Tull": (
@@ -168,7 +170,11 @@ class Hand:
             input_tokens=tokens_in,
             output_tokens=tokens_out,
             cached_tokens=len(request.system) // 4,
-            usd=round(tokens_in * 3e-6 + tokens_out * 15e-6, 6),  # an estimate at list price
+            usd=round(
+                tokens_in * PRICE_PER_TOKEN[request.model][0]
+                + tokens_out * PRICE_PER_TOKEN[request.model][1],
+                7,
+            ),  # an estimate at list price
         )
         self.entries[request.key()] = {
             "call_class": request.call_class,
