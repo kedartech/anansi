@@ -19,6 +19,7 @@ RECORDINGS = Path(__file__).parent / "recordings"
 PROSE = RECORDINGS / "realism-prose-toy.json"
 COUNSEL = RECORDINGS / "realism-counsel-autumn.json"
 AIDE = RECORDINGS / "realism-aide-autumn.json"
+AB = RECORDINGS / "realism-prose-ab.json"
 NOTE = "hand-written for tests; not a model reply"
 
 PROSE_BY_TITLE: Mapping[str, str] = {
@@ -89,6 +90,60 @@ AIDE_REPLY: Mapping[str, Any] = {
 
 def aide_reply(request: Request) -> Any:
     return AIDE_REPLY
+
+
+AB_BY_MODEL_AND_TITLE: Mapping[tuple[str, str], str] = {
+    ("claude-haiku-5-5", "Atlantic reports from the Navy Department, 1941-09-01"): (
+        "Allied merchant losses to U-boats for September stand at 209835 GRT. U-boats "
+        "operational in the Atlantic: 30 boats, July to September average.\n\nH. R. Stark"
+    ),
+    ("claude-sonnet-5-5", "Atlantic reports from the Navy Department, 1941-09-01"): (
+        "Mr. President,\n\nThe Atlantic picture for September is a hard one. Allied merchant "
+        "losses to U-boats come to 209,835 GRT, and we reckon 30 boats operational in the "
+        "Atlantic on the July to September average. The convoys need every escort we can "
+        "spare.\n\nRespectfully,\nH. R. Stark"
+    ),
+    ("claude-haiku-5-5", "The Speaker's count, 1941-09-01"): (
+        "Mr. President, the House stands at 267 Democrats and 162 Republicans. Sam Rayburn"
+    ),
+    ("claude-sonnet-5-5", "The Speaker's count, 1941-09-01"): (
+        "Mr. President,\n\nHere is how the House is made up as of today: 267 Democrats, 162 "
+        "Republicans. Seats are not votes, and I'll not pretend otherwise until I've walked "
+        "the floor.\n\nSam"
+    ),
+    ("claude-haiku-5-5", "Gallup polls, 1941-09-01"): (
+        "Gallup has 55 percent saying your course is about right. No figures yet on declaring "
+        "war on Germany or on helping Britain at the risk of war.\n\nSteve Early"
+    ),
+    ("claude-sonnet-5-5", "Gallup polls, 1941-09-01"): (
+        "Boss,\n\nGallup's latest has 55 percent calling your course about right. They haven't "
+        "given me anything I'd trust on a declaration against Germany, nor on helping Britain "
+        "at the risk of war; I'll chase them for it.\n\nSteve"
+    ),
+    ("claude-haiku-5-5", "Gallup polls, 1941-09-08"): (
+        "Gallup now shows 56 percent saying your course is about right. Nothing new on war "
+        "with Germany or on aid to Britain at risk of war.\n\nSteve Early"
+    ),
+    ("claude-sonnet-5-5", "Gallup polls, 1941-09-08"): (
+        "Boss,\n\nA small move our way: 56 percent now call your course about right. Still "
+        "no number on war with Germany or on helping Britain whatever the risk, and I'd "
+        "rather give you none than a guess.\n\nSteve"
+    ),
+    ("claude-haiku-5-5", "The Speaker's count, 1941-09-08"): (
+        "Mr. President, no change in the House: 267 Democrats, 162 Republicans. Sam Rayburn"
+    ),
+    ("claude-sonnet-5-5", "The Speaker's count, 1941-09-08"): (
+        "Mr. President,\n\nThe House is as it was a week ago, 267 Democrats to 162 Republicans. "
+        "The party line will hold on most things; on neutrality I'll want another week of "
+        "talking before I give you a count you can lean on.\n\nSam"
+    ),
+}
+
+
+def ab_reply(request: Request) -> Any:
+    (page,) = json.loads(request.prompt.split("## Pages to write\n", 1)[1].rsplit("\n\n", 1)[0])
+    text = AB_BY_MODEL_AND_TITLE[(request.model, page["title"])]
+    return {"pages": [{"doc_id": page["doc_id"], "prose": text}]}
 
 
 def prose_reply(request: Request) -> Any:
@@ -179,10 +234,22 @@ def record_aide() -> None:
     hand.save(AIDE)
 
 
+def record_ab(out: Path) -> None:
+    from tests.test_prose_ab import ab
+
+    hand = Hand(ab_reply)
+    ab().run(hand, out)
+    hand.save(AB)
+
+
 def main() -> None:
+    import tempfile
+
     record_prose()
     record_counsel()
     record_aide()
+    with tempfile.TemporaryDirectory() as tmp:
+        record_ab(Path(tmp))
 
 
 if __name__ == "__main__":
