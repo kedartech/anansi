@@ -17,6 +17,7 @@ from revisionist.engine.llm import Reply, Request
 
 RECORDINGS = Path(__file__).parent / "recordings"
 PROSE = RECORDINGS / "realism-prose-toy.json"
+COUNSEL = RECORDINGS / "realism-counsel-autumn.json"
 NOTE = "hand-written for tests; not a model reply"
 
 PROSE_BY_TITLE: Mapping[str, str] = {
@@ -43,6 +44,29 @@ PROSE_BY_TITLE: Mapping[str, str] = {
         "\n\nC. Senn"
     ),
 }
+
+
+COUNSEL_BY_QUESTION: Mapping[str, str] = {
+    "What does Moscow need from us most, Harry?": (
+        "Mr. President, going by the list as Harriman sent it, tanks come first: they ask "
+        "for 500 a month, and 400 aircraft a month behind that. That is what they asked "
+        "for, mind you, not what they will get. I can't tell you yet what we can ship "
+        "against it; that is a question for the Army and for the British, who will want "
+        "their share. My advice is to tell Stalin something definite soon, even if it is "
+        "less than the list."
+    ),
+    "What does Moscow need from us most?": (
+        "Mr. President, I have only their letter of request so far, and it gives no figures "
+        "I would put in front of you. From what I saw in Moscow they need everything, but "
+        "I would not guess at numbers until the full list comes through. When it does, I "
+        "will bring it to you myself."
+    ),
+}
+
+
+def counsel_reply(request: Request) -> Any:
+    question = request.prompt.rsplit("\n", 1)[1]
+    return {"text": COUNSEL_BY_QUESTION[question]}
 
 
 def prose_reply(request: Request) -> Any:
@@ -97,8 +121,32 @@ def record_prose() -> None:
     hand.save(PROSE)
 
 
+def record_counsel() -> None:
+    from revisionist.engine.counsel import ClaudeCounsellor, consult
+    from revisionist.engine.store import MemoryStore
+    from tests.counsel_scenario import (
+        QUESTION,
+        WIRING_QUESTION,
+        hopkins,
+        plant_memo,
+        roosevelt_seat,
+        ticked,
+    )
+    from tests.test_realism_tick import CAMPAIGN
+
+    hand = Hand(counsel_reply)
+    store = MemoryStore()
+    ticked(store)
+    seat, person = roosevelt_seat(store), hopkins(store)
+    consult(store, CAMPAIGN, seat, person, WIRING_QUESTION, ClaudeCounsellor(hand))
+    plant_memo(store)
+    consult(store, CAMPAIGN, seat, person, QUESTION, ClaudeCounsellor(hand))
+    hand.save(COUNSEL)
+
+
 def main() -> None:
     record_prose()
+    record_counsel()
 
 
 if __name__ == "__main__":
