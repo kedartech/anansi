@@ -349,6 +349,7 @@ def _mutate(state: State, event: Event) -> State:
         case (
             ev.CardsDeclared()
             | ev.DocumentIssued()
+            | ev.DocumentWritten()
             | ev.OrderDrafted()
             | ev.OrderStepTaken()
             | ev.OrderSettled()
@@ -411,6 +412,18 @@ def _realism(state: State, p: ev.Payload) -> State:
                 _need(state.quantities, ref.quantity_id, "quantity")
             return state.model_copy(
                 update={"documents": _put(state.documents, doc.view.doc_id, doc)}
+            )
+        case ev.DocumentWritten():
+            doc = _need(state.documents, p.doc_id, "document")
+            if doc.view.prose is not None:
+                raise FoldError(f"document {p.doc_id} is already written")
+            view = doc.view.model_copy(update={"prose": p.prose})
+            return state.model_copy(
+                update={
+                    "documents": _put(
+                        state.documents, p.doc_id, doc.model_copy(update={"view": view})
+                    )
+                }
             )
         case ev.OrderDrafted():
             o = p.order

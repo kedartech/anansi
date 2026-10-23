@@ -627,6 +627,7 @@ realism_payloads = st.one_of(
         pipelines=st.lists(pipelines, max_size=2).map(tuple),
     ),
     documents_issued(),
+    st.builds(ev.DocumentWritten, doc_id=document_ids, prose=st.text(min_size=1, max_size=400)),
     st.builds(ev.DocumentRead, seat_id=seat_ids, doc_id=document_ids),
     st.builds(ev.OrderDrafted, order=orders),
     st.builds(ev.OrderStepTaken, order_id=order_ids, outcome=step_outcomes()),

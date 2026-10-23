@@ -12,7 +12,7 @@ ScheduledEventCreated, ScheduledEventSkipped, DivergenceChanged, DateAdvanced,
 SessionZeroOpened, CharacterListed, CharacterClaimed,
 SessionZeroClosed, SeasonEnded, GoalSet, GoalProgressed, GoalMet, GoalUndone,
 TickOpened, TickClosed``, and for realism campaigns ``CardsDeclared,
-DocumentIssued, OrderDrafted, OrderStepTaken, OrderSettled, QuantitySet``.
+DocumentIssued, DocumentWritten, OrderDrafted, OrderStepTaken, OrderSettled, QuantitySet``.
 
 Every other kind is a record: it is replayable, searchable and shown by
 ``/why``, but changes no state.
@@ -445,7 +445,7 @@ class TickOpened(Model):
 
 class CallCost(Model):
     call_class: str
-    """resolver | narrator | structurer | persona | press | director."""
+    """resolver | narrator | structurer | persona | press | director | prose | counsel | aide."""
     model: str
     input_tokens: int = Field(ge=0)
     output_tokens: int = Field(ge=0)
@@ -505,6 +505,17 @@ class DocumentIssued(Model):
     kind: Literal["document_issued"] = "document_issued"
     document: DocumentView
     truth: DocumentTruth
+
+
+class DocumentWritten(Model):
+    """The prose model wrote a document's page from its view and its author's voice.
+
+    Scoped like the document. Folded into the view; a document is written at most
+    once, so a resumed tick cannot write it twice."""
+
+    kind: Literal["document_written"] = "document_written"
+    doc_id: DocumentId
+    prose: str = Field(min_length=1, max_length=4000)
 
 
 class DocumentRead(Model):
@@ -638,6 +649,7 @@ Payload = Annotated[
     | AdminRead
     | CardsDeclared
     | DocumentIssued
+    | DocumentWritten
     | DocumentRead
     | OrderDrafted
     | OrderStepTaken
@@ -686,6 +698,7 @@ MUTATING_KINDS: frozenset[str] = frozenset(
         "tick_closed",
         "cards_declared",
         "document_issued",
+        "document_written",
         "order_drafted",
         "order_step_taken",
         "order_settled",

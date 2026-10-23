@@ -53,6 +53,10 @@ def _outbound(state: State, p: ev.Payload) -> list[tuple[SeatId, str]]:
         readers = state.seats if scope.visibility is Visibility.PUBLIC else scope.known_by
         text = p.document.model_dump_json()
         return [(seat, text) for seat in sorted(readers)]
+    if isinstance(p, ev.DocumentWritten) and p.doc_id in state.documents:
+        scope = state.documents[p.doc_id].view.scope
+        readers = state.seats if scope.visibility is Visibility.PUBLIC else scope.known_by
+        return [(seat, p.prose) for seat in sorted(readers)]
     return []
 
 
@@ -61,7 +65,8 @@ def scan(state: State, events: Iterable[Event]) -> list[Leak]:
     reader may know in ``state``.
 
     Briefings carry no text of their own (they point at a narration). A
-    document is scanned whole, body and prose, for each seat its scope names.
+    document is scanned whole, body and prose, for each seat its scope names;
+    prose written later (``document_written``) is scanned the same way.
     """
     leaks: list[Leak] = []
     for e in events:
@@ -143,6 +148,9 @@ def surfaces_from_log(
         if isinstance(p, ev.DocumentIssued):
             own = p.document.scope.known_by
             text = p.document.model_dump_json()
+        if isinstance(p, ev.DocumentWritten):
+            own = e.scope.known_by
+            text = p.prose
         if not text:
             continue
         public = isinstance(p, ev.StatementIssued) or e.scope.visibility is Visibility.PUBLIC

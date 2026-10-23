@@ -2462,6 +2462,34 @@
         "title": "DocumentView",
         "type": "object"
       },
+      "DocumentWritten": {
+        "additionalProperties": false,
+        "description": "The prose model wrote a document's page from its view and its author's voice.\n\nScoped like the document. Folded into the view; a document is written at most\nonce, so a resumed tick cannot write it twice.",
+        "properties": {
+          "doc_id": {
+            "title": "Doc Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "document_written",
+            "default": "document_written",
+            "title": "Kind",
+            "type": "string"
+          },
+          "prose": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Prose",
+            "type": "string"
+          }
+        },
+        "required": [
+          "doc_id",
+          "prose"
+        ],
+        "title": "DocumentWritten",
+        "type": "object"
+      },
       "Entity": {
         "additionalProperties": false,
         "properties": {
@@ -5740,6 +5768,7 @@
             "divergence_changed": "#/$defs/DivergenceChanged",
             "document_issued": "#/$defs/DocumentIssued",
             "document_read": "#/$defs/DocumentRead",
+            "document_written": "#/$defs/DocumentWritten",
             "entity_created": "#/$defs/EntityCreated",
             "fact_asserted": "#/$defs/FactAsserted",
             "feasibility_rated": "#/$defs/FeasibilityRated",
@@ -5935,6 +5964,9 @@
           },
           {
             "$ref": "#/$defs/DocumentIssued"
+          },
+          {
+            "$ref": "#/$defs/DocumentWritten"
           },
           {
             "$ref": "#/$defs/DocumentRead"
