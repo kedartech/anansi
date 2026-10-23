@@ -149,6 +149,10 @@ sources:
   - key: rohwer_uboats
     title: Rohwer, via a table of U-boats operational in the Atlantic
     note: "SOURCES.md: about 30, a Jul-Sep 1941 average, not a September count. Blair would settle it."
+  - key: hjr237_timeline
+    title: "H.J.Res. 237 (Neutrality revision), 1941: from message to signature"
+    note: "FDR's message 9 Oct (H. Doc. 77-404); House 17 Oct 259-138 (RH0770068); Senate 7 Nov 50-37 (RS0770084); House concurs 13 Nov 212-194 (RH0770070); signed 17 Nov."
+    verified: true
   - key: gallup_1941
     title: Gallup polls of 1941 (ibiblio transcription)
     note: "SOURCES.md: 8 Oct 1941 FDR 'about right' 57%, 'too far' 27%, 'not far enough' 16%; 22 Nov 26% for war on Germany."
@@ -168,127 +172,163 @@ quantities:
   - {key: us_ship_deliveries_1941, owner: usa, name: "US merchant ships delivered, 1941", value: 103, unit: ships, source: us_war_production}
   - {key: us_ship_dwt_1941, owner: usa, name: "US merchant ship deliveries, 1941", value: 1159765, unit: DWT, source: us_war_production}
   - {key: lend_lease_second_appropriation, owner: usa, name: Second Lend-Lease appropriation, value: 5985000000, unit: USD, source: lend_lease_appropriations}
-  - {key: gallup_fdr_about_right, owner: usa, name: "Gallup, Roosevelt's course 'about right'", unit: percent, gap: true, public: true}
+  # Survey 6/26-7/1/41, the last release before the start: too far 23, about right 55, not far enough 22.
+  - {key: gallup_fdr_about_right, owner: usa, name: "Gallup, Roosevelt's course 'about right'", value: 55, unit: percent, source: gallup_1941, public: true}
   - {key: gallup_declare_war_germany, owner: usa, name: "Gallup, declare war on Germany", unit: percent, gap: true, public: true}
   - {key: gallup_help_britain, owner: usa, name: "Gallup, help Britain even at risk of war", unit: percent, gap: true, public: true}
   - {key: japan_oil_stocks, owner: japan, name: Japanese oil stocks, unit: months of supply, gap: true}
   - {key: senate_neutrality_yeas, owner: senate, name: Senate Neutrality revision vote, unit: votes, gap: true}
+  # Computed: resolver outputs. No value until code computes one.
+  - {key: neutrality_revision_house_yeas, owner: house, name: "House yeas on Neutrality revision", unit: votes, computed: true, public: true}
+  - {key: neutrality_revision_house_nays, owner: house, name: "House nays on Neutrality revision", unit: votes, computed: true, public: true}
+  - {key: neutrality_revision_senate_yeas, owner: senate, name: "Senate yeas on Neutrality revision", unit: votes, computed: true, public: true}
+  - {key: neutrality_revision_senate_nays, owner: senate, name: "Senate nays on Neutrality revision", unit: votes, computed: true, public: true}
+  - {key: neutrality_revision_concur_yeas, owner: house, name: "House concurrence yeas on Neutrality revision", unit: votes, computed: true, public: true}
+  - {key: neutrality_revision_concur_nays, owner: house, name: "House concurrence nays on Neutrality revision", unit: votes, computed: true, public: true}
+  - {key: neutrality_revision_passed, owner: usa, name: "Whether Neutrality revision became law (1 yes, 0 no)", unit: flag, computed: true, public: true}
+  - {key: arm_merchant_ships_house_yeas, owner: house, name: "House yeas on arming merchant ships", unit: votes, computed: true, public: true}
+  - {key: arm_merchant_ships_house_nays, owner: house, name: "House nays on arming merchant ships", unit: votes, computed: true, public: true}
+  - {key: arm_merchant_ships_senate_yeas, owner: senate, name: "Senate yeas on arming merchant ships", unit: votes, computed: true, public: true}
+  - {key: arm_merchant_ships_senate_nays, owner: senate, name: "Senate nays on arming merchant ships", unit: votes, computed: true, public: true}
+  - {key: arm_merchant_ships_passed, owner: usa, name: "Whether arming merchant ships became law (1 yes, 0 no)", unit: flag, computed: true, public: true}
+  - {key: lend_lease_appropriation_house_yeas, owner: house, name: "House yeas on the Lend-Lease appropriation", unit: votes, computed: true, public: true}
+  - {key: lend_lease_appropriation_house_nays, owner: house, name: "House nays on the Lend-Lease appropriation", unit: votes, computed: true, public: true}
+  - {key: lend_lease_appropriation_senate_yeas, owner: senate, name: "Senate yeas on the Lend-Lease appropriation", unit: votes, computed: true, public: true}
+  - {key: lend_lease_appropriation_senate_nays, owner: senate, name: "Senate nays on the Lend-Lease appropriation", unit: votes, computed: true, public: true}
+  - {key: lend_lease_appropriation_passed, owner: usa, name: "Whether Lend-Lease money became law (1 yes, 0 no)", unit: flag, computed: true, public: true}
+  - {key: draft_extension_house_yeas, owner: house, name: "House yeas on draft extension", unit: votes, computed: true, public: true}
+  - {key: draft_extension_house_nays, owner: house, name: "House nays on draft extension", unit: votes, computed: true, public: true}
+  - {key: draft_extension_senate_yeas, owner: senate, name: "Senate yeas on draft extension", unit: votes, computed: true, public: true}
+  - {key: draft_extension_senate_nays, owner: senate, name: "Senate nays on draft extension", unit: votes, computed: true, public: true}
+  - {key: draft_extension_passed, owner: usa, name: "Whether draft extension became law (1 yes, 0 no)", unit: flag, computed: true, public: true}
+  - {key: uboat_losses_oct, name: "Allied merchant losses to U-boats, Oct 1941", unit: GRT, computed: true}
+  - {key: uboat_losses_nov, name: "Allied merchant losses to U-boats, Nov 1941", unit: GRT, computed: true}
+  - {key: soviet_lend_lease_eligible, owner: usa, name: "Soviet Union eligible for Lend-Lease (1 yes, 0 no)", unit: flag, computed: true}
+  - {key: lend_lease_share_uk, owner: usa, name: Lend-Lease allocated to Britain, unit: USD, computed: true}
+  - {key: lend_lease_share_ussr, owner: usa, name: Lend-Lease allocated to the Soviet Union, unit: USD, computed: true}
+  - {key: lend_lease_share_china, owner: usa, name: Lend-Lease allocated to China, unit: USD, computed: true}
+  - {key: us_atlantic_escort, owner: usa, name: "US Atlantic escort (0 none, 1 escort, 2 shoot on sight)", unit: level, computed: true}
+  - {key: uboat_posture, owner: germany, name: "U-boat posture to US ships (0 restrict, 1 open)", unit: level, computed: true}
+  - {key: opinion_target, owner: usa, name: "Where 'about right' is heading", unit: percent, computed: true}
 
 feeds:
-  - {key: state_dept_reports, name: State Department memoranda, author: hull, kind: memo, channel: letter, classification: confidential, reports: [japan_oil_stocks], gap: true}
-  - {key: grew_cables, name: Grew's cables from Tokyo, author: grew, kind: cable, channel: cable, classification: confidential, gap: true}
-  - {key: magic_intercepts, name: MAGIC intercepts, author: kramer, kind: intercept, channel: courier, classification: most_secret, reports: [japan_oil_stocks], gap: true}
-  - {key: gallup_polls, name: Gallup polls, author: early, kind: poll, channel: press, reports: [gallup_fdr_about_right, gallup_declare_war_germany, gallup_help_britain], gap: true}
-  - {key: house_whip_count, name: The Speaker's count, author: rayburn, kind: whip_count, channel: telephone, reports: [house_democrats, house_republicans], gap: true}
-  - {key: senate_whip_count, name: The Majority Leader's count, author: barkley, kind: whip_count, channel: telephone, reports: [senate_neutrality_yeas], gap: true}
-  - {key: atlantic_reports, name: Atlantic reports from the Navy Department, author: stark, kind: report, channel: cable, classification: secret, reports: [uboat_losses_sep, uboats_operational], gap: true}
-  - {key: churchill_cables, name: Churchill's cables, author: churchill, kind: cable, channel: cable, classification: secret, gap: true}
-  - {key: soviet_requests, name: Soviet requests for aid, author: molotov, kind: letter, channel: courier, classification: confidential, gap: true}
-  - {key: german_naval_reports, name: Kriegsmarine reports, author: raeder, kind: report, channel: courier, classification: secret, reports: [uboats_operational, uboat_losses_sep], gap: true}
+  - {key: state_dept_reports, name: State Department memoranda, author: hull, kind: memo, channel: letter, classification: confidential, reports: [japan_oil_stocks], every_days: 7, latency_days: 1, assumed: true, gap: true}
+  - {key: grew_cables, name: Grew's cables from Tokyo, author: grew, kind: cable, channel: cable, classification: confidential, every_days: 3, latency_days: 1, assumed: true, gap: true}
+  - {key: magic_intercepts, name: MAGIC intercepts, author: kramer, kind: intercept, channel: courier, classification: most_secret, reports: [japan_oil_stocks], every_days: 2, latency_days: 1, assumed: true, gap: true}
+  - {key: gallup_polls, name: Gallup polls, author: early, kind: poll, channel: press, reports: [gallup_fdr_about_right, gallup_declare_war_germany, gallup_help_britain], every_days: 7, latency_days: 14, assumed: true, gap: true}
+  - {key: house_whip_count, name: The Speaker's count, author: rayburn, kind: whip_count, channel: telephone, reports: [house_democrats, house_republicans], every_days: 7, latency_days: 0, assumed: true, gap: true}
+  - {key: senate_whip_count, name: The Majority Leader's count, author: barkley, kind: whip_count, channel: telephone, reports: [senate_neutrality_yeas], every_days: 7, latency_days: 0, assumed: true, gap: true}
+  - {key: atlantic_reports, name: Atlantic reports from the Navy Department, author: stark, kind: report, channel: cable, classification: secret, reports: [uboat_losses_sep, uboats_operational], every_days: 7, latency_days: 1, assumed: true, gap: true}
+  - {key: churchill_cables, name: Churchill's cables, author: churchill, kind: cable, channel: cable, classification: secret, every_days: 3, latency_days: 1, assumed: true, gap: true}
+  - {key: soviet_requests, name: Soviet requests for aid, author: molotov, kind: letter, channel: courier, classification: confidential, every_days: 14, latency_days: 7, assumed: true, gap: true}
+  - {key: german_naval_reports, name: Kriegsmarine reports, author: raeder, kind: report, channel: courier, classification: secret, reports: [uboats_operational, uboat_losses_sep], every_days: 7, latency_days: 1, assumed: true, gap: true}
 
 pipelines:
   - key: executive_order
     name: An executive order
     gap: true
     steps:
-      - {person: wh_clerk, kind: clerical}
-      - {person: roosevelt, kind: decision, allowed: [pass, expedite, stall, amend, refuse]}
+      - {person: wh_clerk, kind: clerical, days: 1, assumed: true}
+      - {person: roosevelt, kind: decision, days: 2, assumed: true, allowed: [pass, expedite, stall, amend, refuse]}
   # The House floor vote is the `votes` resolver's, at settlement, not a person's step.
+  # Step lengths from H.J.Res. 237: message 9 Oct, House 17 Oct (8 days), Senate
+  # 7 Nov (21 days, one of them the clerk's), signed 17 Nov (10 days). The 13 Nov concurrence
+  # is a floor vote, so it is the votes resolver's, not a step.
   - key: bill_through_congress
     name: A bill through Congress
-    gap: true
+    source: hjr237_timeline
     steps:
-      - {person: rayburn, kind: decision, allowed: [pass, expedite, stall, amend, refuse, leak]}
-      - {person: house_clerk, kind: clerical}
-      - {person: barkley, kind: decision, allowed: [pass, expedite, stall, amend, refuse, leak]}
-      - {person: roosevelt, kind: decision, allowed: [pass, refuse]}
+      - {person: rayburn, kind: decision, days: 8, allowed: [pass, expedite, stall, amend, refuse, leak]}
+      - {person: house_clerk, kind: clerical, days: 1, assumed: true}
+      - {person: barkley, kind: decision, days: 20, allowed: [pass, expedite, stall, amend, refuse, leak]}
+      - {person: roosevelt, kind: decision, days: 10, allowed: [pass, refuse]}
   - key: naval_order
     name: A naval order
     gap: true
     steps:
-      - {person: stark, kind: decision, allowed: [pass, expedite, stall, amend, refuse]}
-      - {person: king, kind: decision, allowed: [pass, expedite, stall, refuse]}
+      - {person: stark, kind: decision, days: 2, assumed: true, allowed: [pass, expedite, stall, amend, refuse]}
+      - {person: king, kind: decision, days: 2, assumed: true, allowed: [pass, expedite, stall, refuse]}
   - key: cable_to_churchill
     name: A cable to the Prime Minister
     gap: true
     steps:
-      - {person: cable_clerk, kind: clerical}
-      - {person: churchill, kind: decision, allowed: [pass, expedite, stall, leak, refuse]}
+      - {person: cable_clerk, kind: clerical, days: 1, assumed: true}
+      - {person: churchill, kind: decision, days: 2, assumed: true, allowed: [pass, expedite, stall, leak, refuse]}
   - key: lend_lease_allocation
     name: A Lend-Lease allocation
     gap: true
     steps:
-      - {person: hopkins, kind: decision, allowed: [pass, expedite, stall, amend]}
-      - {person: stettinius, kind: decision, allowed: [pass, expedite, stall, refuse]}
-      - {person: roosevelt, kind: decision, allowed: [pass, refuse]}
+      - {person: hopkins, kind: decision, days: 2, assumed: true, allowed: [pass, expedite, stall, amend]}
+      - {person: stettinius, kind: decision, days: 2, assumed: true, allowed: [pass, expedite, stall, refuse]}
+      - {person: roosevelt, kind: decision, days: 2, assumed: true, allowed: [pass, refuse]}
   - key: public_address
     name: A public address
     gap: true
     steps:
-      - {person: early, kind: clerical}
+      - {person: early, kind: clerical, days: 1, assumed: true}
   - key: cos_directive
     name: A Chiefs of Staff directive
     gap: true
     steps:
-      - {person: pound, kind: decision, allowed: [pass, expedite, stall, amend, refuse]}
-      - {person: ismay, kind: clerical}
+      - {person: pound, kind: decision, days: 2, assumed: true, allowed: [pass, expedite, stall, amend, refuse]}
+      - {person: ismay, kind: clerical, days: 1, assumed: true}
   - key: cable_to_roosevelt
     name: A cable to the President
     gap: true
     steps:
-      - {person: uk_cipher_clerk, kind: clerical}
-      - {person: roosevelt, kind: decision, allowed: [pass, expedite, stall, leak, refuse]}
+      - {person: uk_cipher_clerk, kind: clerical, days: 1, assumed: true}
+      - {person: roosevelt, kind: decision, days: 2, assumed: true, allowed: [pass, expedite, stall, leak, refuse]}
   - key: press_broadcast
     name: A broadcast to the nation
     gap: true
     steps:
-      - {person: bbc_clerk, kind: clerical}
+      - {person: bbc_clerk, kind: clerical, days: 1, assumed: true}
   - key: japan_state_policy
     name: Liaison Conference to Imperial sanction
     gap: true
     steps:
-      - {person: sugiyama, kind: decision, allowed: [pass, expedite, stall, refuse]}
-      - {person: nagano, kind: decision, allowed: [pass, expedite, stall, refuse]}
-      - {person: hirohito, kind: decision, allowed: [pass, stall, refuse]}
+      - {person: sugiyama, kind: decision, days: 2, assumed: true, allowed: [pass, expedite, stall, refuse]}
+      - {person: nagano, kind: decision, days: 2, assumed: true, allowed: [pass, expedite, stall, refuse]}
+      - {person: hirohito, kind: decision, days: 2, assumed: true, allowed: [pass, stall, refuse]}
   - key: cabinet_statement
     name: A cabinet statement
     gap: true
     steps:
-      - {person: cabinet_clerk, kind: clerical}
+      - {person: cabinet_clerk, kind: clerical, days: 1, assumed: true}
   - key: okw_directive
     name: An OKW directive
     gap: true
     steps:
-      - {person: jodl, kind: clerical}
-      - {person: raeder, kind: decision, allowed: [pass, expedite, stall, amend, refuse]}
+      - {person: jodl, kind: clerical, days: 1, assumed: true}
+      - {person: raeder, kind: decision, days: 2, assumed: true, allowed: [pass, expedite, stall, amend, refuse]}
   - key: gko_decree
     name: A Stavka or State Defence Committee decree
     gap: true
     steps:
-      - {person: shaposhnikov, kind: decision, allowed: [pass, expedite, stall, amend]}
-      - {person: molotov, kind: decision, allowed: [pass, expedite, stall]}
+      - {person: shaposhnikov, kind: decision, days: 2, assumed: true, allowed: [pass, expedite, stall, amend]}
+      - {person: molotov, kind: decision, days: 2, assumed: true, allowed: [pass, expedite, stall]}
   - key: soviet_aid_request
     name: A Soviet request for aid
     gap: true
     steps:
-      - {person: molotov, kind: decision, allowed: [pass, expedite, stall, amend]}
-      - {person: hopkins, kind: decision, allowed: [pass, expedite, stall, amend, refuse]}
+      - {person: molotov, kind: decision, days: 2, assumed: true, allowed: [pass, expedite, stall, amend]}
+      - {person: hopkins, kind: decision, days: 2, assumed: true, allowed: [pass, expedite, stall, amend, refuse]}
   - key: comando_supremo_order
     name: A Comando Supremo order
     gap: true
     steps:
-      - {person: cavallero, kind: decision, allowed: [pass, expedite, stall, amend, refuse]}
+      - {person: cavallero, kind: decision, days: 2, assumed: true, allowed: [pass, expedite, stall, amend, refuse]}
   - key: mac_order
     name: A Military Affairs Commission order
     gap: true
     steps:
-      - {person: he_yingqin, kind: decision, allowed: [pass, expedite, stall, amend, refuse]}
+      - {person: he_yingqin, kind: decision, days: 2, assumed: true, allowed: [pass, expedite, stall, amend, refuse]}
   - key: appeal_through_soong
     name: An appeal to Washington through Soong
     gap: true
     steps:
-      - {person: soong, kind: decision, allowed: [pass, expedite, stall, amend]}
-      - {person: hull, kind: decision, allowed: [pass, expedite, stall, refuse]}
+      - {person: soong, kind: decision, days: 2, assumed: true, allowed: [pass, expedite, stall, amend]}
+      - {person: hull, kind: decision, days: 2, assumed: true, allowed: [pass, expedite, stall, refuse]}
 
 cards:
   # --- the eight playable cards ---
@@ -1029,4 +1069,5 @@ notes:
   - "Soviet finding: FDR's 30 Oct letter to Stalin pledged up to $1bn before the 7 Nov finding (SOURCES.md)."
   - "MAGIC: Navy carried the White House copies in even months from mid-1941 and was fully responsible from 6 Dec. The courier and takeover date are gaps."
   - "The 12 Aug draft extension passed the House 203-202; it precedes the start and serves as the counterfactual lever."
-  - "Pipeline step lengths, feed cadences and card horizons are unsourced; none is data."
+  - "Step lengths are sourced for the bill through Congress only. The rest, and every feed cadence, are labelled defaults (assumed: true). Card horizons are unsourced."
+  - "Gallup: 'about right' 57% was asked 19-24 Sep and released 8 Oct, a 14-day lag; the poll feed's latency uses it."

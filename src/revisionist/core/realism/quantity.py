@@ -53,4 +53,23 @@ class QuantityResolver(Protocol):
     def __call__(self, state: "State", order: "Order") -> tuple[QuantityChange, ...]: ...
 
 
-__all__ = ["RESOLVER_KEYS", "Quantity", "QuantityChange", "QuantityResolver", "ResolverKey"]
+class PeriodicResolver(Protocol):
+    """A pure function from the truth and a day to typed changes: the quantities
+    that move with time rather than with one order (monthly losses, opinion lag,
+    deliveries after a lead time). Called once per in-world day the clock passes
+    over, earliest first, so a collapsed stretch computes the same as a slow one.
+    """
+
+    key: ResolverKey
+
+    def __call__(self, state: "State", today: date) -> tuple[QuantityChange, ...]: ...
+
+
+__all__ = [
+    "RESOLVER_KEYS",
+    "PeriodicResolver",
+    "Quantity",
+    "QuantityChange",
+    "QuantityResolver",
+    "ResolverKey",
+]

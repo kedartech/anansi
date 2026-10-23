@@ -269,6 +269,10 @@ class Cited(Model):
 
     @model_validator(mode="after")
     def _cited_or_gap(self) -> "Cited":
+        if getattr(self, "computed", False):
+            if self.source is not None or self.gap:
+                raise ValueError("a computed figure has no source and is not a gap")
+            return self
         if (self.source is None) == (not self.gap):
             raise ValueError("give exactly one of source: <key> or gap: true")
         return self
@@ -286,11 +290,15 @@ class QuantityDecl(Cited):
     """None means the world's start date."""
     public: bool = False
     """Public quantities are in every view; the rest reach seats only as documents."""
+    computed: bool = False
+    """A resolver's output: no value until code computes one, so neither cited nor a gap."""
 
     @model_validator(mode="after")
     def _gap_has_no_value(self) -> "QuantityDecl":
-        if self.value is None and not self.gap:
-            raise ValueError(f"quantity {self.key}: a value, or gap: true")
+        if self.computed and self.value is not None:
+            raise ValueError(f"quantity {self.key}: a computed figure starts with no value")
+        if self.value is None and not (self.gap or self.computed):
+            raise ValueError(f"quantity {self.key}: a value, gap: true or computed: true")
         return self
 
 
@@ -304,16 +312,32 @@ class FeedDecl(Cited):
     classification: Classification = Classification.OPEN
     every_days: int | None = Field(default=None, ge=1, le=365)
     latency_days: int | None = Field(default=None, ge=0, le=365)
+    assumed: bool = False
+    """The cadence and latency are a labelled default by document kind, not sourced."""
     reports: tuple[Key, ...] = ()
     """Quantity keys."""
     bias: Bias = Bias()
+
+    @model_validator(mode="after")
+    def _assumed_is_set(self) -> "FeedDecl":
+        if self.assumed and (self.every_days is None or self.latency_days is None):
+            raise ValueError(f"feed {self.key}: an assumed timing still needs its numbers")
+        return self
 
 
 class StepDecl(Model):
     person: Key
     kind: StepKind
     days: int | None = Field(default=None, ge=0, le=365)
+    assumed: bool = False
+    """``days`` is a labelled default by step kind, not sourced."""
     allowed: tuple[StepAction, ...] = (StepAction.PASS,)
+
+    @model_validator(mode="after")
+    def _assumed_is_set(self) -> "StepDecl":
+        if self.assumed and self.days is None:
+            raise ValueError(f"step at {self.person}: an assumed length still needs its days")
+        return self
 
 
 class PipelineDecl(Cited):

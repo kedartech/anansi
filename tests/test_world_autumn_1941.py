@@ -44,6 +44,7 @@ SOURCED_VALUES = {
     103,  # US merchant ship deliveries, 1941
     1_159_765,  # DWT
     30,  # U-boats operational, Jul-Sep average
+    55,  # Gallup, survey 6/26-7/1: about right
     57,  # Gallup 8 Oct: about right, too far, not far enough
     27,
     16,
@@ -71,11 +72,13 @@ def test_the_eight_playable_cards_are_the_roster() -> None:
     assert playable == PLAYABLE == {c.entity for c in world.roster}
 
 
-def test_every_quantity_is_cited_or_a_gap() -> None:
+def test_every_quantity_is_cited_a_gap_or_computed() -> None:
     world = _world()
     declared = {s.key for s in world.sources}
     for q in world.quantities:
-        if q.gap:
+        if q.computed:
+            assert q.value is None and q.source is None and not q.gap, q.key
+        elif q.gap:
             assert q.value is None and q.source is None, q.key
         else:
             assert q.source in declared and q.value is not None, q.key

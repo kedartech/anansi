@@ -6,7 +6,7 @@ say no for their own reasons; otherwise it is clerical and resolves as time.
 Amendments are typed edits to the order's parameters, never free text.
 """
 
-from datetime import date
+from datetime import date, timedelta
 from enum import StrEnum
 
 from pydantic import Field, model_validator
@@ -100,6 +100,23 @@ class Order(Model):
     outcomes: tuple[StepOutcome, ...] = ()
 
 
+def step_due(order: Order, pipeline: Pipeline) -> date | None:
+    """The day the order's current step falls due, or None when it never will.
+
+    The clock at a step starts on the day the order reached it (the filing date
+    for step 0) and restarts on a stall. None for a settled order, an order past
+    its last step, or a step whose length is an unsourced gap. Shared by the
+    advance (when to wake) and the pipeline runner (what to act on today).
+    """
+    if order.status in SETTLED or order.step >= len(pipeline.steps):
+        return None
+    days = pipeline.steps[order.step].days
+    if days is None:
+        return None
+    start = order.outcomes[-1].on if order.outcomes else order.filed
+    return start + timedelta(days=days)
+
+
 __all__ = [
     "ADVANCES",
     "SETTLED",
@@ -110,4 +127,5 @@ __all__ = [
     "StepAction",
     "StepKind",
     "StepOutcome",
+    "step_due",
 ]

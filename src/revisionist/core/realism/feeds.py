@@ -39,16 +39,21 @@ def _last_issued(state: State, feed: Feed) -> date | None:
     return max(issued) if issued else None
 
 
+def next_issue(state: State, feed: Feed) -> date | None:
+    """The day ``feed`` next owes a document, or None for a gap cadence. The first
+    issue falls due at the start (see ``_start``), the next ``every_days`` after the
+    last one issued."""
+    if feed.every_days is None:
+        return None
+    last = _last_issued(state, feed)
+    return _start(state, feed) if last is None else last + timedelta(days=feed.every_days)
+
+
 def due_feeds(state: State, today: date) -> list[Feed]:
-    """Feeds owing a document on or before ``today``. A gap cadence never fires; the
-    first issue falls due at the start (see ``_start``), the next ``every_days`` after
-    the last one issued."""
+    """Feeds owing a document on or before ``today``. A gap cadence never fires."""
     due: list[Feed] = []
     for feed in state.feeds.values():
-        if feed.every_days is None:
-            continue
-        last = _last_issued(state, feed)
-        when = _start(state, feed) if last is None else last + timedelta(days=feed.every_days)
+        when = next_issue(state, feed)
         if when is not None and when <= today:
             due.append(feed)
     return due
