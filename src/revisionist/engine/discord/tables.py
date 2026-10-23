@@ -9,7 +9,7 @@ extra; this module is only used on a Postgres store.
 import base64
 import hashlib
 import secrets
-from collections.abc import Collection
+from collections.abc import Callable, Collection
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
@@ -47,6 +47,12 @@ class SeatLinks:
     def link(self, campaign_id: CampaignId, seat_id: SeatId, user_id: str, guild_id: str) -> None:
         from psycopg import errors
 
+        # A seat is held from one client only; the web holds seats in web_seats (0009).
+        if self.conn.execute(
+            "SELECT 1 FROM web_seats WHERE campaign_id = %s AND seat_id = %s",
+            (campaign_id, seat_id),
+        ).fetchone():
+            raise LinkError(f"seat {seat_id} is already linked in {campaign_id}")
         try:
             self.conn.execute(
                 "INSERT INTO discord_seats (campaign_id, seat_id, discord_user_id, guild_id)"
@@ -138,12 +144,18 @@ class Invites:
         return code
 
     def redeem(
-        self, code: str, user_id: str, guild_id: str, now: datetime
+        self,
+        code: str,
+        user_id: str,
+        guild_id: str,
+        now: datetime,
+        bind: Callable[[CampaignId, SeatId], None] | None = None,
     ) -> tuple[CampaignId, SeatId] | None:
         """Bind the user to the code's seat and spend the code, or neither.
 
         ``None`` for an unknown, spent or expired code. A ``LinkError`` rolls the
-        whole thing back, so a refused link does not burn the code.
+        whole thing back, so a refused link does not burn the code. ``bind``
+        replaces the Discord link, so the web client redeems the same codes.
         """
         with self.conn.transaction():
             row = self.conn.execute(
@@ -157,7 +169,10 @@ class Invites:
             if row is None:
                 return None
             campaign_id, seat_id = CampaignId(row[0]), SeatId(row[1])
-            SeatLinks(self.conn).link(campaign_id, seat_id, user_id, guild_id)
+            if bind is None:
+                SeatLinks(self.conn).link(campaign_id, seat_id, user_id, guild_id)
+            else:
+                bind(campaign_id, seat_id)
             self.conn.execute(
                 "UPDATE discord_invites SET used_at = %s, used_by = %s WHERE code_hash = %s",
                 (now, user_id, code_hash(code)),

@@ -68,12 +68,22 @@ def cost_text(store: EventStore, campaign_id: CampaignId) -> str:
     return render_cost(cost_report(store.read(campaign_id)))
 
 
+def held_seats(conn: "Connection[Any]", campaign_id: CampaignId) -> dict[SeatId, str]:
+    """Every seat a person holds, from either client: a Discord user ID, or
+    ``web:<account>`` for a web account (migration 0009)."""
+    from revisionist.engine.web.accounts import WebSeats, person
+
+    held = SeatLinks(conn).users(campaign_id)
+    held |= {s: person(a) for s, a in WebSeats(conn).accounts(campaign_id).items()}
+    return held
+
+
 def holdings(
     conn: "Connection[Any]", state: State, host_id: str | None
 ) -> dict[str, frozenset[SeatId]]:
-    """Who holds which seats: Discord users from their links, and the host, who
-    can read every human seat nobody else holds through the CLI."""
-    links = SeatLinks(conn).users(state.campaign_id)
+    """Who holds which seats: Discord users and web accounts from their links, and
+    the host, who can read every human seat nobody else holds through the CLI."""
+    links = held_seats(conn, state.campaign_id)
     host = host_id or "host"
     held: dict[str, set[SeatId]] = {host: set()}
     for seat, user in links.items():
@@ -178,8 +188,12 @@ def link_seat(
 
 
 def unlink_seat(conn: "Connection[Any]", state: State, seat_ref: str) -> str:
+    from revisionist.engine.web.accounts import WebSeats
+
     seat = _seat(state, seat_ref)
-    if SeatLinks(conn).unlink(state.campaign_id, seat.seat_id):
+    if SeatLinks(conn).unlink(state.campaign_id, seat.seat_id) or WebSeats(conn).unlink(
+        state.campaign_id, seat.seat_id
+    ):
         return f"Unlinked {seat.name}."
     return f"{seat.name} was not linked."
 

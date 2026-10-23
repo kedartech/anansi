@@ -1,0 +1,16 @@
+{
+  "name": "revisionist-web",
+  "private": true,
+  "description": "Revisionist web client. Static ES modules served by `revisionist web serve`; no build step, nothing here ships to the browser.",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "lint": "eslint js test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.13.0",
+    "eslint": "^9.13.0",
+    "globals": "^15.11.0"
+  }
+}

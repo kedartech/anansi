@@ -860,8 +860,15 @@ def propose_goals(
     options = _three(options)
     proposed = ev.GoalProposed(seat_id=seat, route=route, options=tuple(options))
     _log(store, campaign_id, [(proposed, private_to(seat), seat)])
+    return offer_lines(state, proposed)
+
+
+def offer_lines(state: State, proposed: ev.GoalProposed) -> list[str]:
+    """One offer's lines, labelled for ``confirm_goal``. The web client reads past
+    offers back from the log with this, so they read as they did when made."""
+    seat, route = proposed.seat_id, proposed.route
     lines = []
-    for n, o in enumerate(options, 1):
+    for n, o in enumerate(proposed.options, 1):
         b = goals.balance(state, seat, o.condition)
         note = f" Balance: {b.suggestion}" if b.flag else ""
         d = goals.difficulty(state, seat, o.condition)
