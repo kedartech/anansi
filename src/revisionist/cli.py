@@ -20,12 +20,13 @@ import typer
 from revisionist import __version__
 from revisionist.core.ids import CampaignId, EventId, SeatId
 from revisionist.core.ontology import Controller, Persona, Phase
+from revisionist.core.realism.check import gap_report, gaps, report
 from revisionist.core.report import render_leaks
 from revisionist.core.sealing import needs_admin_read
 from revisionist.core.settings import Betrayal, Inertia, Lethality, Plausibility, Settings
 from revisionist.core.state import State
 from revisionist.core.visibility import Visibility
-from revisionist.core.world_compile import WorldError
+from revisionist.core.world_compile import WorldError, compile_world
 from revisionist.engine import campaign as cmp
 from revisionist.engine import host_ops, play, season, session_zero
 from revisionist.engine import scheduler as sch
@@ -154,6 +155,38 @@ def new(world: Annotated[str, typer.Argument(help="World name or path to a YAML 
     else:
         names = ", ".join(f"{state.seats[s].name} ({s})" for s in humans)
         typer.echo(f"human seats: {names}; {factions} AI factions")
+
+
+world_app = typer.Typer(no_args_is_help=True, help="Check a world file before it is played.")
+app.add_typer(world_app, name="world")
+
+
+@world_app.command("check")
+def world_check(
+    world: Annotated[str, typer.Argument(help="World name or path to a YAML file")],
+    gaps_only: Annotated[bool, typer.Option("--gaps-only", help="Print only the gap list")] = False,
+) -> None:
+    """Validate a world file as `new` would, and list what is still unsourced."""
+    try:
+        decl = cmp.load_world(cmp.world_path(world))
+    except FileNotFoundError as exc:
+        raise _fail(str(exc)) from exc
+    except ValueError as exc:
+        raise _fail(f"world file does not parse:\n{exc}") from exc
+    problems: list[str] = []
+    try:
+        compile_world(decl, CampaignId(new_id()), cmp.versions())
+    except WorldError as exc:
+        problems = list(exc.problems)
+    found = gaps(decl)
+    if gaps_only:
+        typer.echo(gap_report(found))
+        if problems:
+            raise _fail("world has problems:\n" + "\n".join(problems))
+        return
+    typer.echo(report(decl, problems, found))
+    if problems:
+        raise typer.Exit(EXIT_ERROR)
 
 
 establish_app = typer.Typer(no_args_is_help=True, help="Host: set up a new game from a pitch.")

@@ -1,0 +1,71 @@
+{
+  "listing": {
+    "unread": 2,
+    "documents": [
+      {"id": "d-magic-0919", "kind": "intercept", "title": "Japanese Foreign Ministry traffic, Tokyo to Washington embassy", "author": "Signal Intelligence Service", "issued": "1941-10-19", "arrives": "1941-10-20", "channel": "courier", "classification": "most_secret", "unread": true},
+      {"id": "d-whip-1017", "kind": "whip_count", "title": "House count on the Neutrality Act revision", "author": "Sam Rayburn", "issued": "1941-10-17", "arrives": "1941-10-19", "channel": "letter", "classification": "confidential", "unread": true},
+      {"id": "d-cable-1016", "kind": "cable", "title": "Moscow situation, week ending 16 October", "author": "Laurence Steinhardt", "issued": "1941-10-16", "arrives": "1941-10-18", "channel": "cable", "classification": "secret", "unread": false},
+      {"id": "d-memo-1015", "kind": "memo", "title": "Lend-Lease shipments, September tonnage", "author": "Harry Hopkins", "issued": "1941-10-15", "arrives": "1941-10-16", "channel": "letter", "classification": "restricted", "unread": false},
+      {"id": "d-press-1014", "kind": "press", "title": "Editorial: Convoys and the Congress", "author": "New York Times", "issued": "1941-10-14", "arrives": "1941-10-14", "channel": "press", "classification": "open", "unread": false},
+      {"id": "d-report-1010", "kind": "report", "title": "Atlantic Fleet escort status", "author": "Admiral Ernest King", "issued": "1941-10-10", "arrives": "1941-10-12", "channel": "courier", "classification": "confidential", "unread": false}
+    ]
+  },
+  "page": {
+    "item": {"id": "d-whip-1017", "kind": "whip_count", "title": "House count on the Neutrality Act revision", "author": "Sam Rayburn", "issued": "1941-10-17", "arrives": "1941-10-19", "channel": "letter", "classification": "confidential", "unread": true},
+    "body": [
+      {"label": "Members counted", "value": 391, "unit": "members"},
+      {"label": "Committed in favour", "value": 190, "unit": "members"},
+      {"label": "Committed against", "value": 170, "unit": "members"},
+      {"label": "Unsure", "value": 31, "unit": "members"},
+      {"label": "Absentee estimate", "value": null, "unit": "members"}
+    ],
+    "prose": "Mr. President,\n\nThe count is not yet where either of us would like it. I believe the doubtful members will follow the Speaker once the Senate has acted, but I would not stake the session on it.\n\nI shall report again when the last of the committee chairmen has been seen."
+  },
+  "orders": {
+    "orders": [
+      {"id": "o-neutrality", "lever": "Send a bill to Congress", "pipeline": "legislation", "params": {"measure": "Neutrality Act revision"}, "status": "moving", "filed": "1941-10-10", "at_step": 1, "with_person": "Sam Rayburn", "since": "1941-10-12", "steps": [
+        {"step": 0, "person": "Franklin D. Roosevelt", "kind": "decision", "action": "approve", "on": "1941-10-10"},
+        {"step": 1, "person": "Sam Rayburn", "kind": "decision", "action": null, "on": null}
+      ], "decision_needed": false},
+      {"id": "o-convoy", "lever": "Direct the Navy", "pipeline": "naval-order", "params": {"task": "Escort convoy HX 156", "ships": 8}, "status": "moving", "filed": "1941-10-18", "at_step": 0, "with_person": "Franklin D. Roosevelt", "since": "1941-10-19", "steps": [
+        {"step": 0, "person": "Franklin D. Roosevelt", "kind": "decision", "action": null, "on": null},
+        {"step": 1, "person": "Harold Stark", "kind": "clerical", "action": null, "on": null}
+      ], "decision_needed": true},
+      {"id": "o-lend", "lever": "Allocate Lend-Lease", "pipeline": "allocation", "params": {"recipient": "Britain", "tons": 40000}, "status": "enacted", "filed": "1941-10-02", "at_step": 2, "with_person": null, "since": null, "steps": [
+        {"step": 0, "person": "Franklin D. Roosevelt", "kind": "decision", "action": "approve", "on": "1941-10-02"},
+        {"step": 1, "person": "Harry Hopkins", "kind": "clerical", "action": "approve", "on": "1941-10-06"},
+        {"step": 2, "person": "Edward Stettinius", "kind": "clerical", "action": "approve", "on": "1941-10-13"}
+      ], "decision_needed": false}
+    ]
+  },
+  "clock": {
+    "world_date": "1941-10-20",
+    "next_wake_at": "2026-10-23T18:00:00Z",
+    "next_world_date": "1941-10-24",
+    "waiting_on": "Rayburn's count",
+    "days_collapsed": 9
+  },
+  "desk": {
+    "office": "President of the United States",
+    "powers": ["Commander in chief", "Veto", "Executive orders"],
+    "levers": [
+      {"name": "Send a bill to Congress", "pipeline": "legislation", "params": [
+        {"name": "measure", "kind": "text", "lo": null, "hi": null, "choices": []},
+        {"name": "sponsor", "kind": "entity", "lo": null, "hi": null, "choices": []}
+      ]},
+      {"name": "Allocate Lend-Lease", "pipeline": "allocation", "params": [
+        {"name": "recipient", "kind": "enum", "lo": null, "hi": null, "choices": ["Britain", "Soviet Union", "China"]},
+        {"name": "tons", "kind": "int", "lo": 1000, "hi": 100000, "choices": []}
+      ]}
+    ],
+    "contacts": [
+      {"person": "Harry Hopkins", "channel": "in_person"},
+      {"person": "Sam Rayburn", "channel": "telephone"},
+      {"person": "Winston Churchill", "channel": "cable"}
+    ],
+    "principals": ["The electorate", "Congress"],
+    "constraints": ["Congress holds the purse", "Isolationist sentiment in the Midwest"],
+    "personal": ["Polio; limited mobility", "Fireside chats"],
+    "horizon_days": 30
+  }
+}
