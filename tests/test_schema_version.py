@@ -15,6 +15,7 @@ from revisionist.schema_export import build
 
 FINGERPRINTS: dict[str, str] = {
     "11": "1770c651ebcae38a9273903012f29ecdc76628e52ca966b797f02d81674f6ce0",
+    "12": "338078dee68421d3f8482f474ee45a1089c3aa0b9fb0ba384708e80e6c0df58e",
 }
 
 

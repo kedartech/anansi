@@ -19,6 +19,7 @@ from revisionist.engine import campaign as cmp
 from revisionist.engine.agent import Agent, held_means
 from revisionist.engine.llm import ClaudeNarrator, ClaudeResolver, Transport, TransportError
 from revisionist.engine.providers import KeywordSafety, ScriptedResolver, TemplateNarrator
+from revisionist.engine.realism_tick import run_realism_tick
 from revisionist.engine.store import EventStore, load_state
 from revisionist.engine.tick import (
     Deliverer,
@@ -70,6 +71,10 @@ def play_tick(
     state = load_state(store, campaign_id)
     if state.phase is not Phase.PLAY:
         raise NotInPlayError(state.phase)  # before any faction spends a model call
+    if state.ruleset == "realism":  # code decides outcomes: no deputies, no providers
+        done = run_realism_tick(store, campaign_id, versions=cmp.versions(), stop_after=stop_after)
+        found = leak_report(load_state(store, campaign_id), store.read(campaign_id))
+        return TickRun(done, briefings, found)
     deliverer = (deliverer_factory or file_deliverer)(store, campaign_id, briefings)
     if offline:
         providers = Providers(ScriptedResolver(), TemplateNarrator(), deliverer, KeywordSafety())

@@ -510,6 +510,8 @@ _CONDITION_REFS = {
     "meter": "meter",
     "commitment": "commitment",
     "relationship": "relationship",
+    "person": "entity",
+    "quantity": "quantity",
 }
 """Which section each reference field of a win condition names."""
 

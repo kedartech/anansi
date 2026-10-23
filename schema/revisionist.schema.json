@@ -1,6 +1,66 @@
 {
   "event": {
     "$defs": {
+      "ActOf": {
+        "additionalProperties": false,
+        "description": "``person`` did their historical act. Met when no human plays them (history\nfollows the record); else only when an order that human filed has got there.",
+        "properties": {
+          "check": {
+            "const": "act_of",
+            "default": "act_of",
+            "title": "Check",
+            "type": "string"
+          },
+          "lever": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Lever"
+          },
+          "params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                }
+              ]
+            },
+            "title": "Params",
+            "type": "object"
+          },
+          "past_step": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Past Step"
+          },
+          "person": {
+            "title": "Person",
+            "type": "string"
+          }
+        },
+        "required": [
+          "person"
+        ],
+        "title": "ActOf",
+        "type": "object"
+      },
       "AdminRead": {
         "additionalProperties": false,
         "properties": {
@@ -77,6 +137,7 @@
             "items": {
               "discriminator": {
                 "mapping": {
+                  "act_of": "#/$defs/ActOf",
                   "all_of": "#/$defs/AllOf",
                   "any_of": "#/$defs/AnyOf",
                   "commitment_in_force": "#/$defs/CommitmentInForce",
@@ -84,7 +145,8 @@
                   "disposition_at": "#/$defs/DispositionAt",
                   "entity_is": "#/$defs/EntityIs",
                   "holds_office": "#/$defs/HoldsOffice",
-                  "meter_at": "#/$defs/MeterAt"
+                  "meter_at": "#/$defs/MeterAt",
+                  "quantity_at": "#/$defs/QuantityAt"
                 },
                 "propertyName": "check"
               },
@@ -106,6 +168,12 @@
                 },
                 {
                   "$ref": "#/$defs/DispositionAt"
+                },
+                {
+                  "$ref": "#/$defs/ActOf"
+                },
+                {
+                  "$ref": "#/$defs/QuantityAt"
                 },
                 {
                   "$ref": "#/$defs/AllOf"
@@ -140,6 +208,7 @@
             "items": {
               "discriminator": {
                 "mapping": {
+                  "act_of": "#/$defs/ActOf",
                   "all_of": "#/$defs/AllOf",
                   "any_of": "#/$defs/AnyOf",
                   "commitment_in_force": "#/$defs/CommitmentInForce",
@@ -147,7 +216,8 @@
                   "disposition_at": "#/$defs/DispositionAt",
                   "entity_is": "#/$defs/EntityIs",
                   "holds_office": "#/$defs/HoldsOffice",
-                  "meter_at": "#/$defs/MeterAt"
+                  "meter_at": "#/$defs/MeterAt",
+                  "quantity_at": "#/$defs/QuantityAt"
                 },
                 "propertyName": "check"
               },
@@ -169,6 +239,12 @@
                 },
                 {
                   "$ref": "#/$defs/DispositionAt"
+                },
+                {
+                  "$ref": "#/$defs/ActOf"
+                },
+                {
+                  "$ref": "#/$defs/QuantityAt"
                 },
                 {
                   "$ref": "#/$defs/AllOf"
@@ -2853,6 +2929,7 @@
           "condition": {
             "discriminator": {
               "mapping": {
+                "act_of": "#/$defs/ActOf",
                 "all_of": "#/$defs/AllOf",
                 "any_of": "#/$defs/AnyOf",
                 "commitment_in_force": "#/$defs/CommitmentInForce",
@@ -2860,7 +2937,8 @@
                 "disposition_at": "#/$defs/DispositionAt",
                 "entity_is": "#/$defs/EntityIs",
                 "holds_office": "#/$defs/HoldsOffice",
-                "meter_at": "#/$defs/MeterAt"
+                "meter_at": "#/$defs/MeterAt",
+                "quantity_at": "#/$defs/QuantityAt"
               },
               "propertyName": "check"
             },
@@ -2882,6 +2960,12 @@
               },
               {
                 "$ref": "#/$defs/DispositionAt"
+              },
+              {
+                "$ref": "#/$defs/ActOf"
+              },
+              {
+                "$ref": "#/$defs/QuantityAt"
               },
               {
                 "$ref": "#/$defs/AllOf"
@@ -2997,6 +3081,7 @@
           "condition": {
             "discriminator": {
               "mapping": {
+                "act_of": "#/$defs/ActOf",
                 "all_of": "#/$defs/AllOf",
                 "any_of": "#/$defs/AnyOf",
                 "commitment_in_force": "#/$defs/CommitmentInForce",
@@ -3004,7 +3089,8 @@
                 "disposition_at": "#/$defs/DispositionAt",
                 "entity_is": "#/$defs/EntityIs",
                 "holds_office": "#/$defs/HoldsOffice",
-                "meter_at": "#/$defs/MeterAt"
+                "meter_at": "#/$defs/MeterAt",
+                "quantity_at": "#/$defs/QuantityAt"
               },
               "propertyName": "check"
             },
@@ -3026,6 +3112,12 @@
               },
               {
                 "$ref": "#/$defs/DispositionAt"
+              },
+              {
+                "$ref": "#/$defs/ActOf"
+              },
+              {
+                "$ref": "#/$defs/QuantityAt"
               },
               {
                 "$ref": "#/$defs/AllOf"
@@ -4096,6 +4188,40 @@
         "title": "Quantity",
         "type": "object"
       },
+      "QuantityAt": {
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "const": "quantity_at",
+            "default": "quantity_at",
+            "title": "Check",
+            "type": "string"
+          },
+          "op": {
+            "enum": [
+              "ge",
+              "le"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "quantity",
+          "op",
+          "value"
+        ],
+        "title": "QuantityAt",
+        "type": "object"
+      },
       "QuantitySet": {
         "additionalProperties": false,
         "description": "A quantity's value as of a date: authored at compile, computed by a resolver after.",
@@ -4325,6 +4451,7 @@
               {
                 "discriminator": {
                   "mapping": {
+                    "act_of": "#/$defs/ActOf",
                     "all_of": "#/$defs/AllOf",
                     "any_of": "#/$defs/AnyOf",
                     "commitment_in_force": "#/$defs/CommitmentInForce",
@@ -4332,7 +4459,8 @@
                     "disposition_at": "#/$defs/DispositionAt",
                     "entity_is": "#/$defs/EntityIs",
                     "holds_office": "#/$defs/HoldsOffice",
-                    "meter_at": "#/$defs/MeterAt"
+                    "meter_at": "#/$defs/MeterAt",
+                    "quantity_at": "#/$defs/QuantityAt"
                   },
                   "propertyName": "check"
                 },
@@ -4354,6 +4482,12 @@
                   },
                   {
                     "$ref": "#/$defs/DispositionAt"
+                  },
+                  {
+                    "$ref": "#/$defs/ActOf"
+                  },
+                  {
+                    "$ref": "#/$defs/QuantityAt"
                   },
                   {
                     "$ref": "#/$defs/AllOf"
@@ -5870,6 +6004,66 @@
   },
   "state": {
     "$defs": {
+      "ActOf": {
+        "additionalProperties": false,
+        "description": "``person`` did their historical act. Met when no human plays them (history\nfollows the record); else only when an order that human filed has got there.",
+        "properties": {
+          "check": {
+            "const": "act_of",
+            "default": "act_of",
+            "title": "Check",
+            "type": "string"
+          },
+          "lever": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Lever"
+          },
+          "params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                }
+              ]
+            },
+            "title": "Params",
+            "type": "object"
+          },
+          "past_step": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Past Step"
+          },
+          "person": {
+            "title": "Person",
+            "type": "string"
+          }
+        },
+        "required": [
+          "person"
+        ],
+        "title": "ActOf",
+        "type": "object"
+      },
       "AllOf": {
         "additionalProperties": false,
         "properties": {
@@ -5883,6 +6077,7 @@
             "items": {
               "discriminator": {
                 "mapping": {
+                  "act_of": "#/$defs/ActOf",
                   "all_of": "#/$defs/AllOf",
                   "any_of": "#/$defs/AnyOf",
                   "commitment_in_force": "#/$defs/CommitmentInForce",
@@ -5890,7 +6085,8 @@
                   "disposition_at": "#/$defs/DispositionAt",
                   "entity_is": "#/$defs/EntityIs",
                   "holds_office": "#/$defs/HoldsOffice",
-                  "meter_at": "#/$defs/MeterAt"
+                  "meter_at": "#/$defs/MeterAt",
+                  "quantity_at": "#/$defs/QuantityAt"
                 },
                 "propertyName": "check"
               },
@@ -5912,6 +6108,12 @@
                 },
                 {
                   "$ref": "#/$defs/DispositionAt"
+                },
+                {
+                  "$ref": "#/$defs/ActOf"
+                },
+                {
+                  "$ref": "#/$defs/QuantityAt"
                 },
                 {
                   "$ref": "#/$defs/AllOf"
@@ -5946,6 +6148,7 @@
             "items": {
               "discriminator": {
                 "mapping": {
+                  "act_of": "#/$defs/ActOf",
                   "all_of": "#/$defs/AllOf",
                   "any_of": "#/$defs/AnyOf",
                   "commitment_in_force": "#/$defs/CommitmentInForce",
@@ -5953,7 +6156,8 @@
                   "disposition_at": "#/$defs/DispositionAt",
                   "entity_is": "#/$defs/EntityIs",
                   "holds_office": "#/$defs/HoldsOffice",
-                  "meter_at": "#/$defs/MeterAt"
+                  "meter_at": "#/$defs/MeterAt",
+                  "quantity_at": "#/$defs/QuantityAt"
                 },
                 "propertyName": "check"
               },
@@ -5975,6 +6179,12 @@
                 },
                 {
                   "$ref": "#/$defs/DispositionAt"
+                },
+                {
+                  "$ref": "#/$defs/ActOf"
+                },
+                {
+                  "$ref": "#/$defs/QuantityAt"
                 },
                 {
                   "$ref": "#/$defs/AllOf"
@@ -7172,6 +7382,7 @@
           "condition": {
             "discriminator": {
               "mapping": {
+                "act_of": "#/$defs/ActOf",
                 "all_of": "#/$defs/AllOf",
                 "any_of": "#/$defs/AnyOf",
                 "commitment_in_force": "#/$defs/CommitmentInForce",
@@ -7179,7 +7390,8 @@
                 "disposition_at": "#/$defs/DispositionAt",
                 "entity_is": "#/$defs/EntityIs",
                 "holds_office": "#/$defs/HoldsOffice",
-                "meter_at": "#/$defs/MeterAt"
+                "meter_at": "#/$defs/MeterAt",
+                "quantity_at": "#/$defs/QuantityAt"
               },
               "propertyName": "check"
             },
@@ -7201,6 +7413,12 @@
               },
               {
                 "$ref": "#/$defs/DispositionAt"
+              },
+              {
+                "$ref": "#/$defs/ActOf"
+              },
+              {
+                "$ref": "#/$defs/QuantityAt"
               },
               {
                 "$ref": "#/$defs/AllOf"
@@ -7846,6 +8064,40 @@
         "title": "Quantity",
         "type": "object"
       },
+      "QuantityAt": {
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "const": "quantity_at",
+            "default": "quantity_at",
+            "title": "Check",
+            "type": "string"
+          },
+          "op": {
+            "enum": [
+              "ge",
+              "le"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "quantity",
+          "op",
+          "value"
+        ],
+        "title": "QuantityAt",
+        "type": "object"
+      },
       "Relationship": {
         "additionalProperties": false,
         "properties": {
@@ -7916,6 +8168,7 @@
               {
                 "discriminator": {
                   "mapping": {
+                    "act_of": "#/$defs/ActOf",
                     "all_of": "#/$defs/AllOf",
                     "any_of": "#/$defs/AnyOf",
                     "commitment_in_force": "#/$defs/CommitmentInForce",
@@ -7923,7 +8176,8 @@
                     "disposition_at": "#/$defs/DispositionAt",
                     "entity_is": "#/$defs/EntityIs",
                     "holds_office": "#/$defs/HoldsOffice",
-                    "meter_at": "#/$defs/MeterAt"
+                    "meter_at": "#/$defs/MeterAt",
+                    "quantity_at": "#/$defs/QuantityAt"
                   },
                   "propertyName": "check"
                 },
@@ -7945,6 +8199,12 @@
                   },
                   {
                     "$ref": "#/$defs/DispositionAt"
+                  },
+                  {
+                    "$ref": "#/$defs/ActOf"
+                  },
+                  {
+                    "$ref": "#/$defs/QuantityAt"
                   },
                   {
                     "$ref": "#/$defs/AllOf"
@@ -8875,6 +9135,66 @@
   },
   "view": {
     "$defs": {
+      "ActOf": {
+        "additionalProperties": false,
+        "description": "``person`` did their historical act. Met when no human plays them (history\nfollows the record); else only when an order that human filed has got there.",
+        "properties": {
+          "check": {
+            "const": "act_of",
+            "default": "act_of",
+            "title": "Check",
+            "type": "string"
+          },
+          "lever": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Lever"
+          },
+          "params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                }
+              ]
+            },
+            "title": "Params",
+            "type": "object"
+          },
+          "past_step": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Past Step"
+          },
+          "person": {
+            "title": "Person",
+            "type": "string"
+          }
+        },
+        "required": [
+          "person"
+        ],
+        "title": "ActOf",
+        "type": "object"
+      },
       "AllOf": {
         "additionalProperties": false,
         "properties": {
@@ -8888,6 +9208,7 @@
             "items": {
               "discriminator": {
                 "mapping": {
+                  "act_of": "#/$defs/ActOf",
                   "all_of": "#/$defs/AllOf",
                   "any_of": "#/$defs/AnyOf",
                   "commitment_in_force": "#/$defs/CommitmentInForce",
@@ -8895,7 +9216,8 @@
                   "disposition_at": "#/$defs/DispositionAt",
                   "entity_is": "#/$defs/EntityIs",
                   "holds_office": "#/$defs/HoldsOffice",
-                  "meter_at": "#/$defs/MeterAt"
+                  "meter_at": "#/$defs/MeterAt",
+                  "quantity_at": "#/$defs/QuantityAt"
                 },
                 "propertyName": "check"
               },
@@ -8917,6 +9239,12 @@
                 },
                 {
                   "$ref": "#/$defs/DispositionAt"
+                },
+                {
+                  "$ref": "#/$defs/ActOf"
+                },
+                {
+                  "$ref": "#/$defs/QuantityAt"
                 },
                 {
                   "$ref": "#/$defs/AllOf"
@@ -8951,6 +9279,7 @@
             "items": {
               "discriminator": {
                 "mapping": {
+                  "act_of": "#/$defs/ActOf",
                   "all_of": "#/$defs/AllOf",
                   "any_of": "#/$defs/AnyOf",
                   "commitment_in_force": "#/$defs/CommitmentInForce",
@@ -8958,7 +9287,8 @@
                   "disposition_at": "#/$defs/DispositionAt",
                   "entity_is": "#/$defs/EntityIs",
                   "holds_office": "#/$defs/HoldsOffice",
-                  "meter_at": "#/$defs/MeterAt"
+                  "meter_at": "#/$defs/MeterAt",
+                  "quantity_at": "#/$defs/QuantityAt"
                 },
                 "propertyName": "check"
               },
@@ -8980,6 +9310,12 @@
                 },
                 {
                   "$ref": "#/$defs/DispositionAt"
+                },
+                {
+                  "$ref": "#/$defs/ActOf"
+                },
+                {
+                  "$ref": "#/$defs/QuantityAt"
                 },
                 {
                   "$ref": "#/$defs/AllOf"
@@ -10151,6 +10487,7 @@
           "condition": {
             "discriminator": {
               "mapping": {
+                "act_of": "#/$defs/ActOf",
                 "all_of": "#/$defs/AllOf",
                 "any_of": "#/$defs/AnyOf",
                 "commitment_in_force": "#/$defs/CommitmentInForce",
@@ -10158,7 +10495,8 @@
                 "disposition_at": "#/$defs/DispositionAt",
                 "entity_is": "#/$defs/EntityIs",
                 "holds_office": "#/$defs/HoldsOffice",
-                "meter_at": "#/$defs/MeterAt"
+                "meter_at": "#/$defs/MeterAt",
+                "quantity_at": "#/$defs/QuantityAt"
               },
               "propertyName": "check"
             },
@@ -10180,6 +10518,12 @@
               },
               {
                 "$ref": "#/$defs/DispositionAt"
+              },
+              {
+                "$ref": "#/$defs/ActOf"
+              },
+              {
+                "$ref": "#/$defs/QuantityAt"
               },
               {
                 "$ref": "#/$defs/AllOf"
@@ -10795,6 +11139,40 @@
         "title": "Quantity",
         "type": "object"
       },
+      "QuantityAt": {
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "const": "quantity_at",
+            "default": "quantity_at",
+            "title": "Check",
+            "type": "string"
+          },
+          "op": {
+            "enum": [
+              "ge",
+              "le"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "quantity",
+          "op",
+          "value"
+        ],
+        "title": "QuantityAt",
+        "type": "object"
+      },
       "Relationship": {
         "additionalProperties": false,
         "properties": {
@@ -10865,6 +11243,7 @@
               {
                 "discriminator": {
                   "mapping": {
+                    "act_of": "#/$defs/ActOf",
                     "all_of": "#/$defs/AllOf",
                     "any_of": "#/$defs/AnyOf",
                     "commitment_in_force": "#/$defs/CommitmentInForce",
@@ -10872,7 +11251,8 @@
                     "disposition_at": "#/$defs/DispositionAt",
                     "entity_is": "#/$defs/EntityIs",
                     "holds_office": "#/$defs/HoldsOffice",
-                    "meter_at": "#/$defs/MeterAt"
+                    "meter_at": "#/$defs/MeterAt",
+                    "quantity_at": "#/$defs/QuantityAt"
                   },
                   "propertyName": "check"
                 },
@@ -10894,6 +11274,12 @@
                   },
                   {
                     "$ref": "#/$defs/DispositionAt"
+                  },
+                  {
+                    "$ref": "#/$defs/ActOf"
+                  },
+                  {
+                    "$ref": "#/$defs/QuantityAt"
                   },
                   {
                     "$ref": "#/$defs/AllOf"

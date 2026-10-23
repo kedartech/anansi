@@ -24,6 +24,7 @@ from revisionist.core.ids import (
     EntityId,
     GoalId,
     MeterId,
+    QuantityId,
     RelationshipId,
     SeatId,
 )
@@ -31,9 +32,12 @@ from revisionist.core.ontology import (
     AssetKind,
     AssetStatus,
     CommitmentStatus,
+    Controller,
     EntityStatus,
     ScheduleSource,
 )
+from revisionist.core.realism.card import ParamValue
+from revisionist.core.realism.pipeline import OrderStatus
 from revisionist.core.visibility import Scope
 
 if TYPE_CHECKING:
@@ -90,6 +94,27 @@ class DispositionAt(Model):
     value: int = Field(ge=-5, le=5)
 
 
+class ActOf(Model):
+    """``person`` did their historical act. Met when no human plays them (history
+    follows the record); else only when an order that human filed has got there."""
+
+    check: Literal["act_of"] = "act_of"
+    person: EntityId
+    lever: str | None = None
+    """None: the human decides, and no lever exists for it yet, so never met."""
+    params: dict[str, ParamValue] = Field(default_factory=dict)
+    """A subset the order's parameters must match."""
+    past_step: int | None = None
+    """None: the order is enacted. An int: the order has moved past that step index."""
+
+
+class QuantityAt(Model):
+    check: Literal["quantity_at"] = "quantity_at"
+    quantity: QuantityId
+    op: Op
+    value: int
+
+
 class AllOf(Model):
     check: Literal["all_of"] = "all_of"
     conditions: tuple[WinCondition, ...] = Field(min_length=1, max_length=MAX_PARTS)
@@ -100,7 +125,16 @@ class AnyOf(Model):
     conditions: tuple[WinCondition, ...] = Field(min_length=1, max_length=MAX_PARTS)
 
 
-Leaf = HoldsOffice | ControlsAsset | EntityIs | MeterAt | CommitmentInForce | DispositionAt
+Leaf = (
+    HoldsOffice
+    | ControlsAsset
+    | EntityIs
+    | MeterAt
+    | CommitmentInForce
+    | DispositionAt
+    | ActOf
+    | QuantityAt
+)
 
 WinCondition = Annotated[
     HoldsOffice
@@ -109,6 +143,8 @@ WinCondition = Annotated[
     | MeterAt
     | CommitmentInForce
     | DispositionAt
+    | ActOf
+    | QuantityAt
     | AllOf
     | AnyOf,
     Field(discriminator="check"),
@@ -226,10 +262,42 @@ def goal_met(world: State | View, c: WinCondition) -> bool:
         case DispositionAt():
             rel = world.relationships.get(c.relationship)
             return rel is not None and _compare(rel.disposition, c.op, c.value)
+        case ActOf():
+            return _acted(world, c)
+        case QuantityAt():
+            quantity = world.quantities.get(c.quantity)
+            return (
+                quantity is not None
+                and quantity.value is not None
+                and _compare(quantity.value, c.op, c.value)
+            )
         case AllOf():
             return all(goal_met(world, x) for x in c.conditions)
         case AnyOf():
             return any(goal_met(world, x) for x in c.conditions)
+
+
+def _acted(world: State | View, c: ActOf) -> bool:
+    from revisionist.core.state import State  # state imports us
+
+    if not isinstance(world, State):
+        return False  # a View hides who is human (spec §17)
+    humans = {
+        s.seat_id
+        for s in world.seats.values()
+        if s.embodies == c.person and s.controller is Controller.HUMAN
+    }
+    if not humans:
+        return True
+    if c.lever is None:
+        return False
+    return any(
+        o.issuer in humans
+        and o.lever == c.lever
+        and all(o.params.get(k) == v for k, v in c.params.items())
+        and (o.status is OrderStatus.ENACTED or (c.past_step is not None and o.step > c.past_step))
+        for o in world.orders.values()
+    )
 
 
 def parts(c: WinCondition) -> int:
@@ -283,6 +351,8 @@ _REFS: tuple[tuple[str, str], ...] = (
     ("meter", "meters"),
     ("commitment", "commitments"),
     ("relationship", "relationships"),
+    ("person", "entities"),
+    ("quantity", "quantities"),
 )
 _FINAL = frozenset({EntityStatus.DEAD, EntityStatus.DISSOLVED})
 
@@ -380,7 +450,7 @@ def difficulty(state: State, seat: SeatId, c: WinCondition) -> int:
         case DispositionAt():
             rel = state.relationships.get(c.relationship)
             return 2 + (abs(rel.disposition - c.value) if rel is not None else 0)
-        case CommitmentInForce():
+        case CommitmentInForce() | ActOf() | QuantityAt():
             return 2
 
 
@@ -436,6 +506,13 @@ def _touches(state: State, leaf: Leaf) -> tuple[set[EntityId], set[str]]:
             named.add(leaf.relationship)
             if (rel := state.relationships.get(leaf.relationship)) is not None:
                 people |= {rel.a, rel.b}
+        case ActOf():
+            people.add(leaf.person)
+            named.add(leaf.person)
+        case QuantityAt():
+            named.add(leaf.quantity)
+            if (quantity := state.quantities.get(leaf.quantity)) is not None and quantity.owner:
+                people.add(quantity.owner)
     return people, named
 
 

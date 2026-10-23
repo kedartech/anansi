@@ -28,12 +28,14 @@ Exit codes: 1 error, 2 refused, 3 leak (`cli.py:56-58`). `--seat` takes an ID or
 
 Top-level:
 - `version` (`cli.py:127`): print engine version.
-- `new WORLD` (`:133`): compile a world YAML (name in `worlds/` or a path) and start a campaign.
+- `new WORLD [--seat PERSON]` (`:133`): compile a world YAML (name in `worlds/` or a path) and start a campaign. A realism world needs `--seat` (a person's key or name), which claims them and closes Session Zero; a legacy world refuses it.
 - `dashboard [--seat]` (`:265`): standing, means, goal progress.
 - `status [--seat]` (`:308`): campaign status as your seat sees it.
 - `briefing [--seat]` (`:319`): agent briefing. Exit 3 if withheld (`:331`).
 - `order TEXT [--seat] [--visibility private|public|covert] [--spin ≤280]` (`:342`): file an order.
-- `tick [--offline]` (`:386`): resolve one tick. `--offline` uses the scripted resolver and narrator (`cli.py:52-54`).
+- `tick [--offline]` (`:386`): resolve one tick. `--offline` uses the scripted resolver and narrator (`cli.py:52-54`). On a realism campaign it runs `engine/realism_tick.run_realism_tick` (no model call; `--offline` is accepted and ignored) and prints the wake and the new date.
+- `lever NAME [key=value ...] [--seat]`: realism. File an order by pulling a lever on your card; every parameter is checked against its spec. Prints the order id and its first step.
+- `step ORDER ACTION [key=value ...] [--seat]`: realism. Act at the step of your order that waits on you (`pass`, `refuse`, `amend` with edits, ...).
 - `why TARGET [--break-glass] [--reason]` (`:423`): trace an intent or event through the log.
 - `replay --to TICK` (`:451`): rebuild state at a tick and print its hash.
 - `cost` (`:460`): model spend per tick and in total.

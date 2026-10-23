@@ -113,15 +113,6 @@ assets:
   - {key: italian_premiership, kind: office, name: Prime Minister of Italy, tier: 3, controller: mussolini}
   - {key: chinese_chairmanship, kind: office, name: Chairman of the National Government, tier: 4, controller: chiang}
 
-meters:
-  # Event counters that history's clock reads. They are flags, not data.
-  - {key: atlantic_incidents, owner: usa, name: US-German incidents at sea, value: 0, lo: 0, hi: 5}
-  - {key: japan_cabinet_changes, owner: japan, name: Japanese cabinet changes, value: 0, lo: 0, hi: 3}
-  - {key: neutrality_stage, owner: usa, name: Neutrality revision stage, value: 0, lo: 0, hi: 4}
-  - {key: soviet_eligibility, owner: usa, name: Soviet Lend-Lease eligibility, value: 0, lo: 0, hi: 1}
-  - {key: hull_note_delivered, owner: usa, name: Hull note delivered, value: 0, lo: 0, hi: 1}
-  - {key: pacific_war_begun, owner: japan, name: Pacific war begun, value: 0, lo: 0, hi: 1}
-
 sources:
   - key: voteview
     title: "Voteview: congressional roll-call votes"
@@ -1010,57 +1001,57 @@ schedule:
   - key: greer_incident
     name: "Greer and U-652 exchange fire (4 Sep)"
     on_date: 1941-09-04
-    condition: {check: meter_at, meter: atlantic_incidents, op: ge, value: 1}
+    condition: {check: quantity_at, quantity: uboats_operational, op: ge, value: 1}
     weight: 2
   - key: konoe_resigns
     name: Konoe cabinet resigns (16 Oct)
     on_date: 1941-10-16
-    condition: {check: meter_at, meter: japan_cabinet_changes, op: ge, value: 1}
+    condition: {check: act_of, person: konoe}
     weight: 3
   - key: house_arms_merchant_ships
     name: House votes 259-138 to arm merchant ships (17 Oct)
     on_date: 1941-10-17
-    condition: {check: meter_at, meter: neutrality_stage, op: ge, value: 1}
+    condition: {check: act_of, person: roosevelt, lever: send_bill, params: {bill: neutrality_revision}, past_step: 0}
     weight: 2
   - key: kearny_hit
     name: "Kearny torpedoed, 11 killed, convoy SC-48 (17 Oct)"
     on_date: 1941-10-17
-    condition: {check: meter_at, meter: atlantic_incidents, op: ge, value: 2}
+    condition: {check: act_of, person: roosevelt, lever: naval_order, params: {order: shoot_on_sight}}
     weight: 2
   - key: tojo_cabinet
     name: Tojo cabinet formed (18 Oct)
     on_date: 1941-10-18
-    condition: {check: holds_office, holder: tojo, office: japan_premiership}
+    condition: {check: all_of, conditions: [{check: act_of, person: konoe}, {check: act_of, person: tojo}]}
     weight: 3
   - key: reuben_james_sunk
     name: Reuben James sunk by U-552 (31 Oct)
     on_date: 1941-10-31
-    condition: {check: meter_at, meter: atlantic_incidents, op: ge, value: 3}
+    condition: {check: act_of, person: roosevelt, lever: naval_order, params: {order: shoot_on_sight}}
     weight: 2
   - key: soviet_lend_lease_finding
     name: Soviet Lend-Lease eligibility finding (7 Nov)
     on_date: 1941-11-07
-    condition: {check: meter_at, meter: soviet_eligibility, op: ge, value: 1}
+    condition: {check: act_of, person: roosevelt, lever: lend_lease_finding, params: {recipient: ussr}}
     weight: 2
   - key: senate_neutrality_vote
     name: Senate passes Neutrality revision 50-37 (7 Nov)
     on_date: 1941-11-07
-    condition: {check: meter_at, meter: neutrality_stage, op: ge, value: 2}
+    condition: {check: act_of, person: roosevelt, lever: send_bill, params: {bill: neutrality_revision}, past_step: 2}
     weight: 3
   - key: house_concurrence
     name: House concurs in the Senate amendment 212-194 (13 Nov)
     on_date: 1941-11-13
-    condition: {check: meter_at, meter: neutrality_stage, op: ge, value: 3}
+    condition: {check: act_of, person: roosevelt, lever: send_bill, params: {bill: neutrality_revision}, past_step: 2}
     weight: 3
   - key: hull_note
     name: Hull note delivered to Nomura (26 Nov)
     on_date: 1941-11-26
-    condition: {check: meter_at, meter: hull_note_delivered, op: ge, value: 1}
+    condition: {check: act_of, person: hull}
     weight: 3
   - key: pearl_harbor
     name: Japan attacks Pearl Harbor (7 Dec)
     on_date: 1941-12-07
-    condition: {check: meter_at, meter: pacific_war_begun, op: ge, value: 1}
+    condition: {check: all_of, conditions: [{check: act_of, person: konoe}, {check: act_of, person: tojo, lever: mobilisation_plan}]}
     weight: 3
 
 notes:

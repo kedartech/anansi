@@ -1,0 +1,345 @@
+"""The realism tick (plan, Phase 2 unit 2f): the event-driven advance, end to end.
+
+No model is called. Code walks the world from one wake to the next in four stages,
+each landed in the log as one atomic batch ending in ``tick_stage_completed``:
+
+    ADVANCE    the opening in-tray (first tick only), then ``date_advanced`` to the wake
+    PIPELINES  day by day: orders move, history fires or skips, resolvers compute
+    RESOLVE    goal changes, each private to the goal's owner
+    FEEDS      the documents that fell due, dated the new today
+
+Resuming reads the tail of the log and continues from the first stage not marked
+complete, so a resumed run reaches the hash an uninterrupted one would. Prose and
+delivery come later (Phase 4); ``TickResult.delivered`` is empty.
+"""
+
+from collections.abc import Sequence
+from datetime import date, timedelta
+
+from revisionist.core import events as ev
+from revisionist.core import goals, history
+from revisionist.core.events import Event, Versions
+from revisionist.core.fold import replay, state_hash
+from revisionist.core.ids import CampaignId, EntityId, EventId, OrderId, SeatId, derived_id
+from revisionist.core.ontology import Phase
+from revisionist.core.realism.advance import Wake, next_wake
+from revisionist.core.realism.card import ParamKind, ParamSpec, ParamValue
+from revisionist.core.realism.feeds import due_feeds, issue, seed_for_day
+from revisionist.core.realism.pipeline import Order, OrderStatus, StepAction
+from revisionist.core.realism.pipelines import human_step, run_pipelines
+from revisionist.core.realism.resolvers import (
+    ON_DAY,
+    ON_ORDER,
+    apply_changes,
+    resolver_for,
+)
+from revisionist.core.resolution import TickStage
+from revisionist.core.state import State
+from revisionist.core.visibility import PUBLIC, private_to
+from revisionist.engine import campaign as cmp
+from revisionist.engine import session_zero
+from revisionist.engine.ids import new_id
+from revisionist.engine.store import EventStore, load_state
+from revisionist.engine.tick import NotInPlayError, TickResult, _Emitter, _tail
+
+
+class RealismTickResult(TickResult):
+    wake: Wake | None = None
+    """Where the advance stopped. None when a resumed tick passed ADVANCE in an earlier run."""
+
+
+def _opening_date(events: Sequence[Event]) -> date | None:
+    """The in-world date when the tick in progress opened: the last ``date_advanced``
+    before its ``tick_opened``."""
+    start, opened = 0, len(events)
+    for i, e in enumerate(events):
+        if e.kind == "tick_closed":
+            start = i + 1
+    for i in range(start, len(events)):
+        if events[i].kind == "tick_opened":
+            opened = i
+            break
+    found: date | None = None
+    for e in events[:opened]:
+        if isinstance(e.payload, ev.DateAdvanced):
+            found = e.payload.to
+    return found
+
+
+def _unresolved(events: Sequence[Event]) -> list[OrderId]:
+    """Orders enacted since the last PIPELINES stage closed: a human's final step,
+    filed between ticks, whose resolver has not run."""
+    after = 0
+    for i, e in enumerate(events):
+        p = e.payload
+        if isinstance(p, ev.TickStageCompleted) and p.stage is TickStage.PIPELINES:
+            after = i + 1
+    return [
+        e.payload.order_id
+        for e in events[after:]
+        if isinstance(e.payload, ev.OrderSettled) and e.payload.status is OrderStatus.ENACTED
+    ]
+
+
+def run_realism_tick(
+    store: EventStore,
+    campaign_id: CampaignId,
+    *,
+    versions: Versions | None = None,
+    stop_after: TickStage | None = None,
+) -> RealismTickResult:
+    """Run (or resume) one realism tick. Safe to call again after a crash at any point."""
+    versions = versions or cmp.versions()
+    state = load_state(store, campaign_id)
+    if state.phase is not Phase.PLAY:
+        raise NotInPlayError(state.phase)
+    events = list(store.read(campaign_id))
+    tail = _tail(events)
+    em = _Emitter(store, state, versions)
+    done = set(tail.completed)
+    result = RealismTickResult(
+        tick=state.tick, resumed_from=tail.completed[-1] if tail.completed else None
+    )
+    today = state.in_world_date
+    if state.ruleset != "realism" or today is None:
+        raise ValueError("run_realism_tick needs a realism campaign with an in-world date")
+    before = _opening_date(events) if tail.opened else today
+    assert before is not None
+
+    def stopped(stage: TickStage) -> bool:
+        return stop_after is stage
+
+    def finish(stage: TickStage) -> RealismTickResult:
+        return result.model_copy(update={"stopped_after": stage})
+
+    if not tail.opened:
+        em.commit([em.event(ev.TickOpened(intents_frozen=()))])
+
+    if TickStage.ADVANCE not in done:
+        batch: list[Event] = []
+        if not any(d.truth.feed is not None for d in em.state.documents.values()):
+            batch += _feed_documents(em, today)  # the opening in-tray, dated today
+        local = replay(batch, initial=em.state) if batch else em.state
+        wake = next_wake(local, today)
+        batch.append(em.event(ev.DateAdvanced(to=wake.to)))
+        batch.append(em.event(ev.TickStageCompleted(stage=TickStage.ADVANCE)))
+        em.commit(batch)
+        done.add(TickStage.ADVANCE)
+        result = result.model_copy(update={"wake": wake})
+        if stopped(TickStage.ADVANCE):
+            return finish(TickStage.ADVANCE)
+
+    new_today = em.state.in_world_date
+    assert new_today is not None
+
+    if TickStage.PIPELINES not in done:
+        batch = _walk(em, events, before, new_today)
+        batch.append(em.event(ev.TickStageCompleted(stage=TickStage.PIPELINES)))
+        em.commit(batch)
+        done.add(TickStage.PIPELINES)
+        if stopped(TickStage.PIPELINES):
+            return finish(TickStage.PIPELINES)
+
+    if TickStage.RESOLVE not in done:
+        batch = []
+        for change in goals.check(em.state):
+            owner = em.state.goals[change.goal_id].seat_id
+            batch.append(em.event(change, scope=private_to(owner)))
+        batch.append(em.event(ev.TickStageCompleted(stage=TickStage.RESOLVE)))
+        em.commit(batch)
+        done.add(TickStage.RESOLVE)
+        if stopped(TickStage.RESOLVE):
+            return finish(TickStage.RESOLVE)
+
+    if TickStage.FEEDS not in done:
+        batch = _feed_documents(em, new_today)
+        batch.append(em.event(ev.TickStageCompleted(stage=TickStage.FEEDS)))
+        em.commit(batch)
+        done.add(TickStage.FEEDS)
+        if stopped(TickStage.FEEDS):
+            return finish(TickStage.FEEDS)
+
+    digest = state_hash(em.state)
+    em.commit([em.event(ev.TickClosed(state_hash=digest))])
+    em.store.save_snapshot(em.state)
+    return result.model_copy(update={"state_hash": digest})
+
+
+def _feed_documents(em: _Emitter, today: date) -> list[Event]:
+    """A document from every feed due on or before ``today``, dated ``today``.
+
+    A feed that fell due during a collapsed stretch issues once, today, not once
+    per skipped period."""
+    seed = seed_for_day(em.state.campaign_id, today)
+    out: list[Event] = []
+    for feed in sorted(due_feeds(em.state, today), key=lambda f: f.feed_id):
+        doc = issue(em.state, feed, today, seed)
+        if doc is not None:
+            out.append(em.event(doc, scope=doc.document.scope))
+    return out
+
+
+def _walk(em: _Emitter, events: Sequence[Event], before: date, until: date) -> list[Event]:
+    """Every day from ``before`` + 1 to ``until``, earliest first. Each day: orders
+    move, history fires or skips what fell due (opinion reads fired incidents), the
+    orders enacted that day are resolved, then what moves with time. Each step sees
+    the state after the ones before it."""
+    state = em.state
+    out: list[Event] = []
+
+    def add(payloads: Sequence[ev.Payload]) -> None:
+        nonlocal state
+        batch = [em.event(p) for p in payloads]
+        state = replay(batch, initial=state)
+        out.extend(batch)
+
+    pending = _unresolved(events)
+    for oid in pending:
+        order = state.orders[oid]
+        add(apply_changes(state, ON_ORDER[resolver_for(state, order)](state, order)))
+    day = before
+    while day < until:
+        day += timedelta(days=1)
+        steps = run_pipelines(state, day, seed_for_day(state.campaign_id, day))
+        add(steps)
+        add(history.settle(state, day))
+        for step in steps:
+            if isinstance(step, ev.OrderSettled) and step.status is OrderStatus.ENACTED:
+                order = state.orders[step.order_id]
+                add(apply_changes(state, ON_ORDER[resolver_for(state, order)](state, order)))
+        for on_day in ON_DAY.values():
+            add(apply_changes(state, on_day(state, day)))
+    return out
+
+
+# --- what a human does between ticks ---------------------------------------------
+
+
+def seat_player(store: EventStore, campaign_id: CampaignId, entity: EntityId) -> str:
+    """Seat the human as ``entity``, then close Session Zero. Returns the person's
+    name. Raises ``StepRefusedError``."""
+    name = load_state(store, campaign_id).entities[entity].name
+    seat = SeatId(derived_id(campaign_id, "seat", entity))
+    session_zero.claim(store, campaign_id, seat, name)
+    closed = load_state(store, campaign_id)
+    store.append_all(
+        [
+            Event(
+                event_id=EventId(new_id()),
+                campaign_id=campaign_id,
+                seq=closed.last_seq + 1,
+                tick=closed.tick,
+                scope=PUBLIC,
+                payload=ev.SessionZeroClosed(),
+                versions=cmp.versions(),
+            )
+        ]
+    )
+    return name
+
+
+def _fits(spec: ParamSpec, raw: str) -> ParamValue:
+    if spec.kind is ParamKind.INT:
+        try:
+            value = int(raw)
+        except ValueError:
+            raise ValueError(f"{spec.name}: {raw!r} is not a whole number") from None
+        if spec.lo is None or spec.hi is None or not spec.lo <= value <= spec.hi:
+            raise ValueError(f"{spec.name}: {raw} is outside {spec.lo}..{spec.hi}")
+        return value
+    if spec.kind is ParamKind.ENUM and raw not in spec.choices:
+        raise ValueError(f"{spec.name}: {raw!r} is not one of {', '.join(spec.choices)}")
+    return raw
+
+
+def file_order(
+    store: EventStore, campaign_id: CampaignId, seat: SeatId, lever: str, given: dict[str, str]
+) -> Order:
+    """Draft the seat's order for ``lever`` dated today. Every parameter must be given
+    and fit its spec. Raises ``ValueError``."""
+    state = load_state(store, campaign_id)
+    card = state.cards[state.seats[seat].embodies]
+    found = next((x for x in card.levers if x.name == lever), None)
+    if found is None:
+        names = ", ".join(x.name for x in card.levers)
+        raise ValueError(f"no lever {lever!r} on your card (levers: {names})")
+    wanted = {p.name for p in found.params}
+    if set(given) != wanted:
+        raise ValueError(f"{lever} takes exactly: {', '.join(sorted(wanted)) or 'no parameters'}")
+    params = {p.name: _fits(p, given[p.name]) for p in found.params}
+    assert state.in_world_date is not None
+    order = Order(
+        order_id=OrderId(new_id()),
+        issuer=seat,
+        lever=lever,
+        pipeline=found.pipeline,
+        params=params,
+        filed=state.in_world_date,
+    )
+    _append(store, state, ev.OrderDrafted(order=order), seat)
+    return order
+
+
+def take_step(
+    store: EventStore,
+    campaign_id: CampaignId,
+    order_id: OrderId,
+    action: StepAction,
+    given: dict[str, str],
+) -> Order:
+    """The human acts at the step they hold, dated today. Raises ``ValueError``."""
+    state = load_state(store, campaign_id)
+    order = state.orders.get(order_id)
+    if order is None:
+        raise ValueError(f"no order {order_id}")
+    assert state.in_world_date is not None
+    levers = state.cards[state.seats[order.issuer].embodies].levers
+    specs = {p.name: p for lever in levers if lever.name == order.lever for p in lever.params}
+    amended: dict[str, ParamValue] = {}
+    for name, raw in given.items():
+        if name not in specs:
+            raise ValueError(f"order has no parameter {name}")
+        amended[name] = _fits(specs[name], raw)
+    steps = human_step(state, order_id, action, state.in_world_date, amended)
+    batch: list[Event] = []
+    seq = state.last_seq
+    for payload in steps:
+        seq += 1
+        batch.append(
+            Event(
+                event_id=EventId(new_id()),
+                campaign_id=campaign_id,
+                seq=seq,
+                tick=state.tick,
+                scope=payload.document.scope if isinstance(payload, ev.DocumentIssued) else PUBLIC,
+                payload=payload,
+                versions=cmp.versions(),
+            )
+        )
+    replay(batch, initial=state)  # fold first so a bad step never reaches the store
+    store.append_all(batch)
+    return load_state(store, campaign_id).orders[order_id]
+
+
+def _append(store: EventStore, state: State, payload: ev.Payload, actor: SeatId) -> None:
+    event = Event(
+        event_id=EventId(new_id()),
+        campaign_id=state.campaign_id,
+        seq=state.last_seq + 1,
+        tick=state.tick,
+        actor=actor,
+        scope=PUBLIC,
+        payload=payload,
+        versions=cmp.versions(),
+    )
+    replay([event], initial=state)
+    store.append_all([event])
+
+
+__all__ = [
+    "RealismTickResult",
+    "file_order",
+    "run_realism_tick",
+    "seat_player",
+    "take_step",
+]

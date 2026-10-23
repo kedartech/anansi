@@ -15,6 +15,7 @@ import hashlib
 
 from revisionist.core import delta as d
 from revisionist.core.goals import (
+    ActOf,
     AllOf,
     AnyOf,
     CommitmentInForce,
@@ -25,6 +26,7 @@ from revisionist.core.goals import (
     HoldsOffice,
     Leaf,
     MeterAt,
+    QuantityAt,
     WinCondition,
     leaves,
 )
@@ -35,6 +37,7 @@ from revisionist.core.ids import (
     EntityId,
     FactId,
     MeterId,
+    QuantityId,
     RelationshipId,
     SeatId,
     derived_id,
@@ -82,6 +85,8 @@ def _name(state: State, ref: str) -> str:
         return entity.name
     if (meter := state.meters.get(MeterId(ref))) is not None:
         return meter.name
+    if (quantity := state.quantities.get(QuantityId(ref))) is not None:
+        return quantity.name
     if (rel := state.relationships.get(RelationshipId(ref))) is not None:
         return f"ties between {_name(state, rel.a)} and {_name(state, rel.b)}"
     if (commitment := state.commitments.get(CommitmentId(ref))) is not None:
@@ -103,6 +108,10 @@ def _object(leaf: Leaf) -> str:
             return leaf.commitment
         case DispositionAt():
             return leaf.relationship
+        case ActOf():
+            return leaf.person
+        case QuantityAt():
+            return leaf.quantity
 
 
 def domain(state: State, leaf: Leaf) -> str:
@@ -122,6 +131,10 @@ def domain(state: State, leaf: Leaf) -> str:
             return "a treaty"
         case DispositionAt():
             return "a relationship"
+        case ActOf():
+            return "an act"
+        case QuantityAt():
+            return "a figure"
 
 
 def render(state: State, c: WinCondition, *, swap: tuple[str, str] | None = None) -> str:
@@ -149,6 +162,11 @@ def render(state: State, c: WinCondition, *, swap: tuple[str, str] | None = None
             return f"{name(c.commitment)} in force"
         case DispositionAt():
             return f"{name(c.relationship)} {'at least' if c.op == 'ge' else 'at most'} {c.value}"
+        case ActOf():
+            what = f" ({c.lever})" if c.lever else ""
+            return f"{name(c.person)} acts{what}"
+        case QuantityAt():
+            return f"{name(c.quantity)} {'at least' if c.op == 'ge' else 'at most'} {c.value}"
 
 
 def _decoy(state: State, leaf: Leaf, seed: str) -> str | None:
@@ -173,7 +191,7 @@ def _decoy(state: State, leaf: Leaf, seed: str) -> str | None:
             pool = sorted(m for m in state.meters if m != true)
         case DispositionAt():
             pool = sorted(r for r in state.relationships if r != true)
-        case CommitmentInForce():
+        case CommitmentInForce() | ActOf() | QuantityAt():
             pool = []
     if not pool:
         return None

@@ -18,17 +18,19 @@ from typing import TYPE_CHECKING, Annotated
 import typer
 
 from revisionist import __version__
-from revisionist.core.ids import CampaignId, EventId, SeatId
-from revisionist.core.ontology import Controller, Persona, Phase
+from revisionist.core.ids import CampaignId, EntityId, EventId, OrderId, SeatId
+from revisionist.core.ontology import Controller, EntityKind, Persona, Phase
 from revisionist.core.realism.check import gap_report, gaps, report
+from revisionist.core.realism.pipeline import StepAction
 from revisionist.core.report import render_leaks
 from revisionist.core.sealing import needs_admin_read
 from revisionist.core.settings import Betrayal, Inertia, Lethality, Plausibility, Settings
 from revisionist.core.state import State
 from revisionist.core.visibility import Visibility
-from revisionist.core.world_compile import WorldError, compile_world
+from revisionist.core.world import WorldFile
+from revisionist.core.world_compile import WorldError, compile_world, resolve_keys
 from revisionist.engine import campaign as cmp
-from revisionist.engine import host_ops, play, season, session_zero
+from revisionist.engine import host_ops, play, realism_tick, season, session_zero
 from revisionist.engine import scheduler as sch
 from revisionist.engine.ids import new_id
 from revisionist.engine.llm import Transport, TransportError
@@ -130,8 +132,25 @@ def version() -> None:
     typer.echo(__version__)
 
 
+def _person_key(decl: WorldFile, who: str) -> str:
+    """The world-file key of the person ``who`` names, by key or by name."""
+    people = {d.key: d.name for d in decl.entities if d.kind is EntityKind.PERSON}
+    if who in people:
+        return who
+    named = [k for k, name in people.items() if name.casefold() == who.casefold()]
+    if len(named) != 1:
+        raise _fail(f"no person {who!r} in {decl.name}", EXIT_REFUSED)
+    return named[0]
+
+
 @app.command()
-def new(world: Annotated[str, typer.Argument(help="World name or path to a YAML file")]) -> None:
+def new(
+    world: Annotated[str, typer.Argument(help="World name or path to a YAML file")],
+    seat: Annotated[
+        str | None,
+        typer.Option("--seat", help="Realism worlds: the person you play, by key or name"),
+    ] = None,
+) -> None:
     """Compile a world bible and start a campaign from it."""
     try:
         decl = cmp.load_world(cmp.world_path(world))
@@ -139,11 +158,26 @@ def new(world: Annotated[str, typer.Argument(help="World name or path to a YAML 
         raise _fail(str(exc)) from exc
     except ValueError as exc:
         raise _fail(f"world file does not parse:\n{exc}") from exc
+    realism = decl.ruleset == "realism"
+    if realism and seat is None:
+        raise _fail("a realism world needs --seat <person>: who you play", EXIT_REFUSED)
+    if seat is not None and not realism:
+        raise _fail("--seat is only for realism worlds; a legacy world seats you", EXIT_REFUSED)
+    key = _person_key(decl, seat) if seat is not None else None
     store = cmp.open_store()
     try:
         campaign_id = cmp.new_campaign(store, decl)
     except WorldError as exc:
         raise _fail("world has problems:\n" + "\n".join(exc.problems)) from exc
+    if key is not None:
+        entity = EntityId(resolve_keys(decl, campaign_id)[key])
+        try:
+            name = realism_tick.seat_player(store, campaign_id, entity)
+        except session_zero.StepRefusedError as exc:
+            raise _fail(str(exc), EXIT_REFUSED) from exc
+        typer.echo(f"campaign {campaign_id}: {decl.name}")
+        typer.echo(f"you are {name}")
+        return
     state = load_state(store, campaign_id)
     humans = cmp.human_seats(state)
     if not humans:
@@ -406,6 +440,60 @@ def order(
     typer.echo(result.line)
 
 
+def _pairs(items: list[str]) -> dict[str, str]:
+    out: dict[str, str] = {}
+    for item in items:
+        name, eq, value = item.partition("=")
+        if not eq or not name:
+            raise _fail(f"expected key=value, got {item!r}", EXIT_REFUSED)
+        out[name] = value
+    return out
+
+
+Pairs = Annotated[list[str] | None, typer.Argument(help="key=value, one per parameter")]
+
+
+@app.command()
+def lever(name: str, params: Pairs = None, seat: PlayerSeat = None) -> None:
+    """Realism: file an order by pulling one of your levers."""
+    store = cmp.open_store()
+    campaign_id = _campaign(store)
+    me = _me(load_state(store, campaign_id), seat)
+    _guard(store, campaign_id, me)
+    try:
+        order = realism_tick.file_order(store, campaign_id, me, name, _pairs(params or []))
+    except (ValueError, KeyError) as exc:
+        raise _fail(str(exc), EXIT_REFUSED) from exc
+    state = load_state(store, campaign_id)
+    first = state.pipelines[order.pipeline].steps[0]
+    who = state.entities[first.person].name
+    typer.echo(f"order {order.order_id}: {order.lever} filed {order.filed}")
+    typer.echo(f"first step: {who} ({first.kind.value})")
+
+
+@app.command()
+def step(order_id: str, action: str, params: Pairs = None, seat: PlayerSeat = None) -> None:
+    """Realism: act at the step of your order that waits on you."""
+    store = cmp.open_store()
+    campaign_id = _campaign(store)
+    me = _me(load_state(store, campaign_id), seat)
+    _guard(store, campaign_id, me)
+    try:
+        taken = StepAction(action)
+    except ValueError as exc:
+        names = ", ".join(a.value for a in StepAction)
+        raise _fail(f"{action!r} is not an action (one of {names})", EXIT_REFUSED) from exc
+    try:
+        order = realism_tick.take_step(
+            store, campaign_id, OrderId(order_id), taken, _pairs(params or [])
+        )
+    except (ValueError, KeyError) as exc:
+        raise _fail(str(exc), EXIT_REFUSED) from exc
+    typer.echo(
+        f"order {order.order_id}: {taken.value}; now {order.status.value}, step {order.step}"
+    )
+
+
 def _deliverers() -> DelivererFactory | None:
     """Discord DMs for bound seats when a bot token is set on Postgres; else files."""
     if not cmp.is_postgres(cmp.db_target()):
@@ -432,6 +520,13 @@ def tick(offline: Offline = False) -> None:
     except NotInPlayError as exc:
         raise _fail(str(exc), EXIT_REFUSED) from exc
     result = run.result
+    if isinstance(result, realism_tick.RealismTickResult):
+        now = load_state(store, _campaign(store)).in_world_date
+        woke = f"{result.wake.reason.label}, " if result.wake is not None else ""
+        typer.echo(f"tick {result.tick}: woke on {woke}now {now}")
+        if run.leaks:
+            raise _fail(render_leaks(run.leaks), EXIT_LEAK)
+        return
     word = "quiet" if result.quiet else "resolved"
     typer.echo(
         f"tick {result.tick} {word}: {result.applied} applied, {len(result.rejected)} rejected, "
