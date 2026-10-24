@@ -43,9 +43,9 @@ CANARY = "CANARY-TRUTH-OIL-51c2"
 class Realism:
     """A realism toy game with web accounts seated in it."""
 
-    def __init__(self, web: Web) -> None:  # noqa: F811
+    def __init__(self, web: Web, world: str = "realism-toy") -> None:  # noqa: F811
         self.web = web
-        self.decl = cmp.load_world(cmp.world_path("realism-toy"))
+        self.decl = cmp.load_world(cmp.world_path(world))
         store = web.app.open()
         try:
             self.campaign: CampaignId = cmp.new_campaign(store, self.decl)
@@ -183,7 +183,8 @@ def test_me_carries_the_realism_block_for_a_realism_seat(solo: tuple[Realism, Cl
     game = ada.me()["game"]
     assert game["ruleset"] == "realism"
     block = game["view"]["realism"]
-    assert set(block) == {"documents", "desk", "situation", "orders", "clock"}
+    assert set(block) == {"documents", "desk", "situation", "orders", "clock", "map"}
+    assert block["map"] is None  # the toy has no positions: no map tab
     assert block["documents"]["documents"] and block["documents"]["unread"] > 0
     assert block["desk"]["levers"]
     # nothing but the horizon is due, and the horizon is not a thing anyone waits on

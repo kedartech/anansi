@@ -6,8 +6,9 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
-  STEP_ACTIONS, TRAY_FILTERS, addressLine, castLine, channelWord, directiveChannel, classificationWord, entityChoices, figureValue, filterInTray, gapLine, horizonWords,
-  linesHeading, paceLine, powersSentence, reportLine, runLine, sortInTray, stepLine, trackerLine, trayCounts, trendLine, unreadCount,
+  STEP_ACTIONS, TRAY_FILTERS, addressLine, castLine, certaintyWord, channelWord, directiveChannel, classificationWord, entityChoices, figureValue, filterInTray, gapLine,
+  horizonWords, landPath, linesHeading, mapBox, markKindWord, paceLine, powersSentence, projection, reportLine, runLine, sideLine, sightedLine, sortInTray, sortMarks,
+  stepLine, trackerLine, trayCounts, trendLine, unreadCount, whereLine,
 } from '../js/realism-rules.js';
 
 const WEB = fileURLToPath(new URL('..', import.meta.url));
@@ -82,7 +83,7 @@ test('classification and channel words cover every value and reject strangers', 
 });
 
 test('realism files never show a percentage or talk of chances', () => {
-  const files = ['js/realism-rules.js', 'js/views/realism.js', 'css/realism.css', 'test/fixtures/realism-seat.json'];
+  const files = ['js/realism-rules.js', 'js/views/realism.js', 'js/views/realism-map.js', 'css/realism.css', 'test/fixtures/realism-seat.json'];
   const chance = new RegExp(['od', 'ds'].join(''), 'i');
   for (const f of files) {
     const text = readFileSync(join(WEB, f), 'utf8');
@@ -229,4 +230,62 @@ test('castLine counts the players still to choose', () => {
   assert.equal(castLine(0), 'Everyone has chosen. You can begin.');
   assert.equal(castLine(1), 'Waiting for 1 player to choose.');
   assert.equal(castLine(3), 'Waiting for 3 players to choose.');
+});
+
+// --- the map ------------------------------------------------------------------------
+
+const map = fixture.map;
+
+test('map marks read in plain words', () => {
+  const [hx, home, uboats, atlantic] = map.marks;
+  assert.equal(markKindWord(hx.kind), 'Convoy route');
+  assert.equal(whereLine(hx), 'Halifax – North Atlantic – Liverpool');
+  assert.equal(sideLine(atlantic), 'Yours · United States');
+  assert.equal(sideLine(uboats), 'Foreign · Germany');
+  assert.equal(sideLine({ side: 'none', side_name: '' }), 'Both sides');
+  assert.equal(certaintyWord(home.certainty), 'Stale');
+  assert.equal(sightedLine(home), 'Reported 29 September 1941 by Winston Churchill');
+  for (const m of map.marks) {
+    for (const line of [markKindWord(m.kind), sideLine(m), certaintyWord(m.certainty), whereLine(m), sightedLine(m)]) {
+      assert.doesNotMatch(line, /_|\btruth\b|\bcontroller\b|\bhorizon\b/i, line);
+    }
+  }
+  assert.throws(() => certaintyWord('true'));
+});
+
+test('lines are drawn under forces, each in name order', () => {
+  assert.deepEqual(sortMarks(map.marks).map((m) => m.name),
+    ['HX convoys', 'Home Fleet', 'U-boat arm', 'US Atlantic Fleet']);
+  assert.deepEqual(map.marks.map((m) => m.name)[0], 'HX convoys'); // not mutated
+});
+
+test('the map box spans the marks, padded, and the world on request', () => {
+  const box = mapBox(map);
+  for (const p of map.marks.flatMap((m) => m.places)) {
+    assert.ok(p.lon > box.west && p.lon < box.east && p.lat > box.south && p.lat < box.north, p.name);
+  }
+  const one = mapBox({ places: map.places, marks: [map.marks[1]] });
+  assert.ok(one.east - one.west >= 30 && one.north - one.south >= 18);
+  assert.deepEqual(mapBox(map, 'world'), { west: -180, east: 180, south: -60, north: 80 });
+  assert.deepEqual(mapBox({ places: map.places, marks: [] }).west < -158, true);
+});
+
+test('the projection puts north up and squeezes by latitude', () => {
+  const box = { west: -40, east: 0, south: 40, north: 60 };
+  const p = projection(box);
+  assert.equal(p.x(-40), 0);
+  assert.equal(p.y(60), 0);
+  assert.ok(p.y(40) > p.y(50));
+  assert.ok(Math.abs(p.width - 40 * Math.cos((50 * Math.PI) / 180)) < 1e-9);
+  assert.equal(p.height, 20);
+});
+
+test('only the land in the box is drawn', () => {
+  const box = { west: -10, east: 10, south: 40, north: 60 };
+  const p = projection(box);
+  const near = [[0, 50], [1, 50], [1, 51], [0, 50]];
+  const far = [[100, -10], [101, -10], [101, -9], [100, -10]];
+  const d = landPath([near, far], box, p);
+  assert.equal(d.split('M').length - 1, 1);
+  assert.match(d, /^M[\d.]+ [\d.]+L.*Z$/);
 });

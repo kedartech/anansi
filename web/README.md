@@ -10,6 +10,8 @@ is docs/web-design/.
 - js/dom.js: the only DOM builder; text nodes only, never innerHTML.
 - js/views/: sign-in and recovery, join, Session Zero (player steps), war room.
 - fonts/: self-hosted OFL fonts, licences beside them. No third-party requests.
+- assets/land-110m.json: Natural Earth 1:110m land (public domain), rounded to 0.1
+  degree; the coastlines under the realism map.
 
 Tests:
 

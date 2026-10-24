@@ -110,6 +110,53 @@
 .rl-count { font-weight: 400; }
 .rl-filter[aria-selected="true"] .rl-count { color: inherit; }
 
+/* The map. Shape says side, fill and line say certainty; colour is a third cue only. */
+.rl-map { font: 14px/1.5 var(--font-ui); color: var(--ink-primary); }
+.rl-map h2 { font: 600 16px/1.3 var(--font-ui); margin: 0 0 var(--space-1); }
+.rl-filter[aria-pressed="true"] { background: var(--ink-primary); color: var(--paper-sheet); font-weight: 600; }
+.rl-map-figure { margin: 0; border: 1px solid var(--ink-rule); border-radius: var(--radius-paper); overflow: hidden; }
+.rl-map-svg { display: block; height: auto; max-height: 70vh; font-family: var(--font-ui); }
+.rl-map-sea { fill: var(--map-sea); }
+.rl-map-land { fill: var(--map-land); fill-rule: evenodd; stroke: var(--map-water); stroke-width: 0.6px; vector-effect: non-scaling-stroke; }
+.rl-map-place circle { fill: var(--ink-muted); }
+.rl-map-place text { fill: var(--ink-secondary); }
+.rl-mk { --side: var(--ink-primary); cursor: pointer; }
+.rl-side-own { --side: var(--signal-link); }
+.rl-side-other { --side: var(--signal-stamp); }
+.rl-mk-shape { fill: var(--paper-sheet); stroke: var(--side); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.rl-c-known .rl-mk-shape { fill: var(--side); }
+.rl-mk-glyph { fill: none; stroke: var(--side); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.rl-c-known .rl-mk-glyph { stroke: var(--paper-sheet); }
+.rl-c-stale .rl-mk-shape { stroke-dasharray: 3 2; }
+.rl-c-stale { opacity: 0.75; }
+.rl-mk-tick { stroke: var(--ink-primary); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.rl-mk-name { fill: var(--ink-primary); font-weight: 600; paint-order: stroke; stroke: var(--paper-sheet); stroke-width: 3px; vector-effect: non-scaling-stroke; }
+.rl-mk-line { fill: none; stroke: var(--side); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.rl-mk-front .rl-mk-line { stroke-width: 5px; stroke-linejoin: round; opacity: 0.8; }
+.rl-mk-route .rl-mk-line { stroke-dasharray: 6 4; }
+.rl-c-stale .rl-mk-line { stroke-dasharray: 2 3; }
+.rl-mk-hit { fill: none; stroke: transparent; stroke-width: 14px; vector-effect: non-scaling-stroke; }
+.rl-mk-ring { fill: none; stroke: var(--signal-link); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.rl-mk.selected .rl-mk-line { stroke-width: 4px; }
+.rl-mk:focus { outline: none; }
+.rl-mk:focus-visible .rl-mk-shape, .rl-mk:focus-visible .rl-mk-line { stroke: var(--signal-link); stroke-width: 3px; }
+.rl-legend { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); margin: var(--space-3) 0 0; padding: 0; list-style: none; font-size: 13px; color: var(--ink-secondary); }
+.rl-legend li { display: flex; align-items: center; gap: var(--space-1); }
+.rl-legend svg { cursor: default; }
+.rl-map-detail { margin-top: var(--space-4); padding: var(--space-3) var(--space-4); background: var(--paper-sheet); border: 1px solid var(--ink-rule); border-radius: var(--radius-paper); }
+.rl-map-detail h3 { margin: 0 0 var(--space-2); font: 700 15px/1.35 var(--font-period); }
+.rl-map-detail dl { display: grid; grid-template-columns: max-content 1fr; gap: var(--space-1) var(--space-3); margin: 0; }
+.rl-map-detail dt { font-weight: 600; }
+.rl-map-detail dd { margin: 0; }
+.rl-map-list { border-collapse: collapse; font-size: 14px; }
+.rl-map-list caption { text-align: left; font-weight: 600; margin-bottom: var(--space-2); }
+.rl-map-list th, .rl-map-list td { padding: var(--space-1) var(--space-2); border-bottom: 1px solid var(--ink-rule); text-align: left; vertical-align: top; }
+.rl-find { padding: 2px var(--space-2); background: var(--paper-carbon); color: var(--ink-primary); border: 1px solid var(--ink-field-border); border-radius: var(--radius-paper); font: 13px/1.4 var(--font-ui); cursor: pointer; white-space: nowrap; }
+.rl-find:focus-visible, .rl-submit:focus-visible { outline: 2px solid var(--signal-link); outline-offset: 2px; }
+
 @media (max-width: 640px) {
   .rl-folders, .rl-cards { grid-template-columns: 1fr; }
+  .rl-map-list thead { display: none; }
+  .rl-map-list tr { display: grid; padding: var(--space-2) 0; border-bottom: 1px solid var(--ink-rule); }
+  .rl-map-list th, .rl-map-list td { border: 0; padding: 0; }
 }

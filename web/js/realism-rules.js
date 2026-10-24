@@ -201,3 +201,74 @@ export function castLine(waiting) {
   if (!waiting) return 'Everyone has chosen. You can begin.';
   return waiting === 1 ? 'Waiting for 1 player to choose.' : `Waiting for ${waiting} players to choose.`;
 }
+
+// --- the map ---------------------------------------------------------------------
+
+const MARK_KIND = Object.freeze({ fleet: 'Fleet', army: 'Army', air: 'Air group', front: 'Front', route: 'Convoy route' });
+const MARK_SIDE = Object.freeze({ own: 'Yours', other: 'Foreign', none: 'Both sides' });
+const CERTAINTY = Object.freeze({ known: 'Known', reported: 'Reported', stale: 'Stale' });
+
+export const markKindWord = (k) => pick(MARK_KIND, k);
+export const certaintyWord = (c) => pick(CERTAINTY, c);
+
+/** "Foreign · Germany", or "Both sides" for a front. */
+export function sideLine(mark) {
+  const word = pick(MARK_SIDE, mark.side);
+  return mark.side_name ? `${word} · ${mark.side_name}` : word;
+}
+
+/** "Smolensk", or "Leningrad – Smolensk – Odessa" for a line. */
+export const whereLine = (mark) => mark.places.map((p) => p.name).join(' – ');
+
+/** "Reported 1 October 1941 by Alfred Jodl": where it was then, not now. */
+export const sightedLine = (mark) => `Reported ${worldDate(mark.reported)} by ${mark.source}`;
+
+/** Lines first, then forces, by name: forces are drawn over the lines they sit on. */
+export function sortMarks(marks) {
+  const rank = (m) => (m.places.length > 1 ? 0 : 1);
+  return [...marks].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
+}
+
+const MIN_SPAN = Object.freeze({ lon: 30, lat: 18 });
+
+/** The box to draw, in degrees: what the marks (or, with none, the places) span,
+ *  padded, never narrower than MIN_SPAN. 'world' is the whole map. */
+export function mapBox(map, scope = 'reports') {
+  if (scope === 'world') return { west: -180, east: 180, south: -60, north: 80 };
+  const pts = (map.marks.length ? map.marks.flatMap((m) => m.places) : map.places);
+  if (!pts.length) return mapBox(map, 'world');
+  const lons = pts.map((p) => p.lon);
+  const lats = pts.map((p) => p.lat);
+  const grow = (lo, hi, min) => {
+    const pad = Math.max((hi - lo) * 0.15, (min - (hi - lo)) / 2, 5);
+    return [lo - pad, hi + pad];
+  };
+  const [west, east] = grow(Math.min(...lons), Math.max(...lons), MIN_SPAN.lon);
+  const [south, north] = grow(Math.min(...lats), Math.max(...lats), MIN_SPAN.lat);
+  return { west: Math.max(west, -180), east: Math.min(east, 180), south: Math.max(south, -85), north: Math.min(north, 85) };
+}
+
+/** An equirectangular projection for ``box``, squeezed by the cosine of its middle
+ *  latitude so the high north is not drawn twice as wide as it is. */
+export function projection(box) {
+  const k = Math.cos(((box.north + box.south) / 2) * (Math.PI / 180));
+  const x = (lon) => (lon - box.west) * k;
+  const y = (lat) => box.north - lat;
+  return { x, y, width: (box.east - box.west) * k, height: box.north - box.south };
+}
+
+const r1 = (n) => Math.round(n * 10) / 10;
+
+/** One SVG path for the land rings that touch ``box`` (draw it even-odd: inner rings are lakes). */
+export function landPath(rings, box, proj) {
+  const out = [];
+  for (const ring of rings) {
+    let w = 180; let e = -180; let s = 90; let n = -90;
+    for (const [lon, lat] of ring) {
+      w = Math.min(w, lon); e = Math.max(e, lon); s = Math.min(s, lat); n = Math.max(n, lat);
+    }
+    if (e < box.west || w > box.east || n < box.south || s > box.north) continue;
+    out.push(`M${ring.map(([lon, lat]) => `${r1(proj.x(lon))} ${r1(proj.y(lat))}`).join('L')}Z`);
+  }
+  return out.join('');
+}

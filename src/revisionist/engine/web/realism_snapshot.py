@@ -18,7 +18,7 @@ from revisionist.core.ontology import EntityKind
 from revisionist.core.project import project
 from revisionist.core.realism.advance import next_wake
 from revisionist.core.realism.card import Lever, ParamKind, ParamSpec, words
-from revisionist.core.realism.document import DocumentView
+from revisionist.core.realism.document import BodyField, DocumentView
 from revisionist.core.realism.pipeline import Order, OrderStatus, Pipeline, StepAction, StepOutcome
 from revisionist.core.state import State, View
 from revisionist.engine.directive import Proposal, channels
@@ -34,8 +34,11 @@ from revisionist.engine.web.realism_api import (
     LeverChoice,
     LeverLine,
     LeverParam,
+    MapMark,
+    MapPlace,
     OrderTrack,
     OrderTracker,
+    SeatMap,
     Situation,
     SituationFigure,
     SituationReading,
@@ -182,6 +185,71 @@ def situation(view: View) -> Situation:
             SituationFigure(label=label, unit=unit, sources=sources, disagree=len(latest) > 1)
         )
     return Situation(figures=figures)
+
+
+STALE_DAYS = 14
+"""[proposed] A position older than this is drawn as stale."""
+_DEPTH = 8
+
+
+def _place(view: View, e: EntityId) -> MapPlace:
+    at = view.entities[e].at
+    assert at is not None  # a sighting names only places with a position (world_compile)
+    return MapPlace(name=view.entities[e].name, lat=at[0], lon=at[1])
+
+
+def _sides(view: View) -> set[EntityId]:
+    """The viewer's person and everything above it: what counts as its own side."""
+    out: set[EntityId] = set()
+    at: EntityId | None = view.me.embodies
+    for _ in range(_DEPTH):
+        if at is None or at not in view.entities:
+            break
+        out.add(at)
+        at = view.entities[at].parent
+    return out
+
+
+def seat_map(view: View) -> SeatMap | None:
+    """Every placed feature as the latest arrived page has it; None for a world
+    with no positions (the client hides the map)."""
+    places = [
+        _place(view, k)
+        for k, e in sorted(view.entities.items(), key=lambda kv: (kv[1].name, kv[0]))
+        if e.kind is EntityKind.LOCATION and e.at is not None
+    ]
+    if not places:
+        return None
+    today = view.in_world_date
+    own = _sides(view)
+    latest: dict[tuple[str, str], tuple[DocumentId, DocumentView, BodyField]] = {}
+    arrived = sorted(view.documents.items(), key=lambda kv: (kv[1].arrives, kv[1].issued, kv[0]))
+    for doc_id, doc in arrived:
+        for b in doc.body:
+            if b.sight is not None:
+                latest[(b.label, b.sight.kind.value)] = (doc_id, doc, b)
+    marks: list[MapMark] = []
+    for (label, _), (doc_id, doc, b) in sorted(latest.items(), key=lambda kv: kv[0]):
+        sight = b.sight
+        assert sight is not None
+        side: Literal["own", "other", "none"] = (
+            "none" if sight.side is None else "own" if sight.side in own else "other"
+        )
+        stale = today is not None and (today - doc.issued).days > STALE_DAYS
+        marks.append(
+            MapMark(
+                name=label,
+                kind=sight.kind.value,
+                side=side,
+                side_name=view.entities[sight.side].name if sight.side in view.entities else "",
+                certainty="stale" if stale else "known" if side == "own" else "reported",
+                places=[_place(view, p) for p in sight.places],
+                reported=doc.issued.isoformat(),
+                source=view.entities[doc.author].name,
+                document=doc_id,
+            )
+        )
+    return SeatMap(places=places, marks=marks)
 
 
 def _step_lines(order: Order, pipeline: Pipeline, view: View) -> list[StepLine]:
@@ -348,7 +416,7 @@ def seat_realism(
     flagged: set[DocumentId],
     next_wake_at: str | None,
 ) -> dict[str, Any]:
-    """The ``view.realism`` block of ``/api/me``: in-tray, desk, situation, orders and clock."""
+    """The ``view.realism`` block of ``/api/me``: tray, desk, situation, orders, clock and map."""
     view = project(state, seat)
     today = view.in_world_date
     if today is None:
@@ -362,6 +430,7 @@ def seat_realism(
         "situation": situation(view),
         "orders": orders(view, state.pipelines),
         "clock": clock(view, next_wake_at, waiting_on, 0, wake.to.isoformat()),
+        "map": seat_map(view),
     }
 
 
@@ -375,6 +444,7 @@ __all__ = [
     "orders",
     "proposal",
     "read_ids",
+    "seat_map",
     "seat_realism",
     "situation",
     "words",

@@ -21,6 +21,18 @@ export function h(tag, attrs = {}, ...children) {
   return el;
 }
 
+/** An SVG element, the same way: attributes set one by one, text as text nodes. */
+export function svg(tag, attrs = {}, ...children) {
+  const el = document.createElementNS(SVG, tag);
+  for (const [k, v] of Object.entries(attrs ?? {})) {
+    if (v === undefined || v === null || v === false) continue;
+    if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? '' : String(v));
+  }
+  append(el, children);
+  return el;
+}
+
 function append(el, children) {
   for (const c of children.flat(Infinity)) {
     if (c === undefined || c === null || c === false) continue;

@@ -104,5 +104,27 @@
           "history": [{"value": 18, "issued": "1941-10-06", "arrives": "1941-10-07"}, {"value": null, "issued": "1941-10-13", "arrives": "1941-10-14"}]}
       ]}
     ]
+  },
+  "map": {
+    "places": [
+      {"name": "Halifax", "lat": 44.6, "lon": -63.6},
+      {"name": "Liverpool", "lat": 53.4, "lon": -3.0},
+      {"name": "Lorient", "lat": 47.7, "lon": -3.4},
+      {"name": "North Atlantic", "lat": 55.0, "lon": -30.0},
+      {"name": "Pearl Harbor", "lat": 21.4, "lon": -158.0},
+      {"name": "Reykjavik", "lat": 64.1, "lon": -21.9},
+      {"name": "Scapa Flow", "lat": 58.9, "lon": -3.1},
+      {"name": "Washington", "lat": 38.9, "lon": -77.0}
+    ],
+    "marks": [
+      {"name": "HX convoys", "kind": "route", "side": "other", "side_name": "United Kingdom", "certainty": "reported", "reported": "1941-10-13", "source": "Harold R. Stark", "document": "d-atlantic-1013",
+        "places": [{"name": "Halifax", "lat": 44.6, "lon": -63.6}, {"name": "North Atlantic", "lat": 55.0, "lon": -30.0}, {"name": "Liverpool", "lat": 53.4, "lon": -3.0}]},
+      {"name": "Home Fleet", "kind": "fleet", "side": "other", "side_name": "United Kingdom", "certainty": "stale", "reported": "1941-09-29", "source": "Winston Churchill", "document": "d-churchill-0929",
+        "places": [{"name": "Scapa Flow", "lat": 58.9, "lon": -3.1}]},
+      {"name": "U-boat arm", "kind": "fleet", "side": "other", "side_name": "Germany", "certainty": "reported", "reported": "1941-10-13", "source": "Harold R. Stark", "document": "d-atlantic-1013",
+        "places": [{"name": "Lorient", "lat": 47.7, "lon": -3.4}]},
+      {"name": "US Atlantic Fleet", "kind": "fleet", "side": "own", "side_name": "United States", "certainty": "known", "reported": "1941-10-13", "source": "Harold R. Stark", "document": "d-atlantic-1013",
+        "places": [{"name": "Reykjavik", "lat": 64.1, "lon": -21.9}]}
+    ]
   }
 }

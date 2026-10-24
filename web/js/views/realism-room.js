@@ -1,5 +1,5 @@
-// The realism room: the in-tray, the situation board, the desk and the order
-// tracker for a seat in a realism game, under the pace header. Built from
+// The realism room: the in-tray, the situation board, the desk, the order tracker
+// and the map for a seat in a realism game, under the pace header. Built from
 // view.realism (realism_api.py).
 
 import { api } from '../api.js';
@@ -10,9 +10,24 @@ import {
   board, desk, directiveForm, dossier, inTray, paceHeader, proposalCard, tracker,
 } from './realism.js';
 import { header } from './frame.js';
+import { mapView } from './realism-map.js';
 
-const TABS = [['tray', 'In-tray'], ['situation', 'Situation'], ['desk', 'Desk'], ['orders', 'Orders']];
-const ui = { tab: 'tray', page: null, said: null, filter: 'all', sort: 'newest', draft: null, proposal: null };
+const TABS = [['tray', 'In-tray'], ['situation', 'Situation'], ['desk', 'Desk'], ['orders', 'Orders'], ['map', 'Map']];
+const ui = {
+  tab: 'tray', page: null, said: null, filter: 'all', sort: 'newest', draft: null, proposal: null,
+  mapMode: 'map', mapScope: 'reports', mapSelected: null,
+};
+
+// The coastlines, fetched once and kept: the map draws without them until they come.
+let land = null;
+let landing = null;
+function loadLand(then) {
+  landing ??= fetch('/assets/land-110m.json')
+    .then((r) => (r.ok ? r.json() : null))
+    .then((json) => { land = json; })
+    .catch(() => {});
+  landing.then(then);
+}
 
 function stepForm(order, act) {
   const id = `rl-step-${order.id}`;
@@ -106,6 +121,22 @@ export function realismRoom(ctx) {
     if (ui.tab === 'situation') {
       return h('div', { class: 'tab-body' }, board(rv.situation, { onOpen: open }));
     }
+    if (ui.tab === 'map' && rv.map) {
+      if (!land) loadLand(() => { if (land && ui.tab === 'map') rerender(); });
+      return h('div', { class: 'tab-body' }, mapView(rv.map, land, {
+        mode: ui.mapMode,
+        scope: ui.mapScope,
+        selected: ui.mapSelected,
+        onMode: (m) => { ui.mapMode = m; rerender(); },
+        onScope: (sc) => { ui.mapScope = sc; rerender(); },
+        onSelect: (name, mode) => {
+          ui.mapSelected = ui.mapSelected === name && !mode ? null : name;
+          if (mode) ui.mapMode = mode;
+          rerender();
+        },
+        onOpen: open,
+      }));
+    }
     if (ui.tab === 'orders') {
       const waiting = rv.orders.orders.filter((o) => o.decision_needed);
       return h('div', { class: 'tab-body' }, tracker(rv.orders),
@@ -135,7 +166,7 @@ export function realismRoom(ctx) {
       advance,
     ];
     const tablist = h('div', { role: 'tablist', 'aria-label': 'Workspace', class: 'tabs' },
-      TABS.map(([k, label]) => h('button', {
+      TABS.filter(([k]) => k !== 'map' || rv.map).map(([k, label]) => h('button', {
         type: 'button', role: 'tab', 'aria-selected': String(ui.tab === k), id: `rl-tab-${k}`,
         'aria-controls': 'rl-panel',
         onclick: () => { ui.tab = k; ui.said = null; rerender(); },

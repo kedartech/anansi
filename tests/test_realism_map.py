@@ -392,3 +392,30 @@ def test_the_new_fields_are_left_out_when_empty() -> None:
     bare = next(f for f in Rig().state.feeds.values() if not f.sights)
     assert "sights" not in bare.model_dump()
     assert "features" not in State(campaign_id=CAMPAIGN).model_dump()
+
+
+# --- the seat's map (the snapshot) ----------------------------------------------------------
+
+
+def test_the_seat_map_ages_and_sides_its_marks() -> None:
+    _, state = ticked("hitler")
+    view = project(state, next(iter(state.seats)))
+    fresh = {m["name"]: m for m in realism_snapshot.seat_map(view)["marks"]}  # type: ignore[index]
+    assert fresh["Army Group Centre"]["certainty"] == "known"
+    assert fresh["Soviet Western Front"]["certainty"] == "reported"
+    assert fresh["The Eastern Front"]["side"] == "none"
+    assert fresh["The Eastern Front"]["side_name"] == ""
+    assert view.in_world_date is not None
+    later = view.model_copy(
+        update={
+            "in_world_date": view.in_world_date + timedelta(days=realism_snapshot.STALE_DAYS + 3)
+        }
+    )
+    aged = realism_snapshot.seat_map(later)
+    assert aged is not None and {m["certainty"] for m in aged["marks"]} == {"stale"}
+
+
+def test_a_world_without_positions_has_no_map() -> None:
+    r = Rig("realism-toy")
+    r.seat("ada")
+    assert realism_snapshot.seat_map(project(r.state, r.seats["ada"])) is None

@@ -215,6 +215,39 @@ class Situation(TypedDict):
     figures: list[SituationFigure]
 
 
+class MapPlace(TypedDict):
+    name: str
+    lat: float
+    lon: float
+
+
+class MapMark(TypedDict):
+    """One force, front or route as the seat's latest page about it places it."""
+
+    name: str
+    kind: Literal["fleet", "army", "air", "front", "route"]
+    side: Literal["own", "other", "none"]
+    """Own: the seat's own polity or body. None: a front, which is both sides'."""
+    side_name: str
+    certainty: Literal["known", "reported", "stale"]
+    """Known: the seat's own side, freshly reported. Stale: the page is older than
+    ``STALE_DAYS``. A feature no page has placed is not on the map at all."""
+    places: list[MapPlace]
+    reported: str
+    """The page's issue date: where it was then, not now."""
+    source: str
+    """The author's name."""
+    document: str
+    """The page's id, to open it from the map."""
+
+
+class SeatMap(TypedDict):
+    """The map: places are public; marks come from arrived pages only, never the record."""
+
+    places: list[MapPlace]
+    marks: list[MapMark]
+
+
 __all__ = [
     "BodyLine",
     "Clock",
@@ -227,8 +260,11 @@ __all__ = [
     "LeverChoice",
     "LeverLine",
     "LeverParam",
+    "MapMark",
+    "MapPlace",
     "OrderTrack",
     "OrderTracker",
+    "SeatMap",
     "Situation",
     "SituationFigure",
     "SituationReading",
