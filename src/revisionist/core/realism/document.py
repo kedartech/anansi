@@ -10,12 +10,14 @@ how far an estimate is from the record.
 
 from datetime import date
 from enum import StrEnum
+from typing import ClassVar
 
 from pydantic import Field, model_validator
 
 from revisionist.core._base import Label, Model
-from revisionist.core.ids import DocumentId, EntityId, FeedId, QuantityId
+from revisionist.core.ids import DocumentId, EntityId, FeatureId, FeedId, QuantityId
 from revisionist.core.realism.card import ChannelKind
+from revisionist.core.realism.geography import Sight, SightRef
 from revisionist.core.visibility import Scope
 
 
@@ -46,6 +48,10 @@ class BodyField(Model):
     value: int | Label | None = None
     """None: the author says nothing on this (an omission is still a line)."""
     unit: Label = ""
+    sight: Sight | None = None
+    """A line placing a feature: ``value`` names the places in words, this places them."""
+
+    late_fields: ClassVar[frozenset[str]] = frozenset({"sight"})
 
 
 class DocumentView(Model):
@@ -99,6 +105,9 @@ class DocumentTruth(Model):
     """None for a document issued by an event rather than a feed (a leak, a transcript)."""
     truth_refs: tuple[TruthRef, ...] = ()
     bias: Bias = Bias()
+    sightings: tuple[SightRef, ...] = ()
+
+    late_fields: ClassVar[frozenset[str]] = frozenset({"sightings"})
 
 
 class Document(Model):
@@ -128,6 +137,10 @@ class Feed(Model):
     latency_days: int | None = Field(default=None, ge=0, le=365)
     reports: tuple[QuantityId, ...] = ()
     bias: Bias = Bias()
+    sights: tuple[FeatureId, ...] = ()
+    """Features each issue places, after the figures."""
+
+    late_fields: ClassVar[frozenset[str]] = frozenset({"sights"})
 
 
 __all__ = [

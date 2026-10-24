@@ -37,14 +37,37 @@ entities:
   - {key: stavka, kind: org, name: Stavka and the State Defence Committee, parent: ussr}
   - {key: comando_supremo, kind: org, name: Comando Supremo, parent: italy}
   - {key: military_affairs_commission, kind: org, name: Military Affairs Commission, parent: china}
-  - {key: washington, kind: location, name: Washington}
-  - {key: london, kind: location, name: London}
-  - {key: tokyo, kind: location, name: Tokyo}
-  - {key: berlin, kind: location, name: Berlin}
-  - {key: moscow, kind: location, name: Moscow}
-  - {key: rome, kind: location, name: Rome}
-  - {key: chungking, kind: location, name: Chungking}
-  - {key: north_atlantic, kind: location, name: North Atlantic}
+  # Positions are approximate (latitude, longitude) for the map [proposed].
+  - {key: washington, kind: location, name: Washington, at: [38.9, -77.0]}
+  - {key: london, kind: location, name: London, at: [51.5, -0.1]}
+  - {key: tokyo, kind: location, name: Tokyo, at: [35.7, 139.7]}
+  - {key: berlin, kind: location, name: Berlin, at: [52.5, 13.4]}
+  - {key: moscow, kind: location, name: Moscow, at: [55.8, 37.6]}
+  - {key: rome, kind: location, name: Rome, at: [41.9, 12.5]}
+  - {key: chungking, kind: location, name: Chungking, at: [29.6, 106.6]}
+  - {key: north_atlantic, kind: location, name: North Atlantic, at: [55.0, -30.0]}
+  - {key: norfolk, kind: location, name: Norfolk, at: [36.9, -76.3]}
+  - {key: argentia, kind: location, name: Argentia, at: [47.3, -54.0]}
+  - {key: halifax_port, kind: location, name: Halifax, at: [44.6, -63.6]}
+  - {key: sydney_cb, kind: location, name: "Sydney, Cape Breton", at: [46.1, -60.2]}
+  - {key: reykjavik, kind: location, name: Reykjavik, at: [64.1, -21.9]}
+  - {key: liverpool, kind: location, name: Liverpool, at: [53.4, -3.0]}
+  - {key: scapa_flow, kind: location, name: Scapa Flow, at: [58.9, -3.1]}
+  - {key: lorient, kind: location, name: Lorient, at: [47.7, -3.4]}
+  - {key: archangel, kind: location, name: Archangel, at: [64.5, 40.5]}
+  - {key: leningrad, kind: location, name: Leningrad, at: [59.9, 30.3]}
+  - {key: smolensk, kind: location, name: Smolensk, at: [54.8, 32.0]}
+  - {key: vyazma, kind: location, name: Vyazma, at: [55.2, 34.3]}
+  - {key: kalinin, kind: location, name: Kalinin, at: [56.9, 35.9]}
+  - {key: mozhaisk, kind: location, name: Mozhaisk, at: [55.5, 36.0]}
+  - {key: kiev, kind: location, name: Kiev, at: [50.5, 30.5]}
+  - {key: poltava, kind: location, name: Poltava, at: [49.6, 34.6]}
+  - {key: kharkov, kind: location, name: Kharkov, at: [50.0, 36.2]}
+  - {key: odessa, kind: location, name: Odessa, at: [46.5, 30.7]}
+  - {key: taganrog, kind: location, name: Taganrog, at: [47.2, 38.9]}
+  - {key: pearl_harbor_base, kind: location, name: Pearl Harbor, at: [21.4, -158.0]}
+  - {key: kure, kind: location, name: Kure, at: [34.2, 132.6]}
+  - {key: hitokappu_bay, kind: location, name: Hitokappu Bay, at: [44.9, 147.6]}
   # United States
   - {key: roosevelt, kind: person, name: Franklin D. Roosevelt, parent: usa}
   - {key: wallace, kind: person, name: Henry A. Wallace, parent: usa}
@@ -202,6 +225,49 @@ quantities:
   - {key: uboat_posture, owner: germany, name: "U-boat posture to US ships (0 restrict, 1 open)", unit: level, computed: true}
   - {key: opinion_target, owner: usa, name: "Where 'about right' is heading", unit: percent, computed: true}
 
+# The map. Positions and dates are approximate and unsourced (gap: true): a
+# force's legs are where the record has it if nobody orders it elsewhere.
+features:
+  - {key: us_atlantic_fleet, kind: fleet, name: US Atlantic Fleet, side: usa, tier: 4, places: [norfolk], gap: true}
+  - {key: us_pacific_fleet, kind: fleet, name: US Pacific Fleet, side: usa, tier: 5, places: [pearl_harbor_base], gap: true}
+  - {key: home_fleet, kind: fleet, name: Home Fleet, side: uk, tier: 4, places: [scapa_flow], gap: true}
+  - {key: uboat_arm, kind: fleet, name: U-boat arm, side: germany, tier: 3, places: [lorient], gap: true}
+  - key: combined_fleet
+    kind: fleet
+    name: Combined Fleet
+    side: japan
+    tier: 5
+    places: [kure]
+    legs: [{since: 1941-11-22, places: [hitokappu_bay]}]
+    gap: true
+  - key: army_group_centre
+    kind: army
+    name: Army Group Centre
+    side: germany
+    tier: 5
+    places: [smolensk]
+    legs: [{since: 1941-10-07, places: [vyazma]}, {since: 1941-10-24, places: [mozhaisk]}]
+    gap: true
+  - key: soviet_western_front
+    kind: army
+    name: Soviet Western Front
+    side: ussr
+    tier: 4
+    places: [vyazma]
+    legs: [{since: 1941-10-12, places: [mozhaisk]}, {since: 1941-10-24, places: [moscow]}]
+    gap: true
+  - key: eastern_front
+    kind: front
+    name: The Eastern Front
+    places: [leningrad, smolensk, kiev, odessa]
+    legs:
+      - {since: 1941-09-26, places: [leningrad, smolensk, poltava, odessa]}
+      - {since: 1941-10-24, places: [leningrad, kalinin, mozhaisk, kharkov, taganrog]}
+    gap: true
+  - {key: hx_route, kind: route, name: HX convoys, side: uk, places: [halifax_port, north_atlantic, liverpool], gap: true}
+  - {key: sc_route, kind: route, name: SC convoys, side: uk, places: [sydney_cb, north_atlantic, liverpool], gap: true}
+  - {key: arctic_route, kind: route, name: Arctic convoys, side: uk, places: [reykjavik, archangel], gap: true}
+
 feeds:
   - {key: state_dept_reports, name: State Department memoranda, author: hull, kind: memo, channel: letter, classification: confidential, reports: [japan_oil_stocks], every_days: 7, latency_days: 1, assumed: true, gap: true}
   - {key: grew_cables, name: Grew's cables from Tokyo, author: grew, kind: cable, channel: cable, classification: confidential, every_days: 3, latency_days: 1, assumed: true, gap: true}
@@ -209,10 +275,13 @@ feeds:
   - {key: gallup_polls, name: Gallup polls, author: early, kind: poll, channel: press, reports: [gallup_fdr_about_right, gallup_declare_war_germany, gallup_help_britain], every_days: 7, latency_days: 14, assumed: true, gap: true}
   - {key: house_whip_count, name: The Speaker's count, author: rayburn, kind: whip_count, channel: telephone, reports: [house_democrats, house_republicans], every_days: 7, latency_days: 0, assumed: true, gap: true}
   - {key: senate_whip_count, name: The Majority Leader's count, author: barkley, kind: whip_count, channel: telephone, reports: [senate_neutrality_yeas], every_days: 7, latency_days: 0, assumed: true, gap: true}
-  - {key: atlantic_reports, name: Atlantic reports from the Navy Department, author: stark, kind: report, channel: cable, classification: secret, reports: [uboat_losses_sep, uboats_operational], every_days: 7, latency_days: 1, assumed: true, gap: true}
-  - {key: churchill_cables, name: Churchill's cables, author: churchill, kind: cable, channel: cable, classification: secret, every_days: 3, latency_days: 1, assumed: true, gap: true}
+  - {key: atlantic_reports, name: Atlantic reports from the Navy Department, author: stark, kind: report, channel: cable, classification: secret, reports: [uboat_losses_sep, uboats_operational], sights: [us_atlantic_fleet, us_pacific_fleet, uboat_arm, hx_route, sc_route], every_days: 7, latency_days: 1, assumed: true, gap: true}
+  - {key: churchill_cables, name: Churchill's cables, author: churchill, kind: cable, channel: cable, classification: secret, sights: [home_fleet, arctic_route], every_days: 3, latency_days: 1, assumed: true, gap: true}
   - {key: soviet_requests, name: Soviet requests for aid, author: molotov, kind: letter, channel: courier, classification: confidential, every_days: 14, latency_days: 7, assumed: true, gap: true}
-  - {key: german_naval_reports, name: Kriegsmarine reports, author: raeder, kind: report, channel: courier, classification: secret, reports: [uboats_operational, uboat_losses_sep], every_days: 7, latency_days: 1, assumed: true, gap: true}
+  - {key: german_naval_reports, name: Kriegsmarine reports, author: raeder, kind: report, channel: courier, classification: secret, reports: [uboats_operational, uboat_losses_sep], sights: [uboat_arm, home_fleet, hx_route], every_days: 7, latency_days: 1, assumed: true, gap: true}
+  - {key: admiralty_reports, name: Admiralty reports, author: pound, kind: report, channel: courier, classification: secret, sights: [home_fleet, uboat_arm, hx_route, sc_route, arctic_route], every_days: 7, latency_days: 1, assumed: true, gap: true}
+  - {key: okw_situation, name: OKW situation reports, author: jodl, kind: report, channel: courier, classification: secret, sights: [army_group_centre, soviet_western_front, eastern_front], every_days: 3, latency_days: 1, assumed: true, gap: true}
+  - {key: stavka_situation, name: General Staff situation reports, author: shaposhnikov, kind: report, channel: courier, classification: secret, sights: [soviet_western_front, army_group_centre, eastern_front], every_days: 3, latency_days: 0, assumed: true, gap: true}
 
 pipelines:
   - key: executive_order
@@ -358,6 +427,14 @@ cards:
         params:
           - {name: order, kind: enum, choices: [escort_convoys, shoot_on_sight, hold_in_port], label: "The order", choice_labels: ["Escort the convoys", "Shoot on sight", "Hold in port"]}
           - {name: zone, kind: enum, choices: [western_atlantic, iceland_route, pacific], label: "Where", choice_labels: ["Western Atlantic", "The Iceland route", "The Pacific"]}
+      - name: move_fleet
+        pipeline: naval_order
+        resolver: movement
+        label: "Move a fleet"
+        summary: "Send a fleet to another base. The Navy Department carries it out."
+        params:
+          - {name: force, kind: enum, choices: [us_atlantic_fleet, us_pacific_fleet], label: "Which fleet", choice_labels: ["The Atlantic Fleet", "The Pacific Fleet"]}
+          - {name: to, kind: enum, choices: [norfolk, argentia, reykjavik, pearl_harbor_base], label: "To", choice_labels: ["Norfolk", "Argentia", "Reykjavik", "Pearl Harbor"]}
       - name: public_address
         pipeline: public_address
         resolver: opinion
@@ -365,15 +442,9 @@ cards:
         summary: "Speak to the country by radio on a chosen theme."
         params:
           - {name: theme, kind: enum, choices: [aid_to_allies, freedom_of_the_seas, national_unity], label: "Theme", choice_labels: ["Aid to the Allies", "Freedom of the seas", "National unity"]}
-      # [proposed] Neither resolver moves a figure for these two levers yet: the order
-      # runs its pipeline and its reply letter, and nothing more.
-      - name: executive_order
-        pipeline: executive_order
-        resolver: production
-        label: "Issue an executive order"
-        summary: "Direct the executive departments over your own signature, without going to Congress."
-        params:
-          - {name: subject, kind: text, label: "What the order directs"}
+      # [proposed] The resolver moves no figure for this lever yet: the order runs
+      # its pipeline and its reply letter, and nothing more. (Executive orders gave
+      # way to "Move a fleet" under the six-lever cap, Josh, Batch 6.)
       - name: cable_to_churchill
         pipeline: cable_to_churchill
         resolver: shipping
@@ -393,7 +464,7 @@ cards:
       - {person: barkley, channel: telephone}
       - {person: churchill, channel: cable}
     feeds: [state_dept_reports, magic_intercepts, gallup_polls, house_whip_count, senate_whip_count, atlantic_reports, churchill_cables, soviet_requests]
-    pipelines: [executive_order, bill_through_congress, naval_order, cable_to_churchill, lend_lease_allocation, public_address]
+    pipelines: [bill_through_congress, naval_order, cable_to_churchill, lend_lease_allocation, public_address]
     constraints:
       - Congress alone declares war
       - Congress holds appropriations
@@ -427,6 +498,14 @@ cards:
         summary: "Direct which branch of industry is to be pressed ahead."
         params:
           - {name: sector, kind: enum, choices: [aircraft, escorts, merchant_ships], label: "Which sector", choice_labels: ["Aircraft", "Escort vessels", "Merchant ships"]}
+      - name: move_fleet
+        pipeline: cos_directive
+        resolver: movement
+        label: "Move the Home Fleet"
+        summary: "Tell the Admiralty where the Home Fleet is to base."
+        params:
+          - {name: force, kind: enum, choices: [home_fleet], label: "Which fleet", choice_labels: ["The Home Fleet"]}
+          - {name: to, kind: enum, choices: [scapa_flow, reykjavik, liverpool], label: "To", choice_labels: ["Scapa Flow", "Reykjavik", "Liverpool"]}
       - name: broadcast
         pipeline: press_broadcast
         resolver: opinion
@@ -441,7 +520,7 @@ cards:
       - {person: ismay, channel: in_person}
       - {person: halifax, channel: cable}
       - {person: stalin, channel: cable}
-    feeds: []
+    feeds: [admiralty_reports]
     pipelines: [cos_directive, cable_to_roosevelt, press_broadcast]
     constraints:
       - keeps the confidence of the Commons
@@ -473,12 +552,20 @@ cards:
         summary: "Apply to the Allies for supplies or credit."
         params:
           - {name: item, kind: enum, choices: [aircraft, tanks, aluminium, credit], label: "What is wanted", choice_labels: ["Aircraft", "Tanks", "Aluminium", "Credit"]}
+      - name: move_army
+        pipeline: gko_decree
+        resolver: movement
+        label: "Move the Western Front"
+        summary: "Order the Western Front to stand on a new line."
+        params:
+          - {name: force, kind: enum, choices: [soviet_western_front], label: "Which army", choice_labels: ["The Western Front"]}
+          - {name: to, kind: enum, choices: [vyazma, mozhaisk, moscow], label: "To", choice_labels: ["Vyazma", "Mozhaisk", "Moscow"]}
     contacts:
       - {person: molotov, channel: in_person}
       - {person: shaposhnikov, channel: in_person}
       - {person: roosevelt, channel: cable}
       - {person: churchill, channel: cable}
-    feeds: [soviet_requests]
+    feeds: [soviet_requests, stavka_situation]
     pipelines: [gko_decree, soviet_aid_request]
     constraints:
       - the German armies are inside Soviet territory
@@ -511,13 +598,21 @@ cards:
         summary: "Direct which branch of industry is to be pressed ahead."
         params:
           - {name: sector, kind: enum, choices: [uboats, aircraft, tanks], label: "Which sector", choice_labels: ["U-boats", "Aircraft", "Tanks"]}
+      - name: move_army
+        pipeline: okw_directive
+        resolver: movement
+        label: "Move Army Group Centre"
+        summary: "Direct Army Group Centre on a new objective."
+        params:
+          - {name: force, kind: enum, choices: [army_group_centre], label: "Which army group", choice_labels: ["Army Group Centre"]}
+          - {name: to, kind: enum, choices: [smolensk, vyazma, kalinin, mozhaisk, moscow], label: "To", choice_labels: ["Smolensk", "Vyazma", "Kalinin", "Mozhaisk", "Moscow"]}
     contacts:
       - {person: ribbentrop, channel: in_person}
       - {person: raeder, channel: in_person}
       - {person: jodl, channel: in_person}
       - {person: goering, channel: in_person}
       - {person: mussolini, channel: courier}
-    feeds: [german_naval_reports]
+    feeds: [german_naval_reports, okw_situation]
     pipelines: [okw_directive]
     constraints:
       - the main effort is in the East
@@ -971,6 +1066,7 @@ cards:
     principals: [stalin]
     powers: [direct the General Staff, advise Stavka]
     contacts: [{person: stalin, channel: in_person}]
+    feeds: [stavka_situation]
     pipelines: [gko_decree]
     horizon_days: 7
   - person: he_yingqin

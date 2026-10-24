@@ -17,6 +17,7 @@ from revisionist.core.realism.document import (
     Feed,
     TruthRef,
 )
+from revisionist.core.realism.geography import Feature, Sight, SightRef
 from revisionist.core.state import State
 from revisionist.core.visibility import Scope, Visibility
 
@@ -74,6 +75,19 @@ def _report(seed: str, feed: Feed, quantity: str, true: int) -> int | None:
     return (true * (100 + bias.skew_pct + noise) + 50) // 100
 
 
+def _sight(state: State, seed: str, feed: Feed, f: Feature) -> BodyField | None:
+    """Where the author places one feature: where it is, or nothing (left out).
+    A force under way is placed where it set out from until it arrives."""
+    if _draw(seed, feed, f.feature_id, "omit", 100) < feed.bias.omit_pct:
+        return None
+    words = " \N{EN DASH} ".join(state.entities[p].name for p in f.places)
+    return BodyField(
+        label=f.name,
+        value=words if len(words) <= 60 else words[:59] + "…",
+        sight=Sight(kind=f.kind, side=f.side, places=f.places),
+    )
+
+
 def _holders(state: State, feed: Feed) -> frozenset[SeatId]:
     persons = {p for p, c in state.cards.items() if feed.feed_id in c.feeds}
     return frozenset(s.seat_id for s in state.seats.values() if s.embodies in persons)
@@ -92,6 +106,13 @@ def issue(state: State, feed: Feed, today: date, seed: str) -> ev.DocumentIssued
         refs.append(TruthRef(quantity_id=qid, value=q.value))
         claimed = None if q.value is None else _report(seed, feed, qid, q.value)
         body.append(BodyField(label=q.name, value=claimed, unit=q.unit))
+    seen: list[SightRef] = []
+    for fid in feed.sights:
+        f = state.features[fid]
+        line = _sight(state, seed, feed, f)
+        if line is not None:
+            seen.append(SightRef(feature_id=fid, places=f.places))
+            body.append(line)
     doc_id = DocumentId(derived_id(state.campaign_id, feed.feed_id, today.isoformat()))
     arrives = today + timedelta(days=(feed.latency_days or 0) + feed.bias.delay_days)
     view = DocumentView(
@@ -106,5 +127,11 @@ def issue(state: State, feed: Feed, today: date, seed: str) -> ev.DocumentIssued
         body=tuple(body),
         scope=Scope(visibility=Visibility.PRIVATE, known_by=holders),
     )
-    truth = DocumentTruth(doc_id=doc_id, feed=feed.feed_id, truth_refs=tuple(refs), bias=feed.bias)
+    truth = DocumentTruth(
+        doc_id=doc_id,
+        feed=feed.feed_id,
+        truth_refs=tuple(refs),
+        bias=feed.bias,
+        sightings=tuple(seen),
+    )
     return ev.DocumentIssued(document=view, truth=truth)

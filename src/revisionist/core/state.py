@@ -25,6 +25,7 @@ from revisionist.core.ids import (
     DocumentId,
     EntityId,
     FactId,
+    FeatureId,
     FeedId,
     GoalId,
     IntentId,
@@ -54,6 +55,7 @@ from revisionist.core.ontology import (
 )
 from revisionist.core.realism.card import CardFace, Desk, SeatCard
 from revisionist.core.realism.document import Document, DocumentView, Feed
+from revisionist.core.realism.geography import Feature
 from revisionist.core.realism.pipeline import Order, Pipeline
 from revisionist.core.realism.quantity import Quantity
 from revisionist.core.settings import Settings
@@ -125,6 +127,8 @@ class State(_World):
     """Both halves of every document issued, arrived or not."""
     orders: dict[OrderId, Order] = Field(default_factory=dict)
     quantities: dict[QuantityId, Quantity] = Field(default_factory=dict)
+    features: dict[FeatureId, Feature] = Field(default_factory=dict)
+    """Engine only: seats learn of features from documents that sight them."""
 
     late_fields: ClassVar[frozenset[str]] = _World.late_fields | {
         "cards",
@@ -133,6 +137,7 @@ class State(_World):
         "documents",
         "orders",
         "quantities",
+        "features",
     }
 
 

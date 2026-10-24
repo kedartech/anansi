@@ -65,6 +65,10 @@ class Entity(Model):
     """Polity for a faction, org for a person, and so on."""
     location: EntityId | None = None
     tags: frozenset[str] = frozenset()
+    at: tuple[float, float] | None = None
+    """A place's (latitude, longitude), for the map. Realism only."""
+
+    late_fields: ClassVar[frozenset[str]] = frozenset({"at"})
 
 
 class AssetKind(StrEnum):

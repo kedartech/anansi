@@ -11,6 +11,7 @@ have no card yet: ``compile_figure`` adds one person's card to a running campaig
 """
 
 from collections.abc import Callable, Mapping, Sequence
+from itertools import pairwise
 
 from revisionist.core import events as ev
 from revisionist.core import roster
@@ -39,6 +40,7 @@ from revisionist.core.ids import (
     EntityId,
     EventId,
     FactId,
+    FeatureId,
     FeedId,
     GoalId,
     MeterId,
@@ -72,8 +74,9 @@ from revisionist.core.ontology import (
     Seat,
     SeatKind,
 )
-from revisionist.core.realism.card import Contact, Lever, SeatCard
+from revisionist.core.realism.card import Contact, Lever, ParamKind, SeatCard
 from revisionist.core.realism.document import Feed
+from revisionist.core.realism.geography import FORCES, Feature, Leg
 from revisionist.core.realism.pipeline import Pipeline, Step
 from revisionist.core.realism.quantity import Quantity
 from revisionist.core.state import State
@@ -84,6 +87,7 @@ from revisionist.core.world import (
     ClauseDecl,
     EntityDecl,
     GoalDecl,
+    LeverDecl,
     ScopeDecl,
     ScopeSpec,
     WorldFile,
@@ -180,6 +184,7 @@ def _keyed(world: WorldFile) -> list[tuple[str, str]]:
     keyed += [("history", d.key) for d in world.schedule]
     keyed += [("source", d.key) for d in world.sources]
     keyed += [("quantity", d.key) for d in world.quantities]
+    keyed += [("feature", d.key) for d in world.features]
     keyed += [("feed", d.key) for d in world.feeds]
     keyed += [("pipeline", d.key) for d in world.pipelines]
     return keyed
@@ -337,7 +342,7 @@ def _check_v3(world: WorldFile, sections: Mapping[str, str], problems: list[str]
 def _check_realism(world: WorldFile, sections: Mapping[str, str], problems: list[str]) -> None:
     """Cards, feeds, pipelines, quantities and their citations (realism direction)."""
     if world.ruleset == "legacy":
-        for name in ("cards", "feeds", "pipelines", "quantities", "sources"):
+        for name in ("cards", "feeds", "pipelines", "quantities", "features", "sources"):
             if getattr(world, name):
                 problems.append(f"{name}: only a realism world has {name}")
         return
@@ -361,7 +366,9 @@ def _check_realism(world: WorldFile, sections: Mapping[str, str], problems: list
         where = f"feed {f.key}"
         person(where, f.author)
         _refs(problems, where, f.reports, "quantity", sections)
+        _refs(problems, where, f.sights, "feature", sections)
         _check_cited(problems, where, f, sections)
+    _check_features(world, sections, problems)
     for pl in world.pipelines:
         where = f"pipeline {pl.key}"
         for step in pl.steps:
@@ -386,6 +393,8 @@ def _check_realism(world: WorldFile, sections: Mapping[str, str], problems: list
         for lv in c.levers:
             if lv.pipeline not in c.pipelines:
                 problems.append(f"{where}: lever {lv.name} names a pipeline not on the card")
+            if lv.resolver == "movement":
+                _check_movement(world, f"{where}: lever {lv.name}", lv, problems)
     playable = {c.person for c in world.cards if c.playable}
     listed = {ch.entity for ch in world.roster}
     # A listed person with no card yet is built when picked (compile_figure).
@@ -393,6 +402,60 @@ def _check_realism(world: WorldFile, sections: Mapping[str, str], problems: list
         problems.append(f"character {key}: a realism roster lists only playable cards")
     for key in sorted(playable - listed):
         problems.append(f"card {key}: playable, so it must be on the roster")
+
+
+def _placed(world: WorldFile) -> set[str]:
+    return {d.key for d in world.entities if d.kind is EntityKind.LOCATION and d.at is not None}
+
+
+def _check_features(world: WorldFile, sections: Mapping[str, str], problems: list[str]) -> None:
+    """Places with a position, the right number of them, and sides that can hold forces."""
+    for d in world.entities:
+        if d.at is not None and d.kind is not EntityKind.LOCATION:
+            problems.append(f"entity {d.key}: only a place has a position")
+    placed = _placed(world)
+    bodies = {
+        d.key
+        for d in world.entities
+        if d.kind in (EntityKind.POLITY, EntityKind.ORG, EntityKind.FACTION)
+    }
+    start = world.start_date
+    for f in world.features:
+        where = f"feature {f.key}"
+        _ref(problems, where, f.side, "entity", sections)
+        if f.side is not None and f.side in sections and f.side not in bodies:
+            problems.append(f"{where}: {f.side} is not a polity or body")
+        if f.kind in FORCES and f.side is None:
+            problems.append(f"{where}: a force belongs to a side")
+        legs = [(f.as_of or start, f.places), *((leg.since, leg.places) for leg in f.legs)]
+        for n, (_, places) in enumerate(legs):
+            at = where if n == 0 else f"{where} leg {n}"
+            _refs(problems, at, places, "entity", sections)
+            for p in places:
+                if p in sections and p not in placed:
+                    problems.append(f"{at}: {p} is not a place with a position")
+            if f.kind in FORCES and len(places) != 1:
+                problems.append(f"{at}: a force is at one place")
+            if f.kind not in FORCES and len(places) < 2:
+                problems.append(f"{at}: a {f.kind.value} joins two places or more")
+        days = [on for on, _ in legs]
+        if any(a is not None and b is not None and b <= a for a, b in pairwise(days)):
+            problems.append(f"{where}: legs run forward in time")
+        _check_cited(problems, where, f, sections)
+
+
+def _check_movement(world: WorldFile, where: str, lever: LeverDecl, problems: list[str]) -> None:
+    """A movement lever offers forces by key and places with a position by key."""
+    params = {p.name: p for p in lever.params}
+    forces = {f.key for f in world.features if f.kind in FORCES}
+    for name, allowed, what in (("force", forces, "force"), ("to", _placed(world), "place")):
+        spec = params.get(name)
+        if spec is None or spec.kind is not ParamKind.ENUM:
+            problems.append(f"{where}: needs an enum parameter {name}")
+            continue
+        for choice in spec.choices:
+            if choice not in allowed:
+                problems.append(f"{where}: {choice} is not a {what}")
 
 
 def _check_cited(problems: list[str], where: str, decl: Cited, sections: Mapping[str, str]) -> None:
@@ -781,6 +844,21 @@ def _emit_realism(world: WorldFile, ids: Mapping[str, str]) -> list[tuple[ev.Pay
             scope=PUBLIC if q.public else None,
         )
         out.append((ev.QuantitySet(quantity=quantity), PUBLIC))
+    for d in world.features:
+        feature = Feature(
+            feature_id=FeatureId(ids[d.key]),
+            kind=d.kind,
+            name=d.name,
+            side=_maybe(ids, d.side, EntityId),
+            tier=d.tier,
+            places=tuple(EntityId(ids[k]) for k in d.places),
+            as_of=d.as_of or world.start_date,
+            legs=tuple(
+                Leg(since=leg.since, places=tuple(EntityId(ids[k]) for k in leg.places))
+                for leg in d.legs
+            ),
+        )
+        out.append((ev.FeatureSet(feature=feature), PUBLIC))
     feeds = tuple(
         Feed(
             feed_id=FeedId(ids[f.key]),
@@ -792,6 +870,7 @@ def _emit_realism(world: WorldFile, ids: Mapping[str, str]) -> list[tuple[ev.Pay
             every_days=f.every_days,
             latency_days=f.latency_days,
             reports=tuple(QuantityId(ids[k]) for k in f.reports),
+            sights=tuple(FeatureId(ids[k]) for k in f.sights),
             bias=f.bias,
         )
         for f in world.feeds
@@ -825,6 +904,7 @@ def _entity(e: EntityDecl, ids: Mapping[str, str]) -> Entity:
         parent=_maybe(ids, e.parent, EntityId),
         location=_maybe(ids, e.location, EntityId),
         tags=frozenset(e.tags),
+        at=e.at,
     )
 
 

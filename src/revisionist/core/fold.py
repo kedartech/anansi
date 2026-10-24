@@ -354,6 +354,7 @@ def _mutate(state: State, event: Event) -> State:
             | ev.OrderStepTaken()
             | ev.OrderSettled()
             | ev.QuantitySet()
+            | ev.FeatureSet()
         ):
             if state.ruleset != "realism":
                 raise FoldError(f"{event.kind} belongs to a realism campaign")
@@ -381,6 +382,8 @@ def _realism(state: State, p: ev.Payload) -> State:
                 _need(state.entities, f.author, "entity")
                 for qid in f.reports:
                     _need(state.quantities, qid, "quantity")
+                for sighted in f.sights:
+                    _need(state.features, sighted, "feature")
                 feeds[f.feed_id] = f
             cards = dict(state.cards)
             for c in p.cards:
@@ -410,6 +413,8 @@ def _realism(state: State, p: ev.Payload) -> State:
                 _need(state.feeds, doc.truth.feed, "feed")
             for ref in doc.truth.truth_refs:
                 _need(state.quantities, ref.quantity_id, "quantity")
+            for sighting in doc.truth.sightings:
+                _need(state.features, sighting.feature_id, "feature")
             return state.model_copy(
                 update={"documents": _put(state.documents, doc.view.doc_id, doc)}
             )
@@ -470,6 +475,17 @@ def _realism(state: State, p: ev.Payload) -> State:
             if old is not None and q.as_of < old.as_of:
                 raise FoldError(f"quantity {q.quantity_id} is already set as of {old.as_of}")
             return state.model_copy(update={"quantities": _put(state.quantities, q.quantity_id, q)})
+        case ev.FeatureSet():
+            ft = p.feature
+            if ft.side is not None:
+                _need(state.entities, ft.side, "entity")
+            for place in (*ft.places, *([ft.bound_for] if ft.bound_for else [])):
+                if _need(state.entities, place, "entity").kind is not EntityKind.LOCATION:
+                    raise FoldError(f"feature {ft.feature_id}: {place} is not a place")
+            was = state.features.get(ft.feature_id)
+            if was is not None and (ft.as_of < was.as_of or ft.kind is not was.kind):
+                raise FoldError(f"feature {ft.feature_id} cannot go back or change kind")
+            return state.model_copy(update={"features": _put(state.features, ft.feature_id, ft)})
         case _:
             raise FoldError(f"kind {p.kind!r} is not a realism record")
 

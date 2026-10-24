@@ -40,6 +40,7 @@ from revisionist.core.ontology import (
 )
 from revisionist.core.realism.card import ChannelKind, ParamSpec
 from revisionist.core.realism.document import Bias, Classification, DocumentKind
+from revisionist.core.realism.geography import FeatureKind
 from revisionist.core.realism.pipeline import StepAction, StepKind
 from revisionist.core.realism.quantity import ResolverKey
 from revisionist.core.settings import Settings
@@ -47,6 +48,10 @@ from revisionist.core.visibility import Visibility
 
 Key = Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]*$", max_length=40)]
 """A world-file name for one object. Lowercase, digits, underscores."""
+
+
+Latitude = Annotated[float, Field(ge=-90, le=90)]
+Longitude = Annotated[float, Field(ge=-180, le=180)]
 
 
 class ScopeDecl(Model):
@@ -67,6 +72,8 @@ class EntityDecl(Model):
     parent: Key | None = None
     location: Key | None = None
     tags: tuple[Label, ...] = ()
+    at: tuple[Latitude, Longitude] | None = None
+    """A place's latitude and longitude, for the map."""
 
 
 class AssetDecl(Model):
@@ -316,6 +323,8 @@ class FeedDecl(Cited):
     """The cadence and latency are a labelled default by document kind, not sourced."""
     reports: tuple[Key, ...] = ()
     """Quantity keys."""
+    sights: tuple[Key, ...] = ()
+    """Feature keys."""
     bias: Bias = Bias()
 
     @model_validator(mode="after")
@@ -344,6 +353,29 @@ class PipelineDecl(Cited):
     key: Key
     name: Label
     steps: tuple[StepDecl, ...] = Field(min_length=1, max_length=12)
+
+
+class LegDecl(Model):
+    """A move the record says a feature made: where it was from ``since``."""
+
+    since: date
+    places: tuple[Key, ...] = Field(min_length=1)
+
+
+class FeatureDecl(Cited):
+    """A force, front or route on the map. Positions are approximate."""
+
+    key: Key
+    kind: FeatureKind
+    name: Label
+    side: Key | None = None
+    """A polity or body key. A front has none."""
+    tier: int = Field(default=0, ge=0, le=5)
+    places: tuple[Key, ...] = Field(min_length=1)
+    """Place keys: one for a force, two or more for a front or route."""
+    as_of: date | None = None
+    """None means the world's start date."""
+    legs: tuple[LegDecl, ...] = ()
 
 
 class LeverDecl(Model):
@@ -416,6 +448,7 @@ class WorldFile(Model):
     feeds: tuple[FeedDecl, ...] = ()
     pipelines: tuple[PipelineDecl, ...] = ()
     quantities: tuple[QuantityDecl, ...] = ()
+    features: tuple[FeatureDecl, ...] = ()
     sources: tuple[SourceDecl, ...] = ()
 
 
@@ -432,10 +465,12 @@ __all__ = [
     "ContestDecl",
     "EntityDecl",
     "FactDecl",
+    "FeatureDecl",
     "FeedDecl",
     "GoalDecl",
     "HistoryDecl",
     "Key",
+    "LegDecl",
     "LeverDecl",
     "MeterDecl",
     "PipelineDecl",

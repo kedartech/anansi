@@ -12,7 +12,8 @@ ScheduledEventCreated, ScheduledEventSkipped, DivergenceChanged, DateAdvanced,
 SessionZeroOpened, CharacterListed, CharacterClaimed,
 SessionZeroClosed, SeasonEnded, GoalSet, GoalProgressed, GoalMet, GoalUndone,
 TickOpened, TickClosed``, and for realism campaigns ``CardsDeclared,
-DocumentIssued, DocumentWritten, OrderDrafted, OrderStepTaken, OrderSettled, QuantitySet``.
+DocumentIssued, DocumentWritten, OrderDrafted, OrderStepTaken, OrderSettled, QuantitySet,
+FeatureSet``.
 
 Every other kind is a record: it is replayable, searchable and shown by
 ``/why``, but changes no state.
@@ -58,6 +59,7 @@ from revisionist.core.ontology import (
 )
 from revisionist.core.realism.card import ChannelKind, ParamValue, SeatCard
 from revisionist.core.realism.document import DocumentTruth, DocumentView, Feed
+from revisionist.core.realism.geography import Feature
 from revisionist.core.realism.pipeline import Order, OrderStatus, Pipeline, StepOutcome
 from revisionist.core.realism.quantity import Quantity
 from revisionist.core.resolution import FeasibilityBand, OutcomeTier, RejectionReason, TickStage
@@ -565,6 +567,14 @@ class QuantitySet(Model):
     quantity: Quantity
 
 
+class FeatureSet(Model):
+    """A force, front or route as it stands: authored at compile, moved by the
+    movement resolver after. Engine only, like a quantity."""
+
+    kind: Literal["feature_set"] = "feature_set"
+    feature: Feature
+
+
 class CounselHeld(Model):
     """A seat consulted a person on its card. The words are prose and change nothing;
     a record, sealed with the seat's key like an order's text."""
@@ -679,6 +689,7 @@ Payload = Annotated[
     | OrderStepTaken
     | OrderSettled
     | QuantitySet
+    | FeatureSet
     | CounselHeld
     | DirectiveGiven
     | Sealed,
@@ -728,6 +739,7 @@ MUTATING_KINDS: frozenset[str] = frozenset(
         "order_step_taken",
         "order_settled",
         "quantity_set",
+        "feature_set",
     }
 )
 

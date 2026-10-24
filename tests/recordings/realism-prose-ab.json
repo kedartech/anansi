@@ -21,6 +21,28 @@
    "usd": 0.001728
   }
  },
+ "15a1b9745ceb96bb9f61a3e0": {
+  "call_class": "prose",
+  "hand_written": true,
+  "model": "claude-haiku-5-5",
+  "note": "hand-written for tests; not a model reply",
+  "prompt_head": "## Author\nHarold R. Stark, Chief of Naval Operations\n\n## Pages to write\n[{\"doc_id\": \"7WD18YQ5NNBCYVWE5V96DPY182\", \"kind\"",
+  "reply": {
+   "cached_tokens": 355,
+   "input_tokens": 568,
+   "model": "claude-haiku-5-5",
+   "output": {
+    "pages": [
+     {
+      "doc_id": "7WD18YQ5NNBCYVWE5V96DPY182",
+      "prose": "Allied merchant losses to U-boats for September stand at 209835 GRT. U-boats operational in the Atlantic: 30 boats, July to September average.\n\nH. R. Stark"
+     }
+    ]
+   },
+   "output_tokens": 55,
+   "usd": 8.43e-05
+  }
+ },
  "16b0854cb0921dd23ed7b11c": {
   "call_class": "prose",
   "hand_written": true,
@@ -65,28 +87,6 @@
    "usd": 6.52e-05
   }
  },
- "1ba9f2736624b5ee4150ebd3": {
-  "call_class": "prose",
-  "hand_written": true,
-  "model": "claude-haiku-5-5",
-  "note": "hand-written for tests; not a model reply",
-  "prompt_head": "## Author\nHarold R. Stark, Chief of Naval Operations\n\n## Pages to write\n[{\"doc_id\": \"7WD18YQ5NNBCYVWE5V96DPY182\", \"kind\"",
-  "reply": {
-   "cached_tokens": 355,
-   "input_tokens": 490,
-   "model": "claude-haiku-5-5",
-   "output": {
-    "pages": [
-     {
-      "doc_id": "7WD18YQ5NNBCYVWE5V96DPY182",
-      "prose": "Allied merchant losses to U-boats for September stand at 209835 GRT. U-boats operational in the Atlantic: 30 boats, July to September average.\n\nH. R. Stark"
-     }
-    ]
-   },
-   "output_tokens": 55,
-   "usd": 7.65e-05
-  }
- },
  "362475863fd73483b533b11f": {
   "call_class": "prose",
   "hand_written": true,
@@ -107,28 +107,6 @@
    },
    "output_tokens": 37,
    "usd": 6.57e-05
-  }
- },
- "3a3e21e035d07383f02b610c": {
-  "call_class": "prose",
-  "hand_written": true,
-  "model": "claude-sonnet-5-5",
-  "note": "hand-written for tests; not a model reply",
-  "prompt_head": "## Author\nHarold R. Stark, Chief of Naval Operations\n\n## Pages to write\n[{\"doc_id\": \"7WD18YQ5NNBCYVWE5V96DPY182\", \"kind\"",
-  "reply": {
-   "cached_tokens": 355,
-   "input_tokens": 490,
-   "model": "claude-sonnet-5-5",
-   "output": {
-    "pages": [
-     {
-      "doc_id": "7WD18YQ5NNBCYVWE5V96DPY182",
-      "prose": "Mr. President,\n\nThe Atlantic picture for September is a hard one. Allied merchant losses to U-boats come to 209,835 GRT, and we reckon 30 boats operational in the Atlantic on the July to September average. The convoys need every escort we can spare.\n\nRespectfully,\nH. R. Stark"
-     }
-    ]
-   },
-   "output_tokens": 86,
-   "usd": 0.00184
   }
  },
  "535b550051e4e2a4efa1a26e": {
@@ -195,6 +173,28 @@
    },
    "output_tokens": 72,
    "usd": 0.001664
+  }
+ },
+ "e2befe422c5cb16c69abfc71": {
+  "call_class": "prose",
+  "hand_written": true,
+  "model": "claude-sonnet-5-5",
+  "note": "hand-written for tests; not a model reply",
+  "prompt_head": "## Author\nHarold R. Stark, Chief of Naval Operations\n\n## Pages to write\n[{\"doc_id\": \"7WD18YQ5NNBCYVWE5V96DPY182\", \"kind\"",
+  "reply": {
+   "cached_tokens": 355,
+   "input_tokens": 568,
+   "model": "claude-sonnet-5-5",
+   "output": {
+    "pages": [
+     {
+      "doc_id": "7WD18YQ5NNBCYVWE5V96DPY182",
+      "prose": "Mr. President,\n\nThe Atlantic picture for September is a hard one. Allied merchant losses to U-boats come to 209,835 GRT, and we reckon 30 boats operational in the Atlantic on the July to September average. The convoys need every escort we can spare.\n\nRespectfully,\nH. R. Stark"
+     }
+    ]
+   },
+   "output_tokens": 86,
+   "usd": 0.001996
   }
  },
  "ff32d66e2df35ff634fa8d25": {

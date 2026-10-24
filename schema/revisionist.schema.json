@@ -588,6 +588,17 @@
             "title": "Label",
             "type": "string"
           },
+          "sight": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Sight"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
           "unit": {
             "default": "",
             "maxLength": 60,
@@ -2468,6 +2479,14 @@
             "default": null,
             "title": "Feed"
           },
+          "sightings": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/SightRef"
+            },
+            "title": "Sightings",
+            "type": "array"
+          },
           "truth_refs": {
             "default": [],
             "items": {
@@ -2589,6 +2608,28 @@
       "Entity": {
         "additionalProperties": false,
         "properties": {
+          "at": {
+            "anyOf": [
+              {
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "At"
+          },
           "entity_id": {
             "title": "Entity Id",
             "type": "string"
@@ -2947,6 +2988,128 @@
         "title": "FeasibilityRated",
         "type": "object"
       },
+      "Feature": {
+        "additionalProperties": false,
+        "properties": {
+          "arrives": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Arrives"
+          },
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "bound_for": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Bound For"
+          },
+          "feature_id": {
+            "title": "Feature Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/$defs/FeatureKind"
+          },
+          "legs": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/Leg"
+            },
+            "title": "Legs",
+            "type": "array"
+          },
+          "name": {
+            "maxLength": 60,
+            "title": "Name",
+            "type": "string"
+          },
+          "places": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Places",
+            "type": "array"
+          },
+          "side": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Side"
+          },
+          "tier": {
+            "default": 0,
+            "maximum": 5,
+            "minimum": 0,
+            "title": "Tier",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "feature_id",
+          "kind",
+          "name",
+          "places",
+          "as_of"
+        ],
+        "title": "Feature",
+        "type": "object"
+      },
+      "FeatureKind": {
+        "enum": [
+          "fleet",
+          "army",
+          "air",
+          "front",
+          "route"
+        ],
+        "title": "FeatureKind",
+        "type": "string"
+      },
+      "FeatureSet": {
+        "additionalProperties": false,
+        "description": "A force, front or route as it stands: authored at compile, moved by the\nmovement resolver after. Engine only, like a quantity.",
+        "properties": {
+          "feature": {
+            "$ref": "#/$defs/Feature"
+          },
+          "kind": {
+            "const": "feature_set",
+            "default": "feature_set",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "feature"
+        ],
+        "title": "FeatureSet",
+        "type": "object"
+      },
       "Feed": {
         "additionalProperties": false,
         "description": "A source of documents on a cadence (pillar 3). Whose desk it reaches is on the cards.",
@@ -3017,6 +3180,14 @@
               "type": "string"
             },
             "title": "Reports",
+            "type": "array"
+          },
+          "sights": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Sights",
             "type": "array"
           }
         },
@@ -3625,6 +3796,31 @@
         "title": "KnowledgeGrant",
         "type": "object"
       },
+      "Leg": {
+        "additionalProperties": false,
+        "description": "One move the record says a feature made.",
+        "properties": {
+          "places": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Places",
+            "type": "array"
+          },
+          "since": {
+            "format": "date",
+            "title": "Since",
+            "type": "string"
+          }
+        },
+        "required": [
+          "since",
+          "places"
+        ],
+        "title": "Leg",
+        "type": "object"
+      },
       "Lethality": {
         "enum": [
           "soft",
@@ -3666,7 +3862,8 @@
               "votes",
               "shipping",
               "production",
-              "opinion"
+              "opinion",
+              "movement"
             ],
             "title": "Resolver",
             "type": "string"
@@ -5484,6 +5681,64 @@
         "title": "SettingsSet",
         "type": "object"
       },
+      "Sight": {
+        "additionalProperties": false,
+        "description": "A document line's claim about a feature: what it is, whose, and where.",
+        "properties": {
+          "kind": {
+            "$ref": "#/$defs/FeatureKind"
+          },
+          "places": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Places",
+            "type": "array"
+          },
+          "side": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Side"
+          }
+        },
+        "required": [
+          "kind",
+          "places"
+        ],
+        "title": "Sight",
+        "type": "object"
+      },
+      "SightRef": {
+        "additionalProperties": false,
+        "description": "The truth behind one sighting line.",
+        "properties": {
+          "feature_id": {
+            "title": "Feature Id",
+            "type": "string"
+          },
+          "places": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Places",
+            "type": "array"
+          }
+        },
+        "required": [
+          "feature_id",
+          "places"
+        ],
+        "title": "SightRef",
+        "type": "object"
+      },
       "StatementIssued": {
         "additionalProperties": false,
         "description": "A player's spin, made public as the tick freezes (Layer 9b).\n\nSpin is the one free text a player addresses to the world (design \u00a75), so\nit is logged Public whatever the order's own scope: a covert operation can\ncome with a public denial. A record: it changes no state.",
@@ -5897,6 +6152,7 @@
             "entity_created": "#/$defs/EntityCreated",
             "fact_asserted": "#/$defs/FactAsserted",
             "feasibility_rated": "#/$defs/FeasibilityRated",
+            "feature_set": "#/$defs/FeatureSet",
             "goal_approved": "#/$defs/GoalApproved",
             "goal_met": "#/$defs/GoalMet",
             "goal_progressed": "#/$defs/GoalProgressed",
@@ -6110,6 +6366,9 @@
           },
           {
             "$ref": "#/$defs/QuantitySet"
+          },
+          {
+            "$ref": "#/$defs/FeatureSet"
           },
           {
             "$ref": "#/$defs/CounselHeld"
@@ -6505,6 +6764,17 @@
             "maxLength": 60,
             "title": "Label",
             "type": "string"
+          },
+          "sight": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Sight"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
           },
           "unit": {
             "default": "",
@@ -7171,6 +7441,14 @@
             "default": null,
             "title": "Feed"
           },
+          "sightings": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/SightRef"
+            },
+            "title": "Sightings",
+            "type": "array"
+          },
           "truth_refs": {
             "default": [],
             "items": {
@@ -7264,6 +7542,28 @@
       "Entity": {
         "additionalProperties": false,
         "properties": {
+          "at": {
+            "anyOf": [
+              {
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "At"
+          },
           "entity_id": {
             "title": "Entity Id",
             "type": "string"
@@ -7439,6 +7739,108 @@
         "title": "Fact",
         "type": "object"
       },
+      "Feature": {
+        "additionalProperties": false,
+        "properties": {
+          "arrives": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Arrives"
+          },
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "bound_for": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Bound For"
+          },
+          "feature_id": {
+            "title": "Feature Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/$defs/FeatureKind"
+          },
+          "legs": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/Leg"
+            },
+            "title": "Legs",
+            "type": "array"
+          },
+          "name": {
+            "maxLength": 60,
+            "title": "Name",
+            "type": "string"
+          },
+          "places": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Places",
+            "type": "array"
+          },
+          "side": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Side"
+          },
+          "tier": {
+            "default": 0,
+            "maximum": 5,
+            "minimum": 0,
+            "title": "Tier",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "feature_id",
+          "kind",
+          "name",
+          "places",
+          "as_of"
+        ],
+        "title": "Feature",
+        "type": "object"
+      },
+      "FeatureKind": {
+        "enum": [
+          "fleet",
+          "army",
+          "air",
+          "front",
+          "route"
+        ],
+        "title": "FeatureKind",
+        "type": "string"
+      },
       "Feed": {
         "additionalProperties": false,
         "description": "A source of documents on a cadence (pillar 3). Whose desk it reaches is on the cards.",
@@ -7509,6 +7911,14 @@
               "type": "string"
             },
             "title": "Reports",
+            "type": "array"
+          },
+          "sights": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Sights",
             "type": "array"
           }
         },
@@ -7790,6 +8200,31 @@
         "title": "Intent",
         "type": "object"
       },
+      "Leg": {
+        "additionalProperties": false,
+        "description": "One move the record says a feature made.",
+        "properties": {
+          "places": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Places",
+            "type": "array"
+          },
+          "since": {
+            "format": "date",
+            "title": "Since",
+            "type": "string"
+          }
+        },
+        "required": [
+          "since",
+          "places"
+        ],
+        "title": "Leg",
+        "type": "object"
+      },
       "Lethality": {
         "enum": [
           "soft",
@@ -7831,7 +8266,8 @@
               "votes",
               "shipping",
               "production",
-              "opinion"
+              "opinion",
+              "movement"
             ],
             "title": "Resolver",
             "type": "string"
@@ -8908,6 +9344,64 @@
         "title": "Settings",
         "type": "object"
       },
+      "Sight": {
+        "additionalProperties": false,
+        "description": "A document line's claim about a feature: what it is, whose, and where.",
+        "properties": {
+          "kind": {
+            "$ref": "#/$defs/FeatureKind"
+          },
+          "places": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Places",
+            "type": "array"
+          },
+          "side": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Side"
+          }
+        },
+        "required": [
+          "kind",
+          "places"
+        ],
+        "title": "Sight",
+        "type": "object"
+      },
+      "SightRef": {
+        "additionalProperties": false,
+        "description": "The truth behind one sighting line.",
+        "properties": {
+          "feature_id": {
+            "title": "Feature Id",
+            "type": "string"
+          },
+          "places": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Places",
+            "type": "array"
+          }
+        },
+        "required": [
+          "feature_id",
+          "places"
+        ],
+        "title": "SightRef",
+        "type": "object"
+      },
       "Step": {
         "additionalProperties": false,
         "properties": {
@@ -9167,6 +9661,13 @@
           "$ref": "#/$defs/Fact"
         },
         "title": "Facts",
+        "type": "object"
+      },
+      "features": {
+        "additionalProperties": {
+          "$ref": "#/$defs/Feature"
+        },
+        "title": "Features",
         "type": "object"
       },
       "feeds": {
@@ -9627,6 +10128,17 @@
             "maxLength": 60,
             "title": "Label",
             "type": "string"
+          },
+          "sight": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Sight"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
           },
           "unit": {
             "default": "",
@@ -10479,6 +10991,28 @@
       "Entity": {
         "additionalProperties": false,
         "properties": {
+          "at": {
+            "anyOf": [
+              {
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "At"
+          },
           "entity_id": {
             "title": "Entity Id",
             "type": "string"
@@ -10653,6 +11187,17 @@
         ],
         "title": "Fact",
         "type": "object"
+      },
+      "FeatureKind": {
+        "enum": [
+          "fleet",
+          "army",
+          "air",
+          "front",
+          "route"
+        ],
+        "title": "FeatureKind",
+        "type": "string"
       },
       "Goal": {
         "additionalProperties": false,
@@ -10963,7 +11508,8 @@
               "votes",
               "shipping",
               "production",
-              "opinion"
+              "opinion",
+              "movement"
             ],
             "title": "Resolver",
             "type": "string"
@@ -11894,6 +12440,41 @@
           }
         },
         "title": "Settings",
+        "type": "object"
+      },
+      "Sight": {
+        "additionalProperties": false,
+        "description": "A document line's claim about a feature: what it is, whose, and where.",
+        "properties": {
+          "kind": {
+            "$ref": "#/$defs/FeatureKind"
+          },
+          "places": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Places",
+            "type": "array"
+          },
+          "side": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Side"
+          }
+        },
+        "required": [
+          "kind",
+          "places"
+        ],
+        "title": "Sight",
         "type": "object"
       },
       "StepAction": {

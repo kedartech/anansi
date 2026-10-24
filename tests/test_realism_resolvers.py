@@ -25,6 +25,7 @@ from revisionist.core.realism.quantity import QuantityChange
 from revisionist.core.realism.resolvers import (
     ON_DAY,
     ON_ORDER,
+    Change,
     apply_changes,
     opinion,
     production,
@@ -107,7 +108,7 @@ class Rig:
         self.add(ev.OrderSettled(order_id=order.order_id, status=status))
         return self.state.orders[order.order_id]
 
-    def fold_changes(self, changes: tuple[QuantityChange, ...]) -> None:
+    def fold_changes(self, changes: tuple[Change, ...]) -> None:
         for event in apply_changes(self.state, changes):
             self.add(event)
 

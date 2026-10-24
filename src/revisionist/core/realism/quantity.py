@@ -15,8 +15,9 @@ if TYPE_CHECKING:
     from revisionist.core.realism.pipeline import Order
     from revisionist.core.state import State
 
-ResolverKey = Literal["votes", "shipping", "production", "opinion"]
-"""The four resolvers the first scenario needs (plan, B3). A fifth needs Josh's word."""
+ResolverKey = Literal["votes", "shipping", "production", "opinion", "movement"]
+"""The four resolvers the first scenario needs (plan, B3), and movement (Batch 6,
+Josh's word). Another needs his word."""
 
 RESOLVER_KEYS: tuple[ResolverKey, ...] = get_args(ResolverKey)
 

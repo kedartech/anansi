@@ -55,7 +55,11 @@ def offline_state(ticks: int = TICKS) -> State:
 def pick(state: State, n: int = PAGES) -> list[DocumentView]:
     """``n`` pages that state at least one figure, one per author first, oldest first."""
     pages = sorted(
-        (d.view for d in state.documents.values() if any(x.value is not None for x in d.view.body)),
+        (
+            d.view
+            for d in state.documents.values()
+            if any(isinstance(x.value, int) for x in d.view.body)
+        ),
         key=lambda v: (v.issued, v.doc_id),
     )
     chosen: list[DocumentView] = []

@@ -1,8 +1,9 @@
-"""The four quantity resolvers (plan, Phase 2 unit B3).
+"""The resolvers: four for quantities (plan, Phase 2 unit B3) and movement for
+features (Batch 6).
 
 Each module has ``resolve(state, order)`` for an enacted order whose lever names
 it, and ``on_day(state, today)`` for what moves with time. Both are pure and
-seeded only by ``friction``, so a replay computes the same numbers. A fifth
+seeded only by ``friction``, so a replay computes the same numbers. Another
 resolver needs Josh's word.
 """
 
@@ -12,26 +13,31 @@ from datetime import date
 
 from revisionist.core import events as ev
 from revisionist.core.ids import QuantityId
+from revisionist.core.realism.geography import Feature
 from revisionist.core.realism.pipeline import Order
 from revisionist.core.realism.quantity import QuantityChange, ResolverKey
-from revisionist.core.realism.resolvers import opinion, production, shipping, votes
+from revisionist.core.realism.resolvers import movement, opinion, production, shipping, votes
 from revisionist.core.state import State
 from revisionist.core.world_compile import object_id
 
-OrderFn = Callable[[State, Order], tuple[QuantityChange, ...]]
-DayFn = Callable[[State, date], tuple[QuantityChange, ...]]
+Change = QuantityChange | Feature
+"""A quantity's new value, or a feature as it now stands."""
+OrderFn = Callable[[State, Order], tuple[Change, ...]]
+DayFn = Callable[[State, date], tuple[Change, ...]]
 
 ON_ORDER: dict[ResolverKey, OrderFn] = {
     "votes": votes.resolve,
     "shipping": shipping.resolve,
     "production": production.resolve,
     "opinion": opinion.resolve,
+    "movement": movement.resolve,
 }
 ON_DAY: dict[ResolverKey, DayFn] = {
     "votes": votes.on_day,
     "shipping": shipping.on_day,
     "production": production.on_day,
     "opinion": opinion.on_day,
+    "movement": movement.on_day,
 }
 
 
@@ -68,11 +74,16 @@ def friction(state: State, *parts: object, n: int) -> int:
     return int.from_bytes(hashlib.blake2b(key.encode(), digest_size=8).digest(), "big") % n
 
 
-def apply_changes(state: State, changes: tuple[QuantityChange, ...]) -> list[ev.QuantitySet]:
-    """The ``QuantitySet`` events for ``changes``: each quantity as it stands, with
-    the new value and date. Raises ``KeyError`` for a quantity the world never declared."""
+def apply_changes(
+    state: State, changes: tuple[Change, ...]
+) -> list[ev.QuantitySet | ev.FeatureSet]:
+    """The events for ``changes``: each quantity as it stands, with the new value and
+    date, and each feature as given. Raises ``KeyError`` for a quantity the world
+    never declared."""
     return [
-        ev.QuantitySet(
+        ev.FeatureSet(feature=c)
+        if isinstance(c, Feature)
+        else ev.QuantitySet(
             quantity=state.quantities[c.quantity_id].model_copy(
                 update={"value": c.value, "as_of": c.as_of}
             )
@@ -84,6 +95,7 @@ def apply_changes(state: State, changes: tuple[QuantityChange, ...]) -> list[ev.
 __all__ = [
     "ON_DAY",
     "ON_ORDER",
+    "Change",
     "apply_changes",
     "friction",
     "qid",
