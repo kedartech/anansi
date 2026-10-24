@@ -1,0 +1,58 @@
+{
+ "dd220833de3ce45a3ad517c5": {
+  "call_class": "prose",
+  "hand_written": true,
+  "model": "claude-sonnet-5-5",
+  "note": "hand-written for tests; not a model reply",
+  "prompt_head": "## Author\nCora Senn, Clerk of the Council\n\n## Pages to write\n[{\"doc_id\": \"3MQ10ZP4PV7SVCYSQ3JX63MM0Y\", \"kind\": \"letter\",",
+  "reply": {
+   "cached_tokens": 355,
+   "input_tokens": 468,
+   "model": "claude-sonnet-5-5",
+   "output": {
+    "pages": [
+     {
+      "doc_id": "3MQ10ZP4PV7SVCYSQ3JX63MM0Y",
+      "prose": "Dear First Citizen,\n\nWe enrolled 3 bills this week, all in good order. As to the clerks absent, I would rather not set down a figure until the roll is checked.\n\nC. Senn"
+     }
+    ]
+   },
+   "output_tokens": 59,
+   "usd": 0.001526
+  }
+ },
+ "fc016669804f537b8e4b2f93": {
+  "call_class": "prose",
+  "hand_written": true,
+  "model": "claude-sonnet-5-5",
+  "note": "hand-written for tests; not a model reply",
+  "prompt_head": "## Author\nBram Tull, Speaker of the Council\nVoice: Careful; counts before he speaks.\n\n## Pages to write\n[{\"doc_id\": \"4ET",
+  "reply": {
+   "cached_tokens": 355,
+   "input_tokens": 725,
+   "model": "claude-sonnet-5-5",
+   "output": {
+    "pages": [
+     {
+      "doc_id": "4ET363QRVF2G6DA96GCXSM7595",
+      "prose": "Madam,\n\nI have gone along the benches twice before writing. I make it 2 members wavering, and I would not put it higher or lower until I have spoken to each.\n\nYour servant,\nBram Tull"
+     },
+     {
+      "doc_id": "8J4HW5X0D7X37YJZQQBF518CHP",
+      "prose": "Madam,\n\nMy count of the Council as it stands: 8 votes for the levy. I have counted twice. I will write again when it moves.\n\nB. Tull"
+     },
+     {
+      "doc_id": "THBNHR17VCP92112JMWPRTWR3J",
+      "prose": "Madam,\n\nThe count holds at 8 votes for the levy. Nobody has come over and nobody has gone off; I give it you as I find it.\n\nB. Tull"
+     },
+     {
+      "doc_id": "WFZMBTR4E7VHFCASTEASEEAVSD",
+      "prose": "Madam,\n\nStill 8 votes for the levy by my reckoning. I would sooner send you a dull count than a hopeful one.\n\nB. Tull"
+     }
+    ]
+   },
+   "output_tokens": 202,
+   "usd": 0.00347
+  }
+ }
+}

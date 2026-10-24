@@ -33,12 +33,14 @@ Top-level:
 - `status [--seat]` (`:308`): campaign status as your seat sees it.
 - `briefing [--seat]` (`:319`): agent briefing. Exit 3 if withheld (`:331`).
 - `order TEXT [--seat] [--visibility private|public|covert] [--spin ≤280]` (`:342`): file an order.
-- `tick [--offline]` (`:386`): resolve one tick. `--offline` uses the scripted resolver and narrator (`cli.py:52-54`). On a realism campaign it runs `engine/realism_tick.run_realism_tick` (no model call; `--offline` is accepted and ignored) and prints the wake and the new date.
+- `tick [--offline]` (`:386`): resolve one tick. `--offline` uses the scripted resolver and narrator (`cli.py:52-54`). On a realism campaign it runs `engine/realism_tick.run_realism_tick` and prints the wake and the new date. Code decides every outcome; the only model call is the PROSE stage, one call per document author per wake through `engine/prose.ClaudeProseWriter`. `--offline` swaps in `TemplateProseWriter` (plain period sentences, no model).
 - `lever NAME [key=value ...] [--seat]`: realism. File an order by pulling a lever on your card; every parameter is checked against its spec. Prints the order id and its first step.
-- `step ORDER ACTION [key=value ...] [--seat]`: realism. Act at the step of your order that waits on you (`pass`, `refuse`, `amend` with edits, ...).
+- `step ORDER ACTION [key=value ...] [--seat]`: realism. Act at the step of your order that waits on you (`pass`, `refuse`, `amend` with edits, ...). A final step that enacts the order runs its resolver in the same batch, so its quantities (vote counts) are set before the next tick.
+- `consult PERSON "QUESTION" [--seat]`: realism. Ask a person on your card (by surname, full name or entity id) over your card's channel to them. The counsel model speaks as that person from their projection only (`core/realism/person.project_person`). Lands a `counsel_held` record private to your seat, plus `cost_logged`; changes nothing in the world and files nothing. Exit 2 for someone not within reach.
+- `aide [--seat] [--offline]`: realism. Your aide's brief from your projected view: a summary of unread pages, the decisions waiting on you, and up to three draft orders from your levers, printed as `revisionist lever ...` commands and never filed. `--offline` uses the template aide (no model).
 - `why TARGET [--break-glass] [--reason]` (`:423`): trace an intent or event through the log.
 - `replay --to TICK` (`:451`): rebuild state at a tick and print its hash.
-- `cost` (`:460`): model spend per tick and in total.
+- `cost` (`:460`): model spend per tick and in total; on a realism campaign also per in-world day.
 - `leaks [--humans]` (`:467`): canary scan. `--humans` needs Postgres and Discord links.
 - `history [--seat]` (`:639`): tick-0 brief from the record.
 - `agent --name --role [--voice] [--backstory] [--relationship] [--seat]` (`:650`): design your agent's persona.
@@ -67,7 +69,7 @@ Groups:
   - `run [--campaign] [--offline]` (`:857`), `status` (`:883`), `advance` (`:911`), `pause [--reason]` (`:917`), `resume` (`:926`).
 - `discord` (`:934-935`):
   - `link --user ID [--campaign] [--seat]` (`:977`), `unlink` (`:1000`), `invite [--campaign] [--seat] [--hours 1-720]` (`:1016`), `invites` (`:1050`), `channel public CHANNEL_ID` (`:1063`), `seats` (`:1086`), `run` (`:1098`).
-- `(web)` `web` (`cli.py:1133-1134`): `serve [--host 127.0.0.1] [--port 8740] [--static DIR]` (`:1140-1148`).
+- `(web)` `web` (`cli.py:1133-1134`): `serve [--host 127.0.0.1] [--port 8740] [--static DIR] [--offline-prose]` (`:1140-1148`). `--offline-prose` makes the realism `advance` write pages with `TemplateProseWriter` instead of `ClaudeProseWriter`.
 
 ## 3. Discord surface
 - Registration: `engine/discord/bot.py:112` `register()`. Every command is guild-scoped (`guild=guild`). Command names are listed at `bot.py:37-62`.
@@ -119,6 +121,13 @@ Ticks and orders:
 - `engine/agent.py:451` `receive_order()`. `engine/agent.py:212` `class Agent`; `:285` `deputy_turn()` files faction deputies' intents. `:515` `counterfactual_diff()`.
 - `engine/runner.py:114`: deputy intents are filed with `KeywordSafety`.
 - `engine/scheduler.py:278` `run()`: tick every due campaign once. `:133` `ScheduleTable` with `advance`, `pause`, `resume`, `retire` (`:208`). `:226` `register()`, `:235` `live_campaigns()`, `:78` `due()`.
+
+Realism (Phase 4):
+- `engine/realism_tick.py` `run_realism_tick(..., prose=writer)` (the web `advance` passes one too; see section 5): stages ADVANCE, PIPELINES, RESOLVE, FEEDS, then PROSE when a writer is passed (`play_tick` always passes one). PROSE gathers pages issued since the last `tick_closed` without prose, groups them by author, makes one writer call per author, drops prose that states a figure the page lacks (`core/realism/prose.invented_numbers`), and lands `document_written` events with their own `tick_stage_completed`. A `TransportError` leaves the pages bare and the tick still closes; call costs go on `tick_closed.costs`.
+- `engine/prose.py`: `ProseWriter` protocol (takes `DocumentView`s and an `Author`, never `State`), `ClaudeProseWriter`, `TemplateProseWriter`. Prompt `engine/prompts/document_prose.md`.
+- `engine/counsel.py` `consult()`: counsel; prompt `engine/prompts/counsel.md`.
+- `engine/aide.py` `aide_for()` / `brief()`: the aide; prompt `engine/prompts/aide.md`.
+- `scripts/prose_ab.py --live`: the P0 prose A/B (two models, five pages, blind sheet and separate key). Refuses without `--live`.
 
 Briefings and reads:
 - `engine/play.py:116` `get_briefing()`: agent briefing for a seat (model call through the transport).
@@ -188,6 +197,8 @@ Server: `src/revisionist/engine/web/server.py`. Stdlib `ThreadingHTTPServer` (`:
   - `POST /api/signout` (`:335` → `_signout` `:424`).
   - `POST /api/seat/<action>` (`:337-344`): needs a session (`:342`), dispatches via `SEAT_ACTIONS` (`:161-194`).
 - Seat actions (`SEAT_ACTIONS` keys, mapped to `WebHandlers`): `join`, `roster`, `search`, `claim`, `pick`, `goal`, `confirm`, `history`, `agent`, `order`, `ask`, `dossier`, `dispatch`, `status`, `report`, `bug`. Replies whose text is in `REFUSALS` (`:211-224`) return `refused: true`.
+- Realism seat block, `view.realism` in `GET /api/me` (`realism_snapshot.seat_realism`): `documents`, `desk`, `situation`, `orders`, `clock`. `situation` (`realism_snapshot.situation`) is the Situation tab: each body line with a unit and a number-or-silent value, from arrived pages only, grouped by line and by author, never averaged; a silent latest report is a gap dated by `last_given`.
+- Realism actions, `POST /api/realism/<action>` (`App.realism`, `server.py`): `read` (`{doc_id}`; returns the page and logs `document_read` via `realism_tick.mark_read`), `flag` (`{doc_id, flagged}`; `realism_tick.set_flag` logs `document_flagged`, a no-op when the flag already stands, 404 for a document outside the seat's view), `lever`, `step`, `advance`. `advance` passes a prose writer to `run_realism_tick`: `ClaudeProseWriter(transport_factory())`, or `TemplateProseWriter()` when the `App` was built with `offline_prose=True`. Pages the writer drops are logged at warning level and stay bare. Replies are in words ("Sent to Sam Rayburn: ...", "The calendar moves to ..."); the CLI keeps `wake_line`.
 - Auth and hardening:
   - Session cookie `rv_session`, HttpOnly, SameSite=Strict (`:45`, `:256-258`). Token hashed at rest (`accounts.py:69`).
   - Writes need a JSON content type and an `Origin` matching `Host` (`:285-292`, called at `:327`).
@@ -252,6 +263,7 @@ Frontend (static, no build):
   - `conftest.py:23-29` strips `REVISIONIST_*` from the environment for each test.
   - `conftest.py:31-` blocks Discord network calls.
 - Model replay: `tests/recordings/two-rivers-agent.json` and `two-rivers-tick-1.json`, read by `RecordedTransport`. Refresh with `REVISIONIST_RECORD=1 uv run pytest tests/test_llm.py -k live` (`test_llm.py:254`) or `test_agent.py:326`.
+- Realism model replay: `tests/recordings/realism-*.json`, hand-written (each entry is marked `hand_written`; no model wrote them). Regenerate after a prompt change with `uv run --frozen python -m tests.handwritten`; scenarios in `tests/prose_scenario.py` and `tests/counsel_scenario.py`.
 - Helpers: `tests/fixtures.py`, `tests/discord_fakes.py` (`FakeDiscord` `:20`), `tests/pg.py`.
 - Browser and Docker tests:
   - Main: none found (no Playwright or Docker files).
@@ -279,7 +291,7 @@ Environment variables (all read in code unless noted):
 - `REVISIONIST_DISCORD_TOKEN`: `cli.py:1101` (`discord run`), `engine/discord/delivery.py:35` (`TOKEN_ENV`), `:129`.
 - `REVISIONIST_DISCORD_GUILD_ID`: `cli.py:988` (`link`), `:1076` (`channel`), `:1102` (`run`).
 - `REVISIONIST_DISCORD_HOST_ID`: `cli.py:118` (`_guard`), `:493` (`_holdings`), `:1116` (`discord run`).
-- `REVISIONIST_MODEL_<CALL>`: `engine/llm.py:203-204`. Overrides the model per call class; must start with `claude-` (`:207`). Examples in `tests/test_model_override.py:39-53`.
+- `REVISIONIST_MODEL_<CALL>`: `engine/llm.py:203-204`. Overrides the model per call class; must start with `claude-` (`:207`). Examples in `tests/test_model_override.py:39-53`. Realism call classes: `PROSE` (default `claude-sonnet-5-5` [proposed], pending the A/B), `COUNSEL` (`claude-sonnet-5-5` [proposed]), `AIDE` (`claude-haiku-5-5` [proposed]).
 - `REVISIONIST_RECORD`: `engine/llm.py:245`. `1` records live calls into a recording file.
 - Backups:
   - `REVISIONIST_BACKUP_DEST` (`revisionist-backup.sh:13`, `:28`): rsync target or `rclone:<remote>:<path>`.

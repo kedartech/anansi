@@ -14,9 +14,17 @@ from revisionist.core import events as ev
 from revisionist.core.ids import DocumentId, EntityId, OrderId, derived_id
 from revisionist.core.ontology import Controller
 from revisionist.core.realism import resolvers
-from revisionist.core.realism.card import ChannelKind, ParamKind, ParamSpec, ParamValue
+from revisionist.core.realism.card import (
+    ChannelKind,
+    Lever,
+    ParamKind,
+    ParamSpec,
+    ParamValue,
+    words,
+)
 from revisionist.core.realism.document import (
     BodyField,
+    Classification,
     DocumentKind,
     DocumentTruth,
     DocumentView,
@@ -31,7 +39,7 @@ from revisionist.core.realism.pipeline import (
     step_due,
 )
 from revisionist.core.state import State
-from revisionist.core.visibility import PUBLIC
+from revisionist.core.visibility import PUBLIC, Scope, Visibility
 
 RealismStep = ev.OrderStepTaken | ev.OrderSettled | ev.DocumentIssued
 
@@ -60,12 +68,16 @@ EXPEDITE_AT = 5
 FREE_ORDERS = 2  # [proposed] orders a person carries before workload bites
 
 
-def _specs(state: State, order: Order) -> dict[str, ParamSpec]:
+def _lever(state: State, order: Order) -> Lever:
     seat = state.seats[order.issuer]
     for lever in state.cards[seat.embodies].levers:
         if lever.name == order.lever:
-            return {p.name: p for p in lever.params}
+            return lever
     raise KeyError(f"order {order.order_id}: lever {order.lever} is not on the issuer's card")
+
+
+def _specs(state: State, order: Order) -> dict[str, ParamSpec]:
+    return {p.name: p for p in _lever(state, order).params}
 
 
 def _check_amended(state: State, order: Order, amended: dict[str, ParamValue]) -> None:
@@ -159,10 +171,27 @@ def _stalls_here(order: Order) -> int:
     return sum(1 for o in order.outcomes if o.step == order.step and o.action is StepAction.STALL)
 
 
+def _param_label(spec: ParamSpec | None, name: str) -> str:
+    return (spec.label if spec is not None else "") or words(name)
+
+
+def _param_value(spec: ParamSpec | None, value: ParamValue) -> int | str:
+    """A parameter's value in words: an enum choice by its label, never its key."""
+    if isinstance(value, int):
+        return value
+    if spec is not None and spec.kind is ParamKind.ENUM and value in spec.choices:
+        if spec.choice_labels:
+            return spec.choice_labels[spec.choices.index(value)]
+        return words(value)[:60]
+    return value[:60]
+
+
 def _leak(state: State, order: Order, author: EntityId, on: date) -> ev.DocumentIssued:
     doc_id = DocumentId(derived_id(state.campaign_id, "leak", order.order_id, order.step))
+    lever = _lever(state, order)
+    specs = {p.name: p for p in lever.params}
     body = tuple(
-        BodyField(label=k, value=v if isinstance(v, int) else v[:60])
+        BodyField(label=_param_label(specs.get(k), k), value=_param_value(specs.get(k), v))
         for k, v in order.params.items()
     )
     return ev.DocumentIssued(
@@ -173,9 +202,88 @@ def _leak(state: State, order: Order, author: EntityId, on: date) -> ev.Document
             issued=on,
             arrives=on + timedelta(days=LEAK_DELAY_DAYS),
             channel=ChannelKind.PRESS,
-            title=f"Leaked: {order.lever}"[:60],
+            title=f"Leaked: {lever.label or words(lever.name)}"[:60],
             body=body,
             scope=PUBLIC,
+        ),
+        truth=DocumentTruth(doc_id=doc_id),
+    )
+
+
+_DONE: dict[StepAction, str] = {
+    StepAction.PASS: "passed it on",
+    StepAction.EXPEDITE: "pressed it forward",
+    StepAction.STALL: "held it",
+    StepAction.AMEND: "amended it",
+    StepAction.REFUSE: "refused it",
+    StepAction.LEAK: "leaked it",
+}
+
+_REPLY_KIND: dict[ChannelKind, DocumentKind] = {
+    ChannelKind.CABLE: DocumentKind.CABLE,
+    ChannelKind.LETTER: DocumentKind.LETTER,
+    ChannelKind.COURIER: DocumentKind.LETTER,
+    ChannelKind.TELEPHONE: DocumentKind.MEMO,
+    ChannelKind.IN_PERSON: DocumentKind.MEMO,
+    ChannelKind.RADIO: DocumentKind.MEMO,
+    ChannelKind.PRESS: DocumentKind.PRESS,
+}
+"""A call or a meeting reaches the page as a note of it."""
+
+
+def _trim_title(text: str, limit: int = 60) -> str:
+    if len(text) <= limit:
+        return text
+    return text[: limit - 1].rsplit(" ", 1)[0].rstrip(" ,:;") + "…"
+
+
+def _reply(
+    state: State, order: Order, outcome: StepOutcome, status: OrderStatus | None
+) -> ev.DocumentIssued | None:
+    """The word that comes back to the issuer from the person at the step, or None
+    when that person is the issuer's own."""
+    seat = state.seats[order.issuer]
+    if outcome.person == seat.embodies:
+        return None
+    lever = _lever(state, order)
+    specs = {p.name: p for p in lever.params}
+    channel = next(
+        (c.channel for c in state.cards[seat.embodies].contacts if c.person == outcome.person),
+        ChannelKind.LETTER,
+    )
+    label = lever.label or words(lever.name)
+    lead = lever.params[0] if lever.params else None
+    given = order.params.get(lead.name) if lead is not None else None
+    if lead is not None and lead.choice_labels and isinstance(given, str):
+        title = f"On your order: {_param_value(lead, given)}"
+    else:
+        title = f"On your order: {label}"
+    body = [
+        BodyField(label="What was done", value=_DONE[outcome.action]),
+        BodyField(label="Order", value=label[:60]),
+        *(
+            BodyField(
+                label=f"Changed: {_param_label(specs.get(k), k)}"[:60],
+                value=_param_value(specs.get(k), v),
+            )
+            for k, v in outcome.amended.items()
+        ),
+    ]
+    if status is not None:
+        body.append(BodyField(label="Outcome", value=status.value))
+    doc_id = DocumentId(derived_id(state.campaign_id, "reply", order.order_id, len(order.outcomes)))
+    return ev.DocumentIssued(
+        document=DocumentView(
+            doc_id=doc_id,
+            kind=_REPLY_KIND[channel],
+            author=outcome.person,
+            issued=outcome.on,
+            arrives=outcome.on,  # [proposed] no channel delay yet
+            channel=channel,
+            classification=Classification.CONFIDENTIAL,  # [proposed]
+            title=_trim_title(title),
+            body=tuple(body),
+            scope=Scope(visibility=Visibility.PRIVATE, known_by=frozenset({order.issuer})),
         ),
         truth=DocumentTruth(doc_id=doc_id),
     )
@@ -208,6 +316,8 @@ def _act(
         status = OrderStatus.ENACTED
     if status is not None:
         out.append(ev.OrderSettled(order_id=order.order_id, status=status))
+    if (reply := _reply(state, order, outcome, status)) is not None:
+        out.append(reply)
     moved = order.model_copy(
         update={
             "params": {**order.params, **amended},

@@ -33,12 +33,15 @@ class DocumentListItem(TypedDict):
     """``Classification`` value."""
     unread: bool
     """True until the seat logs ``document_read`` for it."""
+    flagged: bool
+    """True while the seat's latest ``document_flagged`` for it says so."""
 
 
 class DocumentListing(TypedDict):
     documents: list[DocumentListItem]
     """Arrived documents in the seat's scope, newest arrival first."""
     unread: int
+    flagged: int
 
 
 class BodyLine(TypedDict):
@@ -72,6 +75,10 @@ class OrderTrack(TypedDict):
 
     id: str
     lever: str
+    label: str
+    """The lever's label on the viewer's card, in words."""
+    terms: list[str]
+    """Each parameter as "Which bill: Revise the Neutrality Act"."""
     pipeline: str
     params: dict[str, int | str]
     status: str
@@ -110,16 +117,25 @@ class ContactLine(TypedDict):
     channel: str
 
 
+class LeverChoice(TypedDict):
+    value: str
+    """What is posted back."""
+    label: str
+
+
 class LeverParam(TypedDict):
     name: str
+    label: str
     kind: Literal["int", "enum", "entity", "text"]
     lo: int | None
     hi: int | None
-    choices: list[str]
+    choices: list[LeverChoice]
 
 
 class LeverLine(TypedDict):
     name: str
+    label: str
+    summary: str
     pipeline: str
     params: list[LeverParam]
     """The draft form is built from these."""
@@ -138,6 +154,50 @@ class Desk(TypedDict):
     horizon_days: int
 
 
+class SituationReading(TypedDict):
+    """One report of a figure by one source."""
+
+    value: int | None
+    """None: that report was silent on it."""
+    issued: str
+    arrives: str
+
+
+class SituationSource(TypedDict):
+    """What one person has reported of a figure, latest report first in the fields."""
+
+    author: str
+    doc_id: str
+    """The latest report, to open it from the board."""
+    value: int | None
+    """The latest report's figure; None is a gap, never an estimate."""
+    issued: str
+    arrives: str
+    last_given: str | None
+    """When a figure was last given (issue date); None if never."""
+    trend: Literal["up", "down", "level"] | None
+    """The latest figure against the one given before it; None for a gap or a first report."""
+    history: list[SituationReading]
+    """This source's latest reports of it (at most six), oldest arrival first."""
+
+
+class SituationFigure(TypedDict):
+    """One headline figure, as each source that reports it has it."""
+
+    label: str
+    unit: str
+    sources: list[SituationSource]
+    """By author name. Never averaged: two sources that differ are both shown."""
+    disagree: bool
+    """True when the sources' latest figures differ."""
+
+
+class Situation(TypedDict):
+    """The situation board: figures from arrived pages only, never from the record."""
+
+    figures: list[SituationFigure]
+
+
 __all__ = [
     "BodyLine",
     "Clock",
@@ -146,9 +206,14 @@ __all__ = [
     "DocumentListItem",
     "DocumentListing",
     "DocumentPage",
+    "LeverChoice",
     "LeverLine",
     "LeverParam",
     "OrderTrack",
     "OrderTracker",
+    "Situation",
+    "SituationFigure",
+    "SituationReading",
+    "SituationSource",
     "StepLine",
 ]

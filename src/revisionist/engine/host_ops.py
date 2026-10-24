@@ -65,7 +65,24 @@ def season_report_lines(store: EventStore, campaign_id: CampaignId) -> list[str]
 
 
 def cost_text(store: EventStore, campaign_id: CampaignId) -> str:
-    return render_cost(cost_report(store.read(campaign_id)))
+    """The cost table; a realism campaign also gets its cost per in-world day, since its
+    ticks are wakes of uneven length."""
+    events = list(store.read(campaign_id))
+    report = cost_report(events)
+    text = render_cost(report)
+    realism = any(
+        isinstance(e.payload, ev.CampaignCreated) and e.payload.ruleset == "realism"
+        for e in events[:1]
+    )
+    dates = [e.payload.to for e in events if isinstance(e.payload, ev.DateAdvanced)]
+    if not realism or not dates:
+        return text
+    days = (dates[-1] - dates[0]).days
+    per_day = report.total_usd / days if days else 0.0
+    return (
+        f"{text}\n${per_day:.4f} per in-world day over {days} days "
+        f"({dates[0].isoformat()} to {dates[-1].isoformat()})"
+    )
 
 
 def held_seats(conn: "Connection[Any]", campaign_id: CampaignId) -> dict[SeatId, str]:

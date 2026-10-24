@@ -13,7 +13,7 @@ from datetime import date, timedelta
 from revisionist.core import history
 from revisionist.core._base import Label, Model
 from revisionist.core.ontology import Controller
-from revisionist.core.realism.pipeline import step_due
+from revisionist.core.realism.pipeline import Order, step_due
 from revisionist.core.realism.pipelines import waiting_on_human
 from revisionist.core.state import State
 
@@ -59,6 +59,17 @@ def _horizon(state: State) -> int:
     return min((card.horizon_days for card in cards if card), default=DEFAULT_HORIZON_DAYS)
 
 
+def _lever_words(state: State, order: Order) -> str:
+    """The lever as its issuer's card words it; a lever with no label shows its name spaced out."""
+    seat = state.seats.get(order.issuer)
+    card = state.cards.get(seat.embodies) if seat is not None else None
+    found = next((x for x in card.levers if x.name == order.lever), None) if card else None
+    if found is not None and found.label:
+        return found.label
+    spoken = order.lever.replace("_", " ")
+    return spoken[:1].upper() + spoken[1:]
+
+
 def next_wake(state: State, today: date) -> Wake:
     """Where the next advance stops. Pure: same state and day, same wake."""
     found: list[WakeReason] = []
@@ -67,7 +78,10 @@ def next_wake(state: State, today: date) -> Wake:
             continue
         when = step_due(order, state.pipelines[order.pipeline])
         if when is not None:
-            found.append(_reason("step", when, f"{order.lever} at step {order.step + 1}", today))
+            holder = state.entities[state.pipelines[order.pipeline].steps[order.step].person].name
+            found.append(
+                _reason("step", when, f"{_lever_words(state, order)}, now with {holder}", today)
+            )
     event = history.next_due(state, today + timedelta(days=1))
     if event is not None and event.on_date is not None:
         found.append(_reason("history", event.on_date, event.name, today))

@@ -20,7 +20,7 @@ Module map (build plan Layer 1):
 - ``state``       State (truth) and View (one seat's knowledge)
 """
 
-SCHEMA_VERSION = "12"
+SCHEMA_VERSION = "14"
 """Bumped on any change to events, deltas, the ontology, State or View.
 
 ``tests/test_schema_version.py`` pins the schema's shape to this number, so a

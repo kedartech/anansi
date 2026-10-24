@@ -22,15 +22,16 @@ from revisionist.core.ids import CampaignId, EntityId, EventId, OrderId, SeatId
 from revisionist.core.ontology import Controller, EntityKind, Persona, Phase
 from revisionist.core.realism.check import gap_report, gaps, report
 from revisionist.core.realism.pipeline import StepAction
-from revisionist.core.report import render_leaks
+from revisionist.core.report import leak_report, render_leaks
 from revisionist.core.sealing import needs_admin_read
 from revisionist.core.settings import Betrayal, Inertia, Lethality, Plausibility, Settings
 from revisionist.core.state import State
 from revisionist.core.visibility import Visibility
 from revisionist.core.world import WorldFile
 from revisionist.core.world_compile import WorldError, compile_world, resolve_keys
+from revisionist.engine import aide as aides
 from revisionist.engine import campaign as cmp
-from revisionist.engine import host_ops, play, realism_tick, season, session_zero
+from revisionist.engine import counsel, host_ops, play, realism_tick, season, session_zero
 from revisionist.engine import scheduler as sch
 from revisionist.engine.ids import new_id
 from revisionist.engine.llm import Transport, TransportError
@@ -494,6 +495,85 @@ def step(order_id: str, action: str, params: Pairs = None, seat: PlayerSeat = No
     )
 
 
+def _person(state: State, me: SeatId, ref: str) -> EntityId:
+    """A person on the seat's card by entity ID, full name or any one word of the name."""
+    card = state.cards.get(state.seats[me].embodies)
+    reach = [c.person for c in card.contacts] if card is not None else []
+    if ref in reach:
+        return EntityId(ref)
+    want = ref.casefold()
+    found = [
+        p
+        for p in reach
+        if state.entities[p].name.casefold() == want
+        or want in state.entities[p].name.casefold().replace(".", "").split()
+    ]
+    if len(found) != 1:
+        names = ", ".join(state.entities[p].name for p in reach) or "nobody"
+        raise _fail(
+            f"no one called {ref!r} within your reach (you can consult: {names})", EXIT_REFUSED
+        )
+    return found[0]
+
+
+@app.command()
+def consult(
+    person: Annotated[str, typer.Argument(help="Someone on your card: a name or a surname")],
+    question: Annotated[str, typer.Argument(help="What you ask them")],
+    seat: PlayerSeat = None,
+) -> None:
+    """Realism: ask a person on your card for counsel. Changes nothing in the world."""
+    store = cmp.open_store()
+    campaign_id = _campaign(store)
+    state = load_state(store, campaign_id)
+    me = _me(state, seat)
+    _guard(store, campaign_id, me)
+    try:
+        held = counsel.consult(
+            store,
+            campaign_id,
+            me,
+            _person(state, me, person),
+            question,
+            counsel.ClaudeCounsellor(transport_factory()),
+        )
+    except counsel.CounselRefusedError as exc:
+        raise _fail(str(exc), EXIT_REFUSED) from exc
+    except TransportError as exc:
+        raise _fail(f"{person} could not be reached: {exc}") from exc
+    typer.echo(f"{held.person}, {held.channel.value.replace('_', ' ')}:")
+    typer.echo(held.text)
+    found = leak_report(load_state(store, campaign_id), store.read(campaign_id))
+    if found:
+        raise _fail(render_leaks(found), EXIT_LEAK)
+
+
+@app.command()
+def aide(seat: PlayerSeat = None, offline: Offline = False) -> None:
+    """Realism: your aide's brief: unread papers, decisions due, draft orders (never filed)."""
+    store = cmp.open_store()
+    campaign_id = _campaign(store)
+    me = _me(load_state(store, campaign_id), seat)
+    _guard(store, campaign_id, me)
+    writer: aides.AideWriter = (
+        aides.TemplateAide() if offline else aides.ClaudeAide(transport_factory())
+    )
+    try:
+        out = aides.aide_for(store, campaign_id, me, writer)
+    except ValueError as exc:
+        raise _fail(str(exc), EXIT_REFUSED) from exc
+    except TransportError as exc:
+        raise _fail(f"your aide could not be reached: {exc}") from exc
+    typer.echo(out.summary)
+    typer.echo("")
+    typer.echo("decisions due:" if out.decisions else "decisions due: none")
+    for d in out.decisions:
+        typer.echo(f"  {d.order_id} {d.lever} (step {d.step}): {', '.join(d.allowed)}")
+    typer.echo("drafts (not filed):" if out.drafts else "drafts: none")
+    for draft in out.drafts:
+        typer.echo(f"  {draft.command()}")
+
+
 def _deliverers() -> DelivererFactory | None:
     """Discord DMs for bound seats when a bot token is set on Postgres; else files."""
     if not cmp.is_postgres(cmp.db_target()):
@@ -522,8 +602,7 @@ def tick(offline: Offline = False) -> None:
     result = run.result
     if isinstance(result, realism_tick.RealismTickResult):
         now = load_state(store, _campaign(store)).in_world_date
-        woke = f"{result.wake.reason.label}, " if result.wake is not None else ""
-        typer.echo(f"tick {result.tick}: woke on {woke}now {now}")
+        typer.echo(realism_tick.wake_line(result, now))
         if run.leaks:
             raise _fail(render_leaks(run.leaks), EXIT_LEAK)
         return
@@ -1274,6 +1353,10 @@ def web_serve(
     static: Annotated[
         Path | None, typer.Option("--static", help="The client folder (default: the repo's web/)")
     ] = None,
+    offline_prose: Annotated[
+        bool,
+        typer.Option("--offline-prose", help="Write realism pages from templates, not a model."),
+    ] = False,
 ) -> None:
     """The web client and its JSON API, in the foreground. Plain HTTP: bind it to
     a private address such as the tailnet, never a public one."""
@@ -1292,6 +1375,7 @@ def web_serve(
         transport_factory=lambda: transport_factory(),
         clock=lambda: clock(),
         briefings=cmp.briefings_dir(),
+        offline_prose=offline_prose,
     )
     typer.echo(f"web client on http://{host}:{port}/", err=True)
     serve(app_, host, port)

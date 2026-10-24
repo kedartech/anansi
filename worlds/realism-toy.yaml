@@ -57,9 +57,11 @@ cards:
       - name: propose_levy
         pipeline: levy_bill
         resolver: votes
+        label: "Propose a levy"
+        summary: "Put a levy before the Council."
         params:
-          - {name: rate, kind: int, lo: 1, hi: 10}
-          - {name: purpose, kind: enum, choices: [harbour, militia]}
+          - {name: rate, kind: int, lo: 1, hi: 10, label: "Rate"}
+          - {name: purpose, kind: enum, choices: [harbour, militia], label: "Purpose", choice_labels: ["For the harbour", "For the militia"]}
     contacts:
       - {person: bram, channel: letter}
       - {person: cora, channel: in_person}

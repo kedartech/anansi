@@ -337,26 +337,34 @@ cards:
       - name: send_bill
         pipeline: bill_through_congress
         resolver: votes
+        label: "Send a bill to Congress"
+        summary: "Ask the Speaker and the Majority Leader to carry a bill through both Houses."
         params:
-          - {name: bill, kind: enum, choices: [neutrality_revision, arm_merchant_ships, lend_lease_appropriation, draft_extension]}
-          - {name: urgency, kind: enum, choices: [ordinary, urgent]}
+          - {name: bill, kind: enum, choices: [neutrality_revision, arm_merchant_ships, lend_lease_appropriation, draft_extension], label: "Which bill", choice_labels: ["Revise the Neutrality Act", "Arm merchant ships", "Fund Lend-Lease", "Extend the draft"]}
+          - {name: urgency, kind: enum, choices: [ordinary, urgent], label: "How hard to press", choice_labels: ["In the ordinary way", "As a matter of urgency"]}
       - name: lend_lease_finding
         pipeline: lend_lease_allocation
         resolver: production
+        label: "Allocate Lend-Lease aid"
+        summary: "Decide how much of the aid programme goes to a given country."
         params:
-          - {name: recipient, kind: enum, choices: [uk, ussr, china]}
-          - {name: share_pct, kind: int, lo: 0, hi: 100}
+          - {name: recipient, kind: enum, choices: [uk, ussr, china], label: "Which country", choice_labels: ["Britain", "The Soviet Union", "China"]}
+          - {name: share_pct, kind: int, lo: 0, hi: 100, label: "Share of the aid (per cent)"}
       - name: naval_order
         pipeline: naval_order
         resolver: shipping
+        label: "Give a naval order"
+        summary: "Instruct the Navy how to act at sea in a stated zone."
         params:
-          - {name: order, kind: enum, choices: [escort_convoys, shoot_on_sight, hold_in_port]}
-          - {name: zone, kind: enum, choices: [western_atlantic, iceland_route, pacific]}
+          - {name: order, kind: enum, choices: [escort_convoys, shoot_on_sight, hold_in_port], label: "The order", choice_labels: ["Escort the convoys", "Shoot on sight", "Hold in port"]}
+          - {name: zone, kind: enum, choices: [western_atlantic, iceland_route, pacific], label: "Where", choice_labels: ["Western Atlantic", "The Iceland route", "The Pacific"]}
       - name: public_address
         pipeline: public_address
         resolver: opinion
+        label: "Address the nation"
+        summary: "Speak to the country by radio on a chosen theme."
         params:
-          - {name: theme, kind: enum, choices: [aid_to_allies, freedom_of_the_seas, national_unity]}
+          - {name: theme, kind: enum, choices: [aid_to_allies, freedom_of_the_seas, national_unity], label: "Theme", choice_labels: ["Aid to the Allies", "Freedom of the seas", "National unity"]}
     contacts:
       - {person: hull, channel: in_person}
       - {person: hopkins, channel: in_person}
@@ -392,18 +400,24 @@ cards:
       - name: convoy_orders
         pipeline: cos_directive
         resolver: shipping
+        label: "Set convoy priorities"
+        summary: "Tell the Admiralty which convoy routes to protect first."
         params:
-          - {name: priority, kind: enum, choices: [atlantic, mediterranean, home_waters]}
+          - {name: priority, kind: enum, choices: [atlantic, mediterranean, home_waters], label: "First priority", choice_labels: ["The Atlantic", "The Mediterranean", "Home waters"]}
       - name: production_priority
         pipeline: cos_directive
         resolver: production
+        label: "Set production priorities"
+        summary: "Direct which branch of industry is to be pressed ahead."
         params:
-          - {name: sector, kind: enum, choices: [aircraft, escorts, merchant_ships]}
+          - {name: sector, kind: enum, choices: [aircraft, escorts, merchant_ships], label: "Which sector", choice_labels: ["Aircraft", "Escort vessels", "Merchant ships"]}
       - name: broadcast
         pipeline: press_broadcast
         resolver: opinion
+        label: "Broadcast to an audience"
+        summary: "Speak over the wireless to a chosen audience."
         params:
-          - {name: audience, kind: enum, choices: [britain, america, occupied_europe]}
+          - {name: audience, kind: enum, choices: [britain, america, occupied_europe], label: "To whom", choice_labels: ["Britain", "America", "Occupied Europe"]}
     contacts:
       - {person: roosevelt, channel: cable}
       - {person: eden, channel: in_person}
@@ -432,13 +446,17 @@ cards:
       - name: state_defence_order
         pipeline: gko_decree
         resolver: production
+        label: "Issue a State Defence order"
+        summary: "Direct industry through the State Defence Committee."
         params:
-          - {name: sector, kind: enum, choices: [tanks, aircraft, evacuated_industry]}
+          - {name: sector, kind: enum, choices: [tanks, aircraft, evacuated_industry], label: "Which sector", choice_labels: ["Tanks", "Aircraft", "Evacuated industry"]}
       - name: aid_request
         pipeline: soviet_aid_request
         resolver: production
+        label: "Ask for foreign aid"
+        summary: "Apply to the Allies for supplies or credit."
         params:
-          - {name: item, kind: enum, choices: [aircraft, tanks, aluminium, credit]}
+          - {name: item, kind: enum, choices: [aircraft, tanks, aluminium, credit], label: "What is wanted", choice_labels: ["Aircraft", "Tanks", "Aluminium", "Credit"]}
     contacts:
       - {person: molotov, channel: in_person}
       - {person: shaposhnikov, channel: in_person}
@@ -465,14 +483,18 @@ cards:
       - name: uboat_directive
         pipeline: okw_directive
         resolver: shipping
+        label: "Direct the U-boat arm"
+        summary: "Set the rules of engagement for U-boats in a stated area."
         params:
-          - {name: posture, kind: enum, choices: [restrict_us_ships, unrestricted_atlantic]}
-          - {name: theatre, kind: enum, choices: [north_atlantic, arctic, mediterranean]}
+          - {name: posture, kind: enum, choices: [restrict_us_ships, unrestricted_atlantic], label: "Posture", choice_labels: ["Spare American ships", "Unrestricted warfare in the Atlantic"]}
+          - {name: theatre, kind: enum, choices: [north_atlantic, arctic, mediterranean], label: "Which waters", choice_labels: ["The North Atlantic", "The Arctic", "The Mediterranean"]}
       - name: production_priority
         pipeline: okw_directive
         resolver: production
+        label: "Set production priorities"
+        summary: "Direct which branch of industry is to be pressed ahead."
         params:
-          - {name: sector, kind: enum, choices: [uboats, aircraft, tanks]}
+          - {name: sector, kind: enum, choices: [uboats, aircraft, tanks], label: "Which sector", choice_labels: ["U-boats", "Aircraft", "Tanks"]}
     contacts:
       - {person: ribbentrop, channel: in_person}
       - {person: raeder, channel: in_person}
@@ -497,18 +519,24 @@ cards:
       - name: requisition_shipping
         pipeline: japan_state_policy
         resolver: shipping
+        label: "Requisition shipping"
+        summary: "Take merchant tonnage into the service of the state."
         params:
-          - {name: tonnage_class, kind: enum, choices: [army, navy, civil]}
+          - {name: tonnage_class, kind: enum, choices: [army, navy, civil], label: "Whose shipping", choice_labels: ["The Army's", "The Navy's", "Civil"]}
       - name: mobilisation_plan
         pipeline: japan_state_policy
         resolver: production
+        label: "Order a mobilisation plan"
+        summary: "Direct national resources toward a chosen industry."
         params:
-          - {name: sector, kind: enum, choices: [oil, steel, aircraft]}
+          - {name: sector, kind: enum, choices: [oil, steel, aircraft], label: "Which sector", choice_labels: ["Oil", "Steel", "Aircraft"]}
       - name: cabinet_statement
         pipeline: cabinet_statement
         resolver: opinion
+        label: "Issue a Cabinet statement"
+        summary: "Put out the Cabinet's public line on the crisis."
         params:
-          - {name: line, kind: enum, choices: [conciliatory, firm, silent]}
+          - {name: line, kind: enum, choices: [conciliatory, firm, silent], label: "The line to take", choice_labels: ["Conciliatory", "Firm", "Say nothing"]}
     contacts:
       - {person: hirohito, channel: in_person}
       - {person: tojo, channel: in_person}
@@ -535,18 +563,24 @@ cards:
       - name: requisition_shipping
         pipeline: japan_state_policy
         resolver: shipping
+        label: "Requisition shipping"
+        summary: "Take merchant tonnage into the service of the state."
         params:
-          - {name: tonnage_class, kind: enum, choices: [army, navy, civil]}
+          - {name: tonnage_class, kind: enum, choices: [army, navy, civil], label: "Whose shipping", choice_labels: ["The Army's", "The Navy's", "Civil"]}
       - name: mobilisation_plan
         pipeline: japan_state_policy
         resolver: production
+        label: "Order a mobilisation plan"
+        summary: "Direct national resources toward a chosen industry."
         params:
-          - {name: sector, kind: enum, choices: [oil, steel, aircraft]}
+          - {name: sector, kind: enum, choices: [oil, steel, aircraft], label: "Which sector", choice_labels: ["Oil", "Steel", "Aircraft"]}
       - name: cabinet_statement
         pipeline: cabinet_statement
         resolver: opinion
+        label: "Issue a Cabinet statement"
+        summary: "Put out the Cabinet's public line on the crisis."
         params:
-          - {name: line, kind: enum, choices: [conciliatory, firm, silent]}
+          - {name: line, kind: enum, choices: [conciliatory, firm, silent], label: "The line to take", choice_labels: ["Conciliatory", "Firm", "Say nothing"]}
     contacts:
       - {person: konoe, channel: in_person}
       - {person: hirohito, channel: in_person}
@@ -572,13 +606,17 @@ cards:
       - name: libya_convoys
         pipeline: comando_supremo_order
         resolver: shipping
+        label: "Run convoys to Libya"
+        summary: "Send supply convoys across the Mediterranean by a chosen route."
         params:
-          - {name: route, kind: enum, choices: [tripoli, benghazi, greece]}
+          - {name: route, kind: enum, choices: [tripoli, benghazi, greece], label: "Which route", choice_labels: ["To Tripoli", "To Benghazi", "To Greece"]}
       - name: production_priority
         pipeline: comando_supremo_order
         resolver: production
+        label: "Set production priorities"
+        summary: "Direct which branch of industry is to be pressed ahead."
         params:
-          - {name: sector, kind: enum, choices: [aircraft, warships, tanks]}
+          - {name: sector, kind: enum, choices: [aircraft, warships, tanks], label: "Which sector", choice_labels: ["Aircraft", "Warships", "Tanks"]}
     contacts:
       - {person: hitler, channel: courier}
       - {person: cavallero, channel: in_person}
@@ -602,13 +640,17 @@ cards:
       - name: arsenal_output
         pipeline: mac_order
         resolver: production
+        label: "Press the arsenals"
+        summary: "Direct the arsenals to concentrate on a chosen class of arms."
         params:
-          - {name: sector, kind: enum, choices: [small_arms, artillery, ammunition]}
+          - {name: sector, kind: enum, choices: [small_arms, artillery, ammunition], label: "Which sector", choice_labels: ["Small arms", "Artillery", "Ammunition"]}
       - name: appeal_abroad
         pipeline: appeal_through_soong
         resolver: opinion
+        label: "Appeal abroad for help"
+        summary: "Send an appeal for support to a foreign public."
         params:
-          - {name: audience, kind: enum, choices: [america, britain]}
+          - {name: audience, kind: enum, choices: [america, britain], label: "To whom", choice_labels: ["America", "Britain"]}
     contacts:
       - {person: soong, channel: cable}
       - {person: he_yingqin, channel: in_person}

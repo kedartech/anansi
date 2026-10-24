@@ -144,7 +144,7 @@ def test_an_order_filed_mid_stretch_shortens_the_wake() -> None:
     wake = next_wake(rig.state, today)
     assert wake.to == today + timedelta(days=2)
     assert wake.reason.what == "step"
-    assert wake.reason.label == "propose_levy at step 1"
+    assert wake.reason.label == "Propose a levy, now with Cora Senn"
 
 
 def test_a_step_held_by_a_human_adds_no_candidate_and_an_ai_step_does() -> None:
