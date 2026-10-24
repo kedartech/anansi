@@ -50,6 +50,12 @@ class ParamSpec(Model):
     lo: int | None = None
     hi: int | None = None
     choices: tuple[Label, ...] = ()
+    # Empty display fields are left out of every dump, so campaigns logged before
+    # they existed keep their state hash.
+    label: Label = Field(default="", exclude_if=lambda v: not v)
+    """What the form calls it. Empty: the client words the name itself."""
+    choice_labels: tuple[Label, ...] = Field(default=(), exclude_if=lambda v: not v)
+    """One per choice, in order, or none."""
 
     @model_validator(mode="after")
     def _shape(self) -> "ParamSpec":
@@ -64,6 +70,8 @@ class ParamSpec(Model):
                 raise ValueError(f"enum parameter {self.name}: needs distinct choices")
         elif self.choices:
             raise ValueError(f"{self.kind.value} parameter {self.name}: only an enum has choices")
+        if self.choice_labels and len(self.choice_labels) != len(self.choices):
+            raise ValueError(f"parameter {self.name}: needs one choice label per choice")
         return self
 
 
@@ -78,6 +86,8 @@ class Lever(Model):
     pipeline: PipelineId
     resolver: ResolverKey
     params: tuple[ParamSpec, ...] = ()
+    label: Label = Field(default="", exclude_if=lambda v: not v)
+    summary: str = Field(default="", max_length=300, exclude_if=lambda v: not v)
 
     @model_validator(mode="after")
     def _distinct(self) -> "Lever":

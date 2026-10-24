@@ -164,6 +164,13 @@ _OPENING: dict[DocumentKind, str] = {
 }
 
 
+_ACKNOWLEDGEMENT: dict[DocumentKind, str] = {
+    DocumentKind.CABLE: "Message received. Fuller report follows.",
+    DocumentKind.LETTER: "I acknowledge your last and will send fuller particulars shortly.",
+    DocumentKind.MEMO: "Noted. A fuller paper will follow.",
+}
+
+
 def _figure(value: int | str) -> str:
     return f"{value:,}" if isinstance(value, int) else value
 
@@ -178,7 +185,7 @@ def template_prose(author: Author, page: DocumentView) -> str:
             unit = f" {line.unit}" if line.unit else ""
             said.append(f"{line.label}: {_figure(line.value)}{unit}.")
     if not said:
-        said.append("I have nothing to report.")
+        said.append(_ACKNOWLEDGEMENT.get(page.kind, "Your attention is drawn to this matter."))
     stop = " STOP " if page.kind is DocumentKind.CABLE else " "
     opening = _OPENING.get(page.kind, "I have the honour to report as follows. ")
     return f"{opening}{stop.join(said)}\n\n{author.name}"

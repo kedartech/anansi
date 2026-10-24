@@ -183,7 +183,7 @@ def test_a_truth_canary_reaches_no_view_snapshot_or_report() -> None:
     seen = project(state, seat)
     assert doc_id in seen.documents
     assert CANARY not in seen.model_dump_json()
-    listing = checked(state, seat, json.loads(json.dumps(rs.documents(seen, set()))))
+    listing = checked(state, seat, json.loads(json.dumps(rs.documents(seen, set(), set()))))
     page = checked(state, seat, json.loads(json.dumps(rs.document(seen, doc_id))))
     tracker = checked(state, seat, json.loads(json.dumps(rs.orders(seen, state.pipelines))))
     assert CANARY not in json.dumps([listing, page, tracker])

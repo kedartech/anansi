@@ -454,6 +454,26 @@ def mark_read(store: EventStore, campaign_id: CampaignId, seat: SeatId, doc_id: 
     return True
 
 
+def set_flag(
+    store: EventStore, campaign_id: CampaignId, seat: SeatId, doc_id: DocumentId, flagged: bool
+) -> bool:
+    """Flag ``doc_id`` for ``seat``, or take the flag off. False if it already stood so."""
+    standing = False
+    for e in store.read(campaign_id):
+        if (
+            isinstance(e.payload, ev.DocumentFlagged)
+            and e.payload.seat_id == seat
+            and e.payload.doc_id == doc_id
+        ):
+            standing = e.payload.flagged
+    if standing == flagged:
+        return False
+    state = load_state(store, campaign_id)
+    event = ev.DocumentFlagged(seat_id=seat, doc_id=doc_id, flagged=flagged)
+    _append(store, state, event, seat, private_to(seat))
+    return True
+
+
 def _append(
     store: EventStore,
     state: State,
@@ -481,6 +501,7 @@ __all__ = [
     "mark_read",
     "run_realism_tick",
     "seat_player",
+    "set_flag",
     "take_step",
     "wake_line",
 ]

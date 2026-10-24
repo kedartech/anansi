@@ -629,6 +629,7 @@ realism_payloads = st.one_of(
     documents_issued(),
     st.builds(ev.DocumentWritten, doc_id=document_ids, prose=st.text(min_size=1, max_size=400)),
     st.builds(ev.DocumentRead, seat_id=seat_ids, doc_id=document_ids),
+    st.builds(ev.DocumentFlagged, seat_id=seat_ids, doc_id=document_ids, flagged=st.booleans()),
     st.builds(ev.OrderDrafted, order=orders),
     st.builds(ev.OrderStepTaken, order_id=order_ids, outcome=step_outcomes()),
     st.builds(ev.OrderSettled, order_id=order_ids, status=st.sampled_from(sorted(rp.SETTLED))),

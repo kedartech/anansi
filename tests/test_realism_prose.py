@@ -200,3 +200,21 @@ def test_template_prose_states_only_the_page() -> None:
     run_realism_tick(store, CAMPAIGN, prose=TemplateProseWriter())
     for doc in load_state(store, CAMPAIGN).documents.values():
         assert doc.view.prose and invented_numbers(doc.view.prose, doc.view) == ()
+
+
+def test_a_page_with_no_lines_gets_a_kind_fit_acknowledgement_and_passes_the_check() -> None:
+    from revisionist.core.realism.document import DocumentKind
+    from revisionist.engine.prose import accepted
+
+    store = MemoryStore()
+    scenario(store)
+    run_realism_tick(store, CAMPAIGN)
+    page = next(iter(load_state(store, CAMPAIGN).documents.values())).view
+    author = Author(entity=page.author, name="A. Clerk")
+    for kind in (DocumentKind.CABLE, DocumentKind.LETTER, DocumentKind.MEMO, DocumentKind.PRESS):
+        bare = page.model_copy(update={"kind": kind, "body": (), "prose": None})
+        text = template_prose(author, bare)
+        assert "nothing to report" not in text
+        assert accepted([bare], Written(prose={bare.doc_id: text}))[1] == []
+    cable = page.model_copy(update={"kind": DocumentKind.CABLE, "body": (), "prose": None})
+    assert "Message received. Fuller report follows." in template_prose(author, cable)

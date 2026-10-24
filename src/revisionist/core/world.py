@@ -351,6 +351,8 @@ class LeverDecl(Model):
     pipeline: Key
     resolver: ResolverKey
     params: tuple[ParamSpec, ...] = ()
+    label: Label = ""
+    summary: str = Field(default="", max_length=300)
 
 
 class ContactDecl(Model):

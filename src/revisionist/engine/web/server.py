@@ -16,7 +16,7 @@ import mimetypes
 import threading
 import time
 from collections.abc import Callable
-from datetime import datetime
+from datetime import date, datetime
 from http import HTTPStatus
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -24,16 +24,18 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from revisionist.core.ids import DocumentId, OrderId
+from revisionist.core.ids import DocumentId, OrderId, SeatId
 from revisionist.core.ontology import Persona, Phase
 from revisionist.core.project import project
-from revisionist.core.realism.pipeline import StepAction
+from revisionist.core.realism.pipeline import OrderStatus, StepAction
+from revisionist.core.state import State
 from revisionist.engine import campaign as cmp
 from revisionist.engine import realism_tick
 from revisionist.engine import scheduler as sch
 from revisionist.engine.discord import handlers as dh
 from revisionist.engine.llm import Transport
 from revisionist.engine.pg_store import PostgresEventStore
+from revisionist.engine.prose import ClaudeProseWriter, ProseWriter, TemplateProseWriter
 from revisionist.engine.store import load_state
 from revisionist.engine.tick import NotInPlayError
 from revisionist.engine.web import realism_snapshot, snapshot
@@ -78,11 +80,14 @@ class App:
         clock: Callable[[], datetime],
         briefings: Path,
         secure_cookie: bool = False,
+        offline_prose: bool = False,
     ) -> None:
         self.dsn = dsn
         self.static = static.resolve()
         self.clock = clock
         self.secure_cookie = secure_cookie
+        self.offline_prose = offline_prose
+        self.transport_factory = transport_factory
         self.handlers = WebHandlers(
             dsn, transport_factory=transport_factory, clock=clock, briefings=briefings
         )
@@ -140,10 +145,12 @@ class App:
                 and link.seat_id in state.seats
             ):
                 wake_at = None if game["paused"] else game["next_tick_at"]
+                log_now = list(store.read(link.campaign_id))
                 seat_view["realism"] = realism_snapshot.seat_realism(
                     state,
                     link.seat_id,
-                    realism_snapshot.read_ids(store.read(link.campaign_id), link.seat_id),
+                    realism_snapshot.read_ids(log_now, link.seat_id),
+                    realism_snapshot.flagged_ids(log_now, link.seat_id),
                     wake_at,
                 )
             out["game"] = game | {"view": seat_view}
@@ -174,14 +181,25 @@ class App:
                     except KeyError:
                         raise ApiError(HTTPStatus.NOT_FOUND, "No such document.") from None
                     realism_tick.mark_read(store, cid, seat, doc_id)
+                    flagged = doc_id in realism_snapshot.flagged_ids(store.read(cid), seat)
+                    page["item"]["flagged"] = flagged
                     return snapshot.checked(state, seat, dict(page))
+                if action == "flag":
+                    doc_id = DocumentId(_text(body, "doc_id", 64))
+                    if doc_id not in project(state, seat).documents:
+                        raise ApiError(HTTPStatus.NOT_FOUND, "No such document.")
+                    flag = body.get("flagged")
+                    if not isinstance(flag, bool):
+                        raise ValueError("flagged is true or false.")
+                    realism_tick.set_flag(store, cid, seat, doc_id, flag)
+                    return snapshot.checked(state, seat, {"flagged": flag})
                 if action == "lever":
                     order = realism_tick.file_order(
                         store, cid, seat, _text(body, "lever", 120), _params(body)
                     )
                     first = state.pipelines[order.pipeline].steps[0]
                     who = state.entities[first.person].name
-                    reply = f"Filed {order.lever}. First step: {who} ({first.kind.value})."
+                    reply = f"Sent to {who}: {_lever_label(state, seat, order.lever)}."
                 elif action == "step":
                     try:
                         taken = StepAction(_text(body, "action", 20))
@@ -191,14 +209,24 @@ class App:
                     order = realism_tick.take_step(
                         store, cid, OrderId(_text(body, "order_id", 64)), taken, _params(body)
                     )
-                    reply = f"{order.lever}: {taken.value}. It is now {order.status.value}."
+                    reply = (
+                        f"{_lever_label(state, seat, order.lever)}: {_DONE[taken]}. "
+                        f"{_STANDING[order.status]}"
+                    )
                 elif action == "advance":
                     humans = cmp.human_seats(state)
                     if humans != [seat]:
                         raise ValueError("Only the host advances a shared game.")
-                    result = realism_tick.run_realism_tick(store, cid)
+                    writer: ProseWriter = (
+                        TemplateProseWriter()
+                        if self.offline_prose
+                        else ClaudeProseWriter(self.transport_factory())
+                    )
+                    result = realism_tick.run_realism_tick(store, cid, prose=writer)
+                    for dropped in result.prose_dropped:
+                        log.warning("no prose for %s", dropped)
                     today = load_state(store, cid).in_world_date
-                    reply = realism_tick.wake_line(result, today)
+                    reply = _calendar_line(today, result.wake.reason.label if result.wake else None)
                 else:
                     raise ApiError(HTTPStatus.NOT_FOUND, "No such call.")
             except (ValueError, KeyError, NotInPlayError) as exc:
@@ -207,6 +235,39 @@ class App:
             return snapshot.checked(state, seat, {"reply": reply, "refused": False})
         finally:
             store.close()
+
+
+_DONE: dict[StepAction, str] = {
+    StepAction.PASS: "you passed it on",
+    StepAction.EXPEDITE: "you pressed it forward",
+    StepAction.AMEND: "you amended it",
+    StepAction.STALL: "you held it back",
+    StepAction.LEAK: "you let word of it out",
+    StepAction.REFUSE: "you refused it",
+}
+_STANDING: dict[OrderStatus, str] = {
+    OrderStatus.MOVING: "It is still moving.",
+    OrderStatus.ENACTED: "It has been carried out.",
+    OrderStatus.REFUSED: "It has been refused.",
+    OrderStatus.LAPSED: "It has lapsed.",
+    OrderStatus.WITHDRAWN: "It has been withdrawn.",
+}
+
+
+def _lever_label(state: State, seat: SeatId, name: str) -> str:
+    card = state.cards[state.seats[seat].embodies]
+    found = next((x for x in card.levers if x.name == name), None)
+    return (
+        realism_snapshot.lever_label(found) if found is not None else realism_snapshot.words(name)
+    )
+
+
+def _calendar_line(today: date | None, reason: str | None) -> str:
+    """What the web says after an advance, in words rather than the CLI's log line."""
+    if today is None:
+        return "The calendar moves on."
+    line = f"The calendar moves to {today:%A} {today.day} {today:%B %Y}."
+    return f"{line} Reason: {reason.rstrip('.')}." if reason else line
 
 
 def _json_body(raw: bytes) -> dict[str, Any]:

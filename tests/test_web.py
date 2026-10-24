@@ -99,6 +99,7 @@ class Web:
             transport_factory=lambda: self.game.transport,
             clock=self.game.clock,
             briefings=tmp_path / "briefings",
+            offline_prose=True,
         )
         self.server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(self.app))
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)

@@ -526,6 +526,15 @@ class DocumentRead(Model):
     doc_id: DocumentId
 
 
+class DocumentFlagged(Model):
+    """A seat flagged a document, or took the flag off. A record; the latest event wins."""
+
+    kind: Literal["document_flagged"] = "document_flagged"
+    seat_id: SeatId
+    doc_id: DocumentId
+    flagged: bool
+
+
 class OrderDrafted(Model):
     """A seat pulled a lever: the order enters its pipeline at step 0."""
 
@@ -651,6 +660,7 @@ Payload = Annotated[
     | DocumentIssued
     | DocumentWritten
     | DocumentRead
+    | DocumentFlagged
     | OrderDrafted
     | OrderStepTaken
     | OrderSettled

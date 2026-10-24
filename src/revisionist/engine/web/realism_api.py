@@ -33,12 +33,15 @@ class DocumentListItem(TypedDict):
     """``Classification`` value."""
     unread: bool
     """True until the seat logs ``document_read`` for it."""
+    flagged: bool
+    """True while the seat's latest ``document_flagged`` for it says so."""
 
 
 class DocumentListing(TypedDict):
     documents: list[DocumentListItem]
     """Arrived documents in the seat's scope, newest arrival first."""
     unread: int
+    flagged: int
 
 
 class BodyLine(TypedDict):
@@ -72,6 +75,10 @@ class OrderTrack(TypedDict):
 
     id: str
     lever: str
+    label: str
+    """The lever's label on the viewer's card, in words."""
+    terms: list[str]
+    """Each parameter as "Which bill: Revise the Neutrality Act"."""
     pipeline: str
     params: dict[str, int | str]
     status: str
@@ -110,16 +117,25 @@ class ContactLine(TypedDict):
     channel: str
 
 
+class LeverChoice(TypedDict):
+    value: str
+    """What is posted back."""
+    label: str
+
+
 class LeverParam(TypedDict):
     name: str
+    label: str
     kind: Literal["int", "enum", "entity", "text"]
     lo: int | None
     hi: int | None
-    choices: list[str]
+    choices: list[LeverChoice]
 
 
 class LeverLine(TypedDict):
     name: str
+    label: str
+    summary: str
     pipeline: str
     params: list[LeverParam]
     """The draft form is built from these."""
@@ -146,6 +162,7 @@ __all__ = [
     "DocumentListItem",
     "DocumentListing",
     "DocumentPage",
+    "LeverChoice",
     "LeverLine",
     "LeverParam",
     "OrderTrack",

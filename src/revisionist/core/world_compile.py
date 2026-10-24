@@ -839,6 +839,8 @@ def _card(c: CardDecl, ids: Mapping[str, str]) -> SeatCard:
                 pipeline=PipelineId(ids[lv.pipeline]),
                 resolver=lv.resolver,
                 params=lv.params,
+                label=lv.label,
+                summary=lv.summary,
             )
             for lv in c.levers
         ),

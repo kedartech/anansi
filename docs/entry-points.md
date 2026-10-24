@@ -69,7 +69,7 @@ Groups:
   - `run [--campaign] [--offline]` (`:857`), `status` (`:883`), `advance` (`:911`), `pause [--reason]` (`:917`), `resume` (`:926`).
 - `discord` (`:934-935`):
   - `link --user ID [--campaign] [--seat]` (`:977`), `unlink` (`:1000`), `invite [--campaign] [--seat] [--hours 1-720]` (`:1016`), `invites` (`:1050`), `channel public CHANNEL_ID` (`:1063`), `seats` (`:1086`), `run` (`:1098`).
-- `(web)` `web` (`cli.py:1133-1134`): `serve [--host 127.0.0.1] [--port 8740] [--static DIR]` (`:1140-1148`).
+- `(web)` `web` (`cli.py:1133-1134`): `serve [--host 127.0.0.1] [--port 8740] [--static DIR] [--offline-prose]` (`:1140-1148`). `--offline-prose` makes the realism `advance` write pages with `TemplateProseWriter` instead of `ClaudeProseWriter`.
 
 ## 3. Discord surface
 - Registration: `engine/discord/bot.py:112` `register()`. Every command is guild-scoped (`guild=guild`). Command names are listed at `bot.py:37-62`.
@@ -123,7 +123,7 @@ Ticks and orders:
 - `engine/scheduler.py:278` `run()`: tick every due campaign once. `:133` `ScheduleTable` with `advance`, `pause`, `resume`, `retire` (`:208`). `:226` `register()`, `:235` `live_campaigns()`, `:78` `due()`.
 
 Realism (Phase 4):
-- `engine/realism_tick.py` `run_realism_tick(..., prose=writer)`: stages ADVANCE, PIPELINES, RESOLVE, FEEDS, then PROSE when a writer is passed (`play_tick` always passes one). PROSE gathers pages issued since the last `tick_closed` without prose, groups them by author, makes one writer call per author, drops prose that states a figure the page lacks (`core/realism/prose.invented_numbers`), and lands `document_written` events with their own `tick_stage_completed`. A `TransportError` leaves the pages bare and the tick still closes; call costs go on `tick_closed.costs`.
+- `engine/realism_tick.py` `run_realism_tick(..., prose=writer)` (the web `advance` passes one too; see section 5): stages ADVANCE, PIPELINES, RESOLVE, FEEDS, then PROSE when a writer is passed (`play_tick` always passes one). PROSE gathers pages issued since the last `tick_closed` without prose, groups them by author, makes one writer call per author, drops prose that states a figure the page lacks (`core/realism/prose.invented_numbers`), and lands `document_written` events with their own `tick_stage_completed`. A `TransportError` leaves the pages bare and the tick still closes; call costs go on `tick_closed.costs`.
 - `engine/prose.py`: `ProseWriter` protocol (takes `DocumentView`s and an `Author`, never `State`), `ClaudeProseWriter`, `TemplateProseWriter`. Prompt `engine/prompts/document_prose.md`.
 - `engine/counsel.py` `consult()`: counsel; prompt `engine/prompts/counsel.md`.
 - `engine/aide.py` `aide_for()` / `brief()`: the aide; prompt `engine/prompts/aide.md`.
@@ -197,6 +197,7 @@ Server: `src/revisionist/engine/web/server.py`. Stdlib `ThreadingHTTPServer` (`:
   - `POST /api/signout` (`:335` → `_signout` `:424`).
   - `POST /api/seat/<action>` (`:337-344`): needs a session (`:342`), dispatches via `SEAT_ACTIONS` (`:161-194`).
 - Seat actions (`SEAT_ACTIONS` keys, mapped to `WebHandlers`): `join`, `roster`, `search`, `claim`, `pick`, `goal`, `confirm`, `history`, `agent`, `order`, `ask`, `dossier`, `dispatch`, `status`, `report`, `bug`. Replies whose text is in `REFUSALS` (`:211-224`) return `refused: true`.
+- Realism actions, `POST /api/realism/<action>` (`App.realism`, `server.py`): `read` (`{doc_id}`; returns the page and logs `document_read` via `realism_tick.mark_read`), `flag` (`{doc_id, flagged}`; `realism_tick.set_flag` logs `document_flagged`, a no-op when the flag already stands, 404 for a document outside the seat's view), `lever`, `step`, `advance`. `advance` passes a prose writer to `run_realism_tick`: `ClaudeProseWriter(transport_factory())`, or `TemplateProseWriter()` when the `App` was built with `offline_prose=True`. Pages the writer drops are logged at warning level and stay bare. Replies are in words ("Sent to Sam Rayburn: ...", "The calendar moves to ..."); the CLI keeps `wake_line`.
 - Auth and hardening:
   - Session cookie `rv_session`, HttpOnly, SameSite=Strict (`:45`, `:256-258`). Token hashed at rest (`accounts.py:69`).
   - Writes need a JSON content type and an `Origin` matching `Host` (`:285-292`, called at `:327`).

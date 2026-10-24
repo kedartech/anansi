@@ -1,17 +1,18 @@
 {
   "listing": {
     "unread": 2,
+    "flagged": 1,
     "documents": [
-      {"id": "d-magic-0919", "kind": "intercept", "title": "Japanese Foreign Ministry traffic, Tokyo to Washington embassy", "author": "Signal Intelligence Service", "issued": "1941-10-19", "arrives": "1941-10-20", "channel": "courier", "classification": "most_secret", "unread": true},
-      {"id": "d-whip-1017", "kind": "whip_count", "title": "House count on the Neutrality Act revision", "author": "Sam Rayburn", "issued": "1941-10-17", "arrives": "1941-10-19", "channel": "letter", "classification": "confidential", "unread": true},
-      {"id": "d-cable-1016", "kind": "cable", "title": "Moscow situation, week ending 16 October", "author": "Laurence Steinhardt", "issued": "1941-10-16", "arrives": "1941-10-18", "channel": "cable", "classification": "secret", "unread": false},
-      {"id": "d-memo-1015", "kind": "memo", "title": "Lend-Lease shipments, September tonnage", "author": "Harry Hopkins", "issued": "1941-10-15", "arrives": "1941-10-16", "channel": "letter", "classification": "restricted", "unread": false},
-      {"id": "d-press-1014", "kind": "press", "title": "Editorial: Convoys and the Congress", "author": "New York Times", "issued": "1941-10-14", "arrives": "1941-10-14", "channel": "press", "classification": "open", "unread": false},
-      {"id": "d-report-1010", "kind": "report", "title": "Atlantic Fleet escort status", "author": "Admiral Ernest King", "issued": "1941-10-10", "arrives": "1941-10-12", "channel": "courier", "classification": "confidential", "unread": false}
+      {"id": "d-magic-0919", "kind": "intercept", "title": "Japanese Foreign Ministry traffic, Tokyo to Washington embassy", "author": "Signal Intelligence Service", "issued": "1941-10-19", "arrives": "1941-10-20", "channel": "courier", "classification": "most_secret", "unread": true, "flagged": false},
+      {"id": "d-whip-1017", "kind": "whip_count", "title": "House count on the Neutrality Act revision", "author": "Sam Rayburn", "issued": "1941-10-17", "arrives": "1941-10-19", "channel": "letter", "classification": "confidential", "unread": true, "flagged": false},
+      {"id": "d-cable-1016", "kind": "cable", "title": "Moscow situation, week ending 16 October", "author": "Laurence Steinhardt", "issued": "1941-10-16", "arrives": "1941-10-18", "channel": "cable", "classification": "secret", "unread": false, "flagged": true},
+      {"id": "d-memo-1015", "kind": "memo", "title": "Lend-Lease shipments, September tonnage", "author": "Harry Hopkins", "issued": "1941-10-15", "arrives": "1941-10-16", "channel": "letter", "classification": "restricted", "unread": false, "flagged": false},
+      {"id": "d-press-1014", "kind": "press", "title": "Editorial: Convoys and the Congress", "author": "New York Times", "issued": "1941-10-14", "arrives": "1941-10-14", "channel": "press", "classification": "open", "unread": false, "flagged": false},
+      {"id": "d-report-1010", "kind": "report", "title": "Atlantic Fleet escort status", "author": "Admiral Ernest King", "issued": "1941-10-10", "arrives": "1941-10-12", "channel": "courier", "classification": "confidential", "unread": false, "flagged": false}
     ]
   },
   "page": {
-    "item": {"id": "d-whip-1017", "kind": "whip_count", "title": "House count on the Neutrality Act revision", "author": "Sam Rayburn", "issued": "1941-10-17", "arrives": "1941-10-19", "channel": "letter", "classification": "confidential", "unread": true},
+    "item": {"id": "d-whip-1017", "kind": "whip_count", "title": "House count on the Neutrality Act revision", "author": "Sam Rayburn", "issued": "1941-10-17", "arrives": "1941-10-19", "channel": "letter", "classification": "confidential", "unread": true, "flagged": false},
     "body": [
       {"label": "Members counted", "value": 391, "unit": "members"},
       {"label": "Committed in favour", "value": 190, "unit": "members"},
@@ -23,18 +24,18 @@
   },
   "orders": {
     "orders": [
-      {"id": "o-neutrality", "lever": "Send a bill to Congress", "pipeline": "legislation", "params": {"measure": "Neutrality Act revision"}, "status": "moving", "filed": "1941-10-10", "at_step": 1, "with_person": "Sam Rayburn", "since": "1941-10-12", "steps": [
-        {"step": 0, "person": "Franklin D. Roosevelt", "kind": "decision", "action": "approve", "on": "1941-10-10"},
+      {"id": "o-neutrality", "lever": "send_bill", "label": "Send a bill to Congress", "terms": ["Which bill: Revise the Neutrality Act"], "pipeline": "legislation", "params": {"bill": "neutrality_revision"}, "status": "moving", "filed": "1941-10-10", "at_step": 1, "with_person": "Sam Rayburn", "since": "1941-10-12", "steps": [
+        {"step": 0, "person": "Franklin D. Roosevelt", "kind": "decision", "action": "pass", "on": "1941-10-10"},
         {"step": 1, "person": "Sam Rayburn", "kind": "decision", "action": null, "on": null}
       ], "decision_needed": false},
-      {"id": "o-convoy", "lever": "Direct the Navy", "pipeline": "naval-order", "params": {"task": "Escort convoy HX 156", "ships": 8}, "status": "moving", "filed": "1941-10-18", "at_step": 0, "with_person": "Franklin D. Roosevelt", "since": "1941-10-19", "steps": [
+      {"id": "o-convoy", "lever": "naval_order", "label": "Give a naval order", "terms": ["The order: Escort the convoys", "Where: The Iceland route"], "pipeline": "naval-order", "params": {"order": "escort_convoys", "zone": "iceland_route"}, "status": "moving", "filed": "1941-10-18", "at_step": 0, "with_person": "Franklin D. Roosevelt", "since": "1941-10-19", "steps": [
         {"step": 0, "person": "Franklin D. Roosevelt", "kind": "decision", "action": null, "on": null},
         {"step": 1, "person": "Harold Stark", "kind": "clerical", "action": null, "on": null}
       ], "decision_needed": true},
-      {"id": "o-lend", "lever": "Allocate Lend-Lease", "pipeline": "allocation", "params": {"recipient": "Britain", "tons": 40000}, "status": "enacted", "filed": "1941-10-02", "at_step": 2, "with_person": null, "since": null, "steps": [
-        {"step": 0, "person": "Franklin D. Roosevelt", "kind": "decision", "action": "approve", "on": "1941-10-02"},
-        {"step": 1, "person": "Harry Hopkins", "kind": "clerical", "action": "approve", "on": "1941-10-06"},
-        {"step": 2, "person": "Edward Stettinius", "kind": "clerical", "action": "approve", "on": "1941-10-13"}
+      {"id": "o-lend", "lever": "lend_lease_finding", "label": "Allocate Lend-Lease aid", "terms": ["Which country: Britain", "Share of the aid (per cent): 40"], "pipeline": "allocation", "params": {"recipient": "uk", "share_pct": 40}, "status": "enacted", "filed": "1941-10-02", "at_step": 2, "with_person": null, "since": null, "steps": [
+        {"step": 0, "person": "Franklin D. Roosevelt", "kind": "decision", "action": "pass", "on": "1941-10-02"},
+        {"step": 1, "person": "Harry Hopkins", "kind": "clerical", "action": "pass", "on": "1941-10-06"},
+        {"step": 2, "person": "Edward Stettinius", "kind": "clerical", "action": "pass", "on": "1941-10-13"}
       ], "decision_needed": false}
     ]
   },
@@ -47,15 +48,18 @@
   },
   "desk": {
     "office": "President of the United States",
-    "powers": ["Commander in chief", "Veto", "Executive orders"],
+    "powers": ["Commander in Chief of the Army and Navy", "sign or veto bills", "issue executive orders"],
     "levers": [
-      {"name": "Send a bill to Congress", "pipeline": "legislation", "params": [
-        {"name": "measure", "kind": "text", "lo": null, "hi": null, "choices": []},
-        {"name": "sponsor", "kind": "entity", "lo": null, "hi": null, "choices": []}
+      {"name": "send_bill", "label": "Send a bill to Congress", "summary": "Ask the Speaker and the Majority Leader to carry a bill through both Houses.", "pipeline": "legislation", "params": [
+        {"name": "bill", "label": "Which bill", "kind": "enum", "lo": null, "hi": null, "choices": [
+          {"value": "neutrality_revision", "label": "Revise the Neutrality Act"},
+          {"value": "draft_extension", "label": "Extend the draft"}]},
+        {"name": "sponsor", "label": "Sponsor", "kind": "entity", "lo": null, "hi": null, "choices": []}
       ]},
-      {"name": "Allocate Lend-Lease", "pipeline": "allocation", "params": [
-        {"name": "recipient", "kind": "enum", "lo": null, "hi": null, "choices": ["Britain", "Soviet Union", "China"]},
-        {"name": "tons", "kind": "int", "lo": 1000, "hi": 100000, "choices": []}
+      {"name": "lend_lease_finding", "label": "Allocate Lend-Lease aid", "summary": "Decide how much of the aid programme goes to a given country.", "pipeline": "allocation", "params": [
+        {"name": "recipient", "label": "Which country", "kind": "enum", "lo": null, "hi": null, "choices": [
+          {"value": "uk", "label": "Britain"}, {"value": "ussr", "label": "The Soviet Union"}, {"value": "china", "label": "China"}]},
+        {"name": "share_pct", "label": "Share of the aid (per cent)", "kind": "int", "lo": 0, "hi": 100, "choices": []}
       ]}
     ],
     "contacts": [

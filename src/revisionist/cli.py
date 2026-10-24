@@ -1353,6 +1353,10 @@ def web_serve(
     static: Annotated[
         Path | None, typer.Option("--static", help="The client folder (default: the repo's web/)")
     ] = None,
+    offline_prose: Annotated[
+        bool,
+        typer.Option("--offline-prose", help="Write realism pages from templates, not a model."),
+    ] = False,
 ) -> None:
     """The web client and its JSON API, in the foreground. Plain HTTP: bind it to
     a private address such as the tailnet, never a public one."""
@@ -1371,6 +1375,7 @@ def web_serve(
         transport_factory=lambda: transport_factory(),
         clock=lambda: clock(),
         briefings=cmp.briefings_dir(),
+        offline_prose=offline_prose,
     )
     typer.echo(f"web client on http://{host}:{port}/", err=True)
     serve(app_, host, port)

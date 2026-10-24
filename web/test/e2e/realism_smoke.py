@@ -1,7 +1,8 @@
 """Browser smoke run of the realism room against a live `revisionist web serve`.
 
 Signs up a fresh account, joins a realism game with an invite code, and checks the
-in-tray, the desk, a filed order and the advance, screenshotting each tab at
+in-tray folders, an open dossier and its flag, the filters, the desk, a signed
+order and the advance, screenshotting each tab at
 1440x900. Fails on any console error, page error, failed request or a request to
 another origin, or any named check that does not hold; runs axe-core when it is
 mounted at /axe/axe.min.js.
@@ -20,6 +21,7 @@ from playwright.sync_api import Locator, Page, sync_playwright
 BASE, CODE, OUT = sys.argv[1].rstrip("/"), sys.argv[2], Path(sys.argv[3])
 SIZE = (1440, 900)
 AXE = Path("/axe/axe.min.js")
+WAKE_MS = 240_000  # a wake makes one live prose call per author
 problems: list[str] = []
 checks: dict[str, bool] = {}
 origin = urlparse(BASE).netloc
@@ -98,55 +100,90 @@ def main() -> int:
         page.get_by_role("tab", name="In-tray").wait_for(timeout=30_000)
         page.wait_for_timeout(300)
         shoot(page, "00-opening")
-        if page.locator(".rl-doc").count() == 0:
-            # A new game's first documents arrive on the first tick.
+        if page.locator(".rl-folder").count() == 0:
+            # A new game's first papers arrive on the first wake; prose is written live.
             page.get_by_role("button", name="Advance to next wake").click()
-            page.get_by_role("status").filter(has_text="woke on").wait_for(timeout=30_000)
+            page.get_by_role("status").filter(has_text="calendar moves").wait_for(timeout=WAKE_MS)
             page.wait_for_timeout(300)
-        tray = page.locator(".rl-doc")
+        tray = page.locator(".rl-folder")
         n = tray.count()
-        check(f"in-tray renders {n} documents", n > 0)
+        check(f"in-tray renders {n} folders", n > 0)
         shoot(page, "01-in-tray")
         axe(page, "in-tray")
 
-        unread = page.locator(".rl-doc.unread").count()
-        page.locator(".rl-doc.unread .rl-doc-open").first.click()
-        page.locator(".rl-page").wait_for()
+        unread = page.locator(".rl-folder.unread").count()
+        page.locator(".rl-folder.unread .rl-cover").first.click()
+        page.locator(".rl-dossier .rl-page").wait_for()
         page.wait_for_timeout(300)
-        now_unread = page.locator(".rl-doc.unread").count()
+        prose = page.locator(".rl-prose")
+        text = prose.inner_text() if prose.count() else ""
+        check("an opened paper has written text", len(text.strip()) > 40, f"{len(text)} chars")
+        report["sample_prose"] = text[:600]
         check(
-            "opening a document marks it read",
+            "no paper reads 'Not stated'", "Not stated" not in page.locator(".rl-page").inner_text()
+        )
+        shoot(page, "02-dossier")
+        axe(page, "dossier")
+
+        page.get_by_role("button", name="Flag", exact=True).click()
+        page.get_by_role("button", name="Unflag").wait_for()
+        page.get_by_role("button", name="Close folder").click()
+        page.locator(".rl-tray").wait_for()
+        page.wait_for_timeout(300)
+        now_unread = page.locator(".rl-folder.unread").count()
+        check(
+            "opening a folder marks it read",
             unread > 0 and now_unread == unread - 1,
             f"unread {unread} -> {now_unread}",
         )
-        shoot(page, "02-in-tray-reading")
+        check("flagging marks the folder", page.locator(".rl-folder.flagged").count() == 1)
+        page.get_by_role("tab", name="Flagged").click()
+        page.wait_for_timeout(200)
+        check("Flagged filter shows the one folder", page.locator(".rl-folder").count() == 1)
+        shoot(page, "03-in-tray-flagged")
+        page.get_by_role("tab", name="Unread").click()
+        page.wait_for_timeout(200)
+        check("Unread filter shows the rest", page.locator(".rl-folder").count() == now_unread)
+        page.get_by_role("tab", name="All").click()
 
         page.get_by_role("tab", name="Desk").click()
-        forms = page.locator("form.rl-form")
-        check("desk lists levers", forms.count() > 0)
-        shoot(page, "03-desk")
+        instruments = page.locator(".rl-instrument")
+        check("desk lists instruments", instruments.count() > 0)
+        snake = [t for t in instruments.locator("strong").all_inner_texts() if "_" in t]
+        check("instrument names are in words", not snake, ", ".join(snake))
+        shoot(page, "04-desk")
         axe(page, "desk")
 
         page.get_by_role("tab", name="Orders").click()
         before = page.locator(".rl-order").count()
         page.get_by_role("tab", name="Desk").click()
-        form = page.locator("form.rl-form").first
+        first = page.locator(".rl-instrument").first
+        first.get_by_role("button", name="Draft").click()
+        form = first.locator("form.rl-form")
+        form.wait_for()
         fill(form)
-        form.get_by_role("button", name="File order").click()
-        page.get_by_role("status").filter(has_text="Filed").wait_for()
+        shoot(page, "05-desk-draft")
+        form.get_by_role("button", name="Sign and send").click()
+        page.get_by_role("status").filter(has_text="Sent to").wait_for()
+        report["sent_reply"] = page.get_by_role("status").inner_text()
         page.wait_for_timeout(300)
         page.get_by_role("tab", name="Orders").click()
         after = page.locator(".rl-order").count()
-        check("filing an order adds a tracker entry", after == before + 1, f"{before} -> {after}")
-        shoot(page, "04-orders")
+        check("signing an order adds a tracker entry", after == before + 1, f"{before} -> {after}")
+        shoot(page, "06-orders")
         axe(page, "orders")
 
         pace = page.locator(".rl-pace").first.inner_text()
+        t0 = time.time()
         page.get_by_role("button", name="Advance to next wake").click()
-        page.get_by_role("status").filter(has_text="woke on").wait_for(timeout=30_000)
+        page.get_by_role("status").filter(has_text="calendar moves").wait_for(timeout=WAKE_MS)
+        report["advance_seconds"] = round(time.time() - t0, 1)
         page.wait_for_timeout(300)
         moved = page.locator(".rl-pace").first.inner_text()
         check("advance moves the world date", moved != pace, f"{pace!r} -> {moved!r}")
+        page.get_by_role("tab", name="In-tray").click()
+        page.wait_for_timeout(300)
+        shoot(page, "07-in-tray-after-advance")
 
         body = page.locator("body").inner_text()
         for word in ("controller", "human", "truth", " AI ", "%"):

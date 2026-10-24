@@ -1,5 +1,5 @@
 {
- "0b3914b94b70552d838b8b08": {
+ "c8d3aff3a47fda982f4009af": {
   "call_class": "counsel",
   "hand_written": true,
   "model": "claude-sonnet-5-5",
@@ -7,16 +7,16 @@
   "prompt_head": "## You are\nHarry L. Hopkins, Special assistant to the President\n\n## Today\n1941-09-18\n\n## Your papers\n[{\"kind\": \"letter\",",
   "reply": {
    "cached_tokens": 263,
-   "input_tokens": 435,
+   "input_tokens": 445,
    "model": "claude-sonnet-5-5",
    "output": {
     "text": "Mr. President, going by the list as Harriman sent it, tanks come first: they ask for 500 a month, and 400 aircraft a month behind that. That is what they asked for, mind you, not what they will get. I can't tell you yet what we can ship against it; that is a question for the Army and for the British, who will want their share. My advice is to tell Stalin something definite soon, even if it is less than the list."
    },
    "output_tokens": 106,
-   "usd": 0.00193
+   "usd": 0.00195
   }
  },
- "86d1915b6583462ccaec47be": {
+ "f57589b07034c03bf9817e95": {
   "call_class": "counsel",
   "hand_written": true,
   "model": "claude-sonnet-5-5",
@@ -24,13 +24,13 @@
   "prompt_head": "## You are\nHarry L. Hopkins, Special assistant to the President\n\n## Today\n1941-09-18\n\n## Your papers\n[{\"kind\": \"letter\",",
   "reply": {
    "cached_tokens": 263,
-   "input_tokens": 367,
+   "input_tokens": 377,
    "model": "claude-sonnet-5-5",
    "output": {
     "text": "Mr. President, I have only their letter of request so far, and it gives no figures I would put in front of you. From what I saw in Moscow they need everything, but I would not guess at numbers until the full list comes through. When it does, I will bring it to you myself."
    },
    "output_tokens": 71,
-   "usd": 0.001444
+   "usd": 0.001464
   }
  }
 }

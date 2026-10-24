@@ -22,6 +22,12 @@
   --ink-field-border: #7A705F;      /* 4.1:1 */
   --ink-rule: #B5AA93;              /* decorative */
 
+  /* Manila folders: ink-primary is 10:1 on closed, 12.2:1 on open; ink-secondary 5.4:1 and 6.6:1.
+     Signal-stamp text sits on paper-sheet, never straight on the manila (4.4:1 on closed). */
+  --folder-manila: #D9C48F;
+  --folder-manila-open: #E8D9AE;
+  --folder-edge: #8A7544;           /* decorative edge only */
+
   /* Signal: always with an icon and a word */
   --signal-stamp: #9B2C22;          /* deadlines, errors, covert, hostile */
   --signal-link: #2A3D66;           /* links, focus ring */

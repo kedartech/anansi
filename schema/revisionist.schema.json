@@ -2278,6 +2278,37 @@
         "title": "DivergenceChanged",
         "type": "object"
       },
+      "DocumentFlagged": {
+        "additionalProperties": false,
+        "description": "A seat flagged a document, or took the flag off. A record; the latest event wins.",
+        "properties": {
+          "doc_id": {
+            "title": "Doc Id",
+            "type": "string"
+          },
+          "flagged": {
+            "title": "Flagged",
+            "type": "boolean"
+          },
+          "kind": {
+            "const": "document_flagged",
+            "default": "document_flagged",
+            "title": "Kind",
+            "type": "string"
+          },
+          "seat_id": {
+            "title": "Seat Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "seat_id",
+          "doc_id",
+          "flagged"
+        ],
+        "title": "DocumentFlagged",
+        "type": "object"
+      },
       "DocumentIssued": {
         "additionalProperties": false,
         "description": "A document is written. Its envelope scope is the view's; seats see it on arrival.",
@@ -3542,6 +3573,12 @@
         "additionalProperties": false,
         "description": "Something the person can set moving. Names a pipeline and a resolver, never a verb.",
         "properties": {
+          "label": {
+            "default": "",
+            "maxLength": 60,
+            "title": "Label",
+            "type": "string"
+          },
           "name": {
             "maxLength": 60,
             "title": "Name",
@@ -3567,6 +3604,12 @@
               "opinion"
             ],
             "title": "Resolver",
+            "type": "string"
+          },
+          "summary": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Summary",
             "type": "string"
           }
         },
@@ -4026,6 +4069,15 @@
         "additionalProperties": false,
         "description": "One typed parameter of a lever. An order's params and every amendment must fit it.",
         "properties": {
+          "choice_labels": {
+            "default": [],
+            "items": {
+              "maxLength": 60,
+              "type": "string"
+            },
+            "title": "Choice Labels",
+            "type": "array"
+          },
           "choices": {
             "default": [],
             "items": {
@@ -4049,6 +4101,12 @@
           },
           "kind": {
             "$ref": "#/$defs/ParamKind"
+          },
+          "label": {
+            "default": "",
+            "maxLength": 60,
+            "title": "Label",
+            "type": "string"
           },
           "lo": {
             "anyOf": [
@@ -5766,6 +5824,7 @@
             "delta_proposed": "#/$defs/DeltaProposed",
             "delta_rejected": "#/$defs/DeltaRejected",
             "divergence_changed": "#/$defs/DivergenceChanged",
+            "document_flagged": "#/$defs/DocumentFlagged",
             "document_issued": "#/$defs/DocumentIssued",
             "document_read": "#/$defs/DocumentRead",
             "document_written": "#/$defs/DocumentWritten",
@@ -5970,6 +6029,9 @@
           },
           {
             "$ref": "#/$defs/DocumentRead"
+          },
+          {
+            "$ref": "#/$defs/DocumentFlagged"
           },
           {
             "$ref": "#/$defs/OrderDrafted"
@@ -7672,6 +7734,12 @@
         "additionalProperties": false,
         "description": "Something the person can set moving. Names a pipeline and a resolver, never a verb.",
         "properties": {
+          "label": {
+            "default": "",
+            "maxLength": 60,
+            "title": "Label",
+            "type": "string"
+          },
           "name": {
             "maxLength": 60,
             "title": "Name",
@@ -7697,6 +7765,12 @@
               "opinion"
             ],
             "title": "Resolver",
+            "type": "string"
+          },
+          "summary": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Summary",
             "type": "string"
           }
         },
@@ -7896,6 +7970,15 @@
         "additionalProperties": false,
         "description": "One typed parameter of a lever. An order's params and every amendment must fit it.",
         "properties": {
+          "choice_labels": {
+            "default": [],
+            "items": {
+              "maxLength": 60,
+              "type": "string"
+            },
+            "title": "Choice Labels",
+            "type": "array"
+          },
           "choices": {
             "default": [],
             "items": {
@@ -7919,6 +8002,12 @@
           },
           "kind": {
             "$ref": "#/$defs/ParamKind"
+          },
+          "label": {
+            "default": "",
+            "maxLength": 60,
+            "title": "Label",
+            "type": "string"
           },
           "lo": {
             "anyOf": [
@@ -10777,6 +10866,12 @@
         "additionalProperties": false,
         "description": "Something the person can set moving. Names a pipeline and a resolver, never a verb.",
         "properties": {
+          "label": {
+            "default": "",
+            "maxLength": 60,
+            "title": "Label",
+            "type": "string"
+          },
           "name": {
             "maxLength": 60,
             "title": "Name",
@@ -10802,6 +10897,12 @@
               "opinion"
             ],
             "title": "Resolver",
+            "type": "string"
+          },
+          "summary": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Summary",
             "type": "string"
           }
         },
@@ -11001,6 +11102,15 @@
         "additionalProperties": false,
         "description": "One typed parameter of a lever. An order's params and every amendment must fit it.",
         "properties": {
+          "choice_labels": {
+            "default": [],
+            "items": {
+              "maxLength": 60,
+              "type": "string"
+            },
+            "title": "Choice Labels",
+            "type": "array"
+          },
           "choices": {
             "default": [],
             "items": {
@@ -11024,6 +11134,12 @@
           },
           "kind": {
             "$ref": "#/$defs/ParamKind"
+          },
+          "label": {
+            "default": "",
+            "maxLength": 60,
+            "title": "Label",
+            "type": "string"
           },
           "lo": {
             "anyOf": [

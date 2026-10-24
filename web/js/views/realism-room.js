@@ -5,20 +5,20 @@ import { api } from '../api.js';
 import { h } from '../dom.js';
 import { STEP_ACTIONS, entityChoices } from '../realism-rules.js';
 import { worldDate } from '../rules.js';
-import { desk, documentPage, inTray, leverForm, paceHeader, tracker } from './realism.js';
+import { desk, dossier, inTray, paceHeader, tracker } from './realism.js';
 import { header } from './frame.js';
 
 const TABS = [['tray', 'In-tray'], ['desk', 'Desk'], ['orders', 'Orders']];
-const ui = { tab: 'tray', page: null, said: null };
+const ui = { tab: 'tray', page: null, said: null, filter: 'all', sort: 'newest' };
 
 function stepForm(order, act) {
   const id = `rl-step-${order.id}`;
   const select = h('select', { id, name: 'action', required: true },
     STEP_ACTIONS.map(([value, label]) => h('option', { value }, label)));
   return h('form', {
-    class: 'rl-form', 'aria-label': `Act on ${order.lever}`,
+    class: 'rl-form', 'aria-label': `Act on ${order.label}`,
     onsubmit: (e) => { e.preventDefault(); act({ order_id: order.id, action: select.value, params: {} }); },
-  }, h('label', { for: id }, `Your decision on ${order.lever}`), select,
+  }, h('label', { for: id }, `Your decision on ${order.label}`), select,
   h('button', { type: 'submit', class: 'rl-submit' }, 'Take the step'));
 }
 
@@ -26,7 +26,7 @@ export function realismRoom(ctx) {
   const { me, refresh } = ctx;
   const game = me.game;
   const rv = game.view.realism;
-  const root = h('div', { class: 'screen war-screen' });
+  const root = h('div', { class: 'screen war-screen realism-screen' });
   const status = h('p', { class: 'outcome', role: 'status', 'aria-live': 'polite' }, ui.said);
   const rerender = () => root.replaceChildren(...build());
 
@@ -51,20 +51,40 @@ export function realismRoom(ctx) {
     }
   }
 
+  async function flag(on) {
+    try {
+      await api.realism('flag', { doc_id: ui.page.item.id, flagged: on });
+      ui.page.item.flagged = on;
+      await refresh();
+    } catch (ex) {
+      status.replaceChildren(h('span', { class: 'form-error', role: 'alert' }, ex.message));
+    }
+  }
+
   function body() {
     if (ui.tab === 'desk') {
-      const names = entityChoices(rv.desk);
-      return h('div', { class: 'tab-body' }, desk(rv.desk),
-        rv.desk.levers.map((l) => leverForm(l, (v) => run('lever', v), names)));
+      return h('div', { class: 'tab-body' },
+        desk(rv.desk, { onSubmit: (v) => run('lever', v), entities: entityChoices(rv.desk) }));
     }
     if (ui.tab === 'orders') {
       const waiting = rv.orders.orders.filter((o) => o.decision_needed);
       return h('div', { class: 'tab-body' }, tracker(rv.orders),
         waiting.map((o) => stepForm(o, (v) => run('step', v))));
     }
-    return h('div', { class: 'tab-body' }, inTray(rv.documents, open),
-      h('div', { class: 'rl-reader', 'aria-label': 'Reader' },
-        ui.page ? documentPage(ui.page) : h('p', { class: 'rl-none' }, 'Open a document to read it here.')));
+    if (ui.page) {
+      return h('div', { class: 'tab-body' }, dossier(ui.page, { onClose: () => { ui.page = null; rerender(); }, onFlag: flag }));
+    }
+    const choose = (key, focus) => {
+      ui.filter = key;
+      rerender();
+      if (focus) root.querySelector(`#rl-filter-${key}`)?.focus();
+    };
+    return h('div', { class: 'tab-body' }, inTray(rv.documents, open, {
+      filter: ui.filter,
+      sort: ui.sort,
+      onFilter: choose,
+      onSort: (value) => { ui.sort = value; rerender(); },
+    }));
   }
 
   function build() {

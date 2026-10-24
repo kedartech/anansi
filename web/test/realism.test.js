@@ -5,7 +5,10 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { STEP_ACTIONS, channelWord, classificationWord, entityChoices, paceLine, sortInTray, trackerLine, unreadCount } from '../js/realism-rules.js';
+import {
+  STEP_ACTIONS, TRAY_FILTERS, channelWord, classificationWord, entityChoices, filterInTray, horizonWords, paceLine,
+  powersSentence, sortInTray, stepLine, trackerLine, trayCounts, unreadCount,
+} from '../js/realism-rules.js';
 
 const WEB = fileURLToPath(new URL('..', import.meta.url));
 const fixture = JSON.parse(readFileSync(join(WEB, 'test', 'fixtures', 'realism-seat.json'), 'utf8'));
@@ -83,4 +86,63 @@ test('entity choices are contacts and principals, once each', () => {
 test('the step actions match the engine and offer each once', () => {
   const values = STEP_ACTIONS.map(([v]) => v).sort();
   assert.deepEqual(values, ['amend', 'expedite', 'leak', 'pass', 'refuse', 'stall']);
+});
+
+test('the filter bar counts each tray and the counts agree with the listing', () => {
+  assert.deepEqual(trayCounts(docs), { all: 6, unread: 2, read: 4, flagged: 1 });
+  assert.equal(fixture.listing.flagged, trayCounts(docs).flagged);
+  assert.deepEqual(TRAY_FILTERS.map(([key]) => key), ['all', 'unread', 'read', 'flagged']);
+  assert.deepEqual(trayCounts([]), { all: 0, unread: 0, read: 0, flagged: 0 });
+});
+
+test('filterInTray keeps the right folders and rejects an unknown filter', () => {
+  assert.deepEqual(filterInTray(docs, 'unread').map((d) => d.id), ['d-magic-0919', 'd-whip-1017']);
+  assert.deepEqual(filterInTray(docs, 'flagged').map((d) => d.id), ['d-cable-1016']);
+  assert.equal(filterInTray(docs, 'read').length, 4);
+  assert.equal(filterInTray(docs, 'all').length, docs.length);
+  assert.throws(() => filterInTray(docs, 'toString'));
+});
+
+test('sortInTray can put the oldest arrival first, keeping ties in order', () => {
+  const oldest = sortInTray(docs, 'oldest');
+  assert.equal(oldest[0].id, 'd-report-1010');
+  for (let i = 1; i < oldest.length; i++) assert.ok(oldest[i - 1].arrives <= oldest[i].arrives);
+  const tied = [{ id: 'a', arrives: '1941-10-01' }, { id: 'b', arrives: '1941-10-01' }];
+  assert.deepEqual(sortInTray(tied, 'oldest').map((d) => d.id), ['a', 'b']);
+  assert.deepEqual(sortInTray(tied).map((d) => d.id), ['a', 'b']);
+});
+
+test('the planning horizon is in words', () => {
+  assert.equal(horizonWords(7), 'You plan about a week ahead');
+  assert.equal(horizonWords(30), 'You plan about a month ahead');
+  assert.equal(horizonWords(14), 'You plan about 14 days ahead');
+  assert.equal(horizonWords(1), 'You plan about 1 day ahead');
+});
+
+test('powers join into one sentence', () => {
+  assert.equal(powersSentence(fixture.desk.powers),
+    'Commander in Chief of the Army and Navy, sign or veto bills and issue executive orders.');
+  assert.equal(powersSentence(['declare war']), 'Declare war.');
+  assert.equal(powersSentence(['sign bills.', 'veto bills']), 'Sign bills and veto bills.');
+  assert.equal(powersSentence([]), '');
+});
+
+test('order steps read in words', () => {
+  const steps = orders.find((o) => o.id === 'o-neutrality').steps;
+  assert.equal(stepLine(steps[0]), 'Franklin D. Roosevelt: passed it on, 10 Oct 1941');
+  assert.equal(stepLine(steps[1]), 'Sam Rayburn: has it now');
+});
+
+test('the fixture desk and orders carry words, not keys, for the screen', () => {
+  for (const l of fixture.desk.levers) {
+    assert.ok(l.label && l.summary);
+    for (const p of l.params) {
+      assert.ok(p.label);
+      for (const c of p.choices) assert.ok(c.label && !c.label.includes('_'));
+    }
+  }
+  for (const o of orders) {
+    assert.ok(!o.label.includes('_'));
+    for (const t of o.terms) assert.ok(!t.includes('_'));
+  }
 });

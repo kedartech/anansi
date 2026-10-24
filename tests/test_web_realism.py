@@ -255,7 +255,11 @@ def test_advance_moves_the_world_date(solo: tuple[Realism, Client]) -> None:
     _, ada = solo
     before = realism_of(ada)["clock"]
     status, out = post(ada, "advance")
-    assert status == 200 and out["refused"] is False and "woke on" in out["reply"], out
+    assert (
+        status == 200
+        and out["refused"] is False
+        and out["reply"].startswith("The calendar moves to ")
+    ), out
     assert realism_of(ada)["clock"]["world_date"] == before["next_world_date"]
 
 
@@ -305,3 +309,82 @@ def test_the_planted_truth_canary_never_reaches_a_response(solo: tuple[Realism, 
     seen.append(json.dumps(ada.me()))
     for text in seen:
         assert not any(c in text for c in canaries)
+
+
+def test_advance_writes_prose_for_the_pages_it_issues(solo: tuple[Realism, Client]) -> None:
+    _, ada = solo
+    first_day = realism_of(ada)["clock"]["world_date"]
+    assert post(ada, "advance")[1]["refused"] is False
+    fresh = [d for d in realism_of(ada)["documents"]["documents"] if d["issued"] > first_day]
+    assert fresh
+    for d in fresh:
+        status, page = post(ada, "read", doc_id=d["id"])
+        assert status == 200 and page["prose"], page
+
+
+def test_flag_round_trips_and_is_idempotent(solo: tuple[Realism, Client]) -> None:
+    game, ada = solo
+    listing = realism_of(ada)["documents"]
+    assert listing["flagged"] == 0 and not any(d["flagged"] for d in listing["documents"])
+    target = listing["documents"][0]["id"]
+    assert post(ada, "flag", doc_id=target, flagged=True) == (200, {"flagged": True})
+    assert post(ada, "flag", doc_id=target, flagged=True)[0] == 200
+    after = realism_of(ada)["documents"]
+    assert after["flagged"] == 1
+    assert [d["id"] for d in after["documents"] if d["flagged"]] == [target]
+    assert post(ada, "read", doc_id=target)[1]["item"]["flagged"] is True
+    store = game.web.app.open()
+    try:
+        flags = [e for e in store.read(game.campaign) if isinstance(e.payload, ev.DocumentFlagged)]
+    finally:
+        store.close()
+    assert len(flags) == 1
+    assert post(ada, "flag", doc_id=target, flagged=False)[0] == 200
+    assert post(ada, "flag", doc_id=target, flagged=False)[0] == 200
+    assert realism_of(ada)["documents"]["flagged"] == 0
+
+
+def test_flag_is_404_outside_the_seat_scope_and_refuses_a_bad_flag(
+    solo: tuple[Realism, Client],
+) -> None:
+    _, ada = solo
+    assert post(ada, "flag", doc_id="01ARZ3NDEKTSV4RRFFQ69G5FAV", flagged=True)[0] == 404
+    target = realism_of(ada)["documents"]["documents"][0]["id"]
+    status, out = post(ada, "flag", doc_id=target, flagged="yes")
+    assert status == 200 and out["refused"] is True
+
+
+def test_lever_and_param_labels_reach_the_desk_and_the_orders(
+    solo: tuple[Realism, Client],
+) -> None:
+    _, ada = solo
+    (lever,) = realism_of(ada)["desk"]["levers"]
+    assert lever["label"] == "Propose a levy" and lever["summary"]
+    assert [p["label"] for p in lever["params"]] == ["Rate", "Purpose"]
+    assert lever["params"][1]["choices"][0] == {"value": "harbour", "label": "For the harbour"}
+    post(ada, "lever", lever="propose_levy", params={"rate": 3, "purpose": "harbour"})
+    (order,) = realism_of(ada)["orders"]["orders"]
+    assert order["label"] == "Propose a levy"
+    assert order["terms"] == ["Rate: 3", "Purpose: For the harbour"]
+
+
+def test_replies_are_in_words(solo: tuple[Realism, Client]) -> None:
+    _, ada = solo
+    _, filed = post(ada, "lever", lever="propose_levy", params={"rate": 3, "purpose": "harbour"})
+    assert filed["reply"].startswith("Sent to ") and "Propose a levy" in filed["reply"]
+    _, advanced = post(ada, "advance")
+    for out in (filed, advanced):
+        assert out["refused"] is False, out
+        assert "tick" not in out["reply"].lower() and "_" not in out["reply"], out
+    assert advanced["reply"].startswith("The calendar moves to ")
+    assert "Reason: " in advanced["reply"]
+
+
+def test_step_replies_cover_every_action_and_status_without_underscores() -> None:
+    from revisionist.core.realism.pipeline import OrderStatus, StepAction
+    from revisionist.engine.web import server
+
+    assert set(server._DONE) == set(StepAction)
+    assert set(server._STANDING) == set(OrderStatus)
+    for text in (*server._DONE.values(), *server._STANDING.values()):
+        assert "_" not in text and "tick" not in text.lower()
