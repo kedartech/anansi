@@ -1,9 +1,9 @@
-// Realism views: the in-tray, a document page, the desk, the situation board, the
-// order tracker, the pace header and the lever form. Each takes the realism_api JSON and returns a node.
+// Realism views: the in-tray, a document page, the desk, the directive form, the situation
+// board, the order tracker, the pace header and the lever form. Each takes the realism_api JSON and returns a node.
 
 import { h, icon } from '../dom.js';
 import {
-  TRAY_FILTERS, channelWord, classificationWord, figureValue, filterInTray, gapLine, horizonWords, linesHeading, paceLine,
+  TRAY_FILTERS, addressLine, channelWord, directiveChannel, classificationWord, figureValue, filterInTray, gapLine, horizonWords, linesHeading, paceLine,
   powersSentence, reportLine, runLine, sortInTray, stepLine, trackerLine, trayCounts, trendLine,
 } from '../realism-rules.js';
 import { worldDate } from '../rules.js';
@@ -110,7 +110,10 @@ function paragraph(text) {
   return text ? h('p', { class: 'rl-powers' }, text) : null;
 }
 
-/** `opts` is { onSubmit, entities }: the lever form's hand-off and the names entity params offer. */
+/**
+ * `opts` is { onSubmit, entities, directive }: the lever form's hand-off, the names entity
+ * params offer, and the directive panel shown above the standard forms.
+ */
 export function desk(d, opts = {}) {
   const block = (title, items) => items.length
     ? h('section', { class: 'rl-desk-block' }, h('h3', {}, title), list(items))
@@ -120,10 +123,11 @@ export function desk(d, opts = {}) {
       h('h2', { id: 'rl-desk-h' }, d.office),
       d.principals.length ? h('p', {}, `Answerable to ${d.principals.join(', ')}`) : null,
       h('p', { class: 'rl-horizon' }, horizonWords(d.horizon_days))),
+    opts.directive ?? null,
     d.powers.length ? h('section', { class: 'rl-desk-block' }, h('h3', {}, 'Powers'), paragraph(powersSentence(d.powers))) : null,
     block('Limits', d.constraints),
     block('Personal', d.personal),
-    h('section', { class: 'rl-desk-block' }, h('h3', {}, 'Instruments'),
+    h('section', { class: 'rl-desk-block' }, h('h3', {}, 'Standard forms'),
       d.levers.length
         ? h('ul', { class: 'rl-instruments', role: 'list' }, d.levers.map((l) => instrument(l, opts)))
         : h('p', { class: 'rl-none' }, 'None at your disposal.')),
@@ -132,6 +136,54 @@ export function desk(d, opts = {}) {
         ? h('ul', { class: 'rl-contacts', role: 'list' }, d.contacts.map((c) => h('li', {},
           CHANNEL_ICON[c.channel] ? [icon(CHANNEL_ICON[c.channel]), ' '] : null, h('strong', {}, c.person), ` (${channelWord(c.channel)})`)))
         : h('p', { class: 'rl-none' }, 'No one is within reach.')));
+}
+
+let directiveSeq = 0;
+
+/**
+ * Write a directive: to whom, how, and the words. `draft` is { to, channel, text } to
+ * start from (kept across Revise); `onAsk` gets the same shape.
+ */
+export function directiveForm(contacts, draft, onAsk) {
+  const id = `rl-dir-${directiveSeq++}`;
+  const start = contacts.find((c) => c.person === draft?.to) ?? contacts[0];
+  const how = h('select', { id: `${id}-how`, name: 'channel', required: true });
+  const fill = (contact, chosen) => how.replaceChildren(...contact.channels.map((ch) => h('option', {
+    value: ch, selected: ch === chosen,
+  }, directiveChannel(ch))));
+  const to = h('select', {
+    id: `${id}-to`, name: 'to', required: true,
+    onchange: () => fill(contacts.find((c) => c.person === to.value), null),
+  }, contacts.map((c) => h('option', { value: c.person, selected: c === start }, c.person)));
+  const words = h('textarea', { id: `${id}-text`, name: 'text', rows: 4, maxlength: 1000, required: true }, draft?.text ?? '');
+  if (start) fill(start, draft?.channel);
+  const form = h('form', {
+    class: 'rl-form rl-directive', 'aria-label': 'Write a directive',
+    onsubmit: (e) => { e.preventDefault(); onAsk?.({ to: to.value, channel: how.value, text: words.value }); },
+  },
+  h('div', { class: 'rl-field' }, h('label', { for: `${id}-to` }, 'To'), to),
+  h('div', { class: 'rl-field' }, h('label', { for: `${id}-how` }, 'By'), how),
+  h('div', { class: 'rl-field' }, h('label', { for: `${id}-text` }, 'Your instruction'), words),
+  h('button', { type: 'submit', class: 'rl-submit' }, 'Prepare the order'));
+  return h('section', { class: 'rl-desk-block', 'aria-labelledby': `${id}-h` },
+    h('h3', { id: `${id}-h` }, 'Write a directive'),
+    contacts.length ? form : h('p', { class: 'rl-none' }, 'No one is within reach.'));
+}
+
+/** The order the aide read a directive as, to sign or revise; or why there is none. */
+export function proposalCard(p, { onSign, onRevise } = {}) {
+  const revise = h('button', { type: 'button', class: 'rl-btn', onclick: () => onRevise?.(p) }, 'Revise');
+  return h('section', { class: 'rl-desk-block rl-proposal', 'aria-labelledby': 'rl-proposal-h' },
+    h('h3', { id: 'rl-proposal-h' }, p.lever ? 'Ready to sign' : 'This cannot be sent'),
+    h('p', { class: 'rl-address' }, addressLine(p)),
+    h('blockquote', { class: 'rl-words' }, p.text),
+    p.lever
+      ? [h('p', {}, 'Your aide reads this as: ', h('strong', {}, p.label)),
+        p.terms.length ? list(p.terms, 'rl-terms') : null]
+      : h('p', { class: 'rl-reason' }, p.reason),
+    h('div', { class: 'rl-actions' },
+      p.lever ? h('button', { type: 'button', class: 'rl-submit', onclick: () => onSign?.(p) }, 'Sign and send') : null,
+      revise));
 }
 
 /** The design's icons that fit a channel; the others go without. */

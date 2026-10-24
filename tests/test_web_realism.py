@@ -390,3 +390,148 @@ def test_step_replies_cover_every_action_and_status_without_underscores() -> Non
     assert set(server._STANDING) == set(OrderStatus)
     for text in (*server._DONE.values(), *server._STANDING.values()):
         assert "_" not in text and "tick" not in text.lower()
+
+
+class Aide:
+    """Answers every directive with ``output``; no model is called."""
+
+    def __init__(self, output: dict[str, Any]) -> None:
+        self.output = output
+        self.prompts: list[str] = []
+
+    def call(self, request: Any) -> Any:
+        from revisionist.engine.llm import Reply
+
+        self.prompts.append(request.prompt)
+        return Reply(self.output, request.model, 10, 10, 0, 0.0)
+
+
+def aide(game: Realism, output: dict[str, Any]) -> Aide:
+    reader = Aide(output)
+    game.web.app.transport_factory = lambda: reader
+    return reader
+
+
+LEVY: dict[str, Any] = {
+    "lever": "propose_levy",
+    "params": {"rate": 3, "purpose": "harbour"},
+    "reason": "",
+}
+ASK: dict[str, Any] = {
+    "to": "Cora Senn",
+    "channel": "letter",
+    "text": "Put a small harbour levy to the Council.",
+}
+
+
+def directives(game: Realism) -> list[ev.Event]:
+    store = game.web.app.open()
+    try:
+        return [e for e in store.read(game.campaign) if isinstance(e.payload, ev.DirectiveGiven)]
+    finally:
+        store.close()
+
+
+def test_contacts_carry_the_channels_a_directive_can_take(solo: tuple[Realism, Client]) -> None:
+    _, ada = solo
+    contacts = {c["person"]: c["channels"] for c in realism_of(ada)["desk"]["contacts"]}
+    assert contacts == {"Bram Tull": ["letter"], "Cora Senn": ["in_person", "letter"]}
+
+
+def test_a_directive_is_read_shown_and_filed_only_when_signed(
+    solo: tuple[Realism, Client],
+) -> None:
+    game, ada = solo
+    reader = aide(game, LEVY)
+    status, out = post(ada, "directive", **ASK)
+    assert status == 200 and out["refused"] is False, out
+    assert out["reply"] == "Your aide reads this as: Propose a levy."
+    assert out["proposal"] == {
+        "to": "Cora Senn",
+        "channel": "letter",
+        "text": ASK["text"],
+        "lever": "propose_levy",
+        "label": "Propose a levy",
+        "terms": ["Rate: 3", "Purpose: For the harbour"],
+        "params": {"rate": 3, "purpose": "harbour"},
+        "reason": None,
+    }
+    (prompt,) = reader.prompts
+    assert prompt.endswith(ASK["text"]) and "## To Cora Senn, by letter" in prompt
+    assert realism_of(ada)["orders"]["orders"] == [] and directives(game) == []
+
+    p = out["proposal"]
+    status, out = post(ada, "sign", **ASK, lever=p["lever"], params=p["params"])
+    assert status == 200 and out == {
+        "reply": "Sent to Cora Senn: Propose a levy.",
+        "refused": False,
+    }
+    (order,) = realism_of(ada)["orders"]["orders"]
+    assert order["params"] == {"rate": 3, "purpose": "harbour"}
+    (record,) = directives(game)
+    assert isinstance(record.payload, ev.DirectiveGiven)
+    assert record.payload.text == ASK["text"] and record.payload.order_id == order["id"]
+    assert record.scope.visibility.value == "private"
+
+
+def test_what_cannot_be_done_is_a_reason_and_files_nothing(solo: tuple[Realism, Client]) -> None:
+    game, ada = solo
+    aide(game, {"lever": "", "params": {}, "reason": "The Council alone can dissolve itself."})
+    status, out = post(ada, "directive", **ASK | {"text": "Dissolve the Council."})
+    assert status == 200 and out["refused"] is True
+    assert out["reply"] == "The Council alone can dissolve itself."
+    assert out["proposal"]["lever"] is None and out["proposal"]["terms"] == []
+    aide(
+        game, {"lever": "propose_levy", "params": {"rate": 99, "purpose": "harbour"}, "reason": ""}
+    )
+    status, out = post(ada, "directive", **ASK)
+    assert out["refused"] is True and "_" not in out["reply"]
+    assert realism_of(ada)["orders"]["orders"] == [] and directives(game) == []
+
+
+def test_directive_refusals_are_replies(solo: tuple[Realism, Client]) -> None:
+    game, ada = solo
+    reader = aide(game, LEVY)
+    for body in (
+        ASK | {"to": "Nobody at all"},
+        ASK | {"to": "Bram Tull", "channel": "in_person"},
+        ASK | {"channel": "pigeon"},
+        ASK | {"text": "   "},
+    ):
+        status, out = post(ada, "directive", **body)
+        assert status == 200 and out["refused"] is True and out["reply"], (body, out)
+        assert "_" not in out["reply"]
+    assert reader.prompts == []
+    for signed in (
+        ASK | {"lever": "nonesuch", "params": {}},
+        ASK | {"lever": "propose_levy", "params": {"rate": 99, "purpose": "harbour"}},
+        ASK | {"to": "Nobody at all", **LEVY},
+    ):
+        status, out = post(ada, "sign", **signed)
+        assert status == 200 and out["refused"] is True, (signed, out)
+    assert realism_of(ada)["orders"]["orders"] == [] and directives(game) == []
+
+
+def test_an_unreachable_aide_points_to_the_standard_forms(solo: tuple[Realism, Client]) -> None:
+    from revisionist.engine.llm import TransportError
+
+    class Down:
+        def call(self, request: Any) -> Any:
+            raise TransportError("model unavailable")
+
+    game, ada = solo
+    game.web.app.transport_factory = Down
+    status, out = post(ada, "directive", **ASK)
+    assert status == 200 and out["refused"] is True and "standard forms" in out["reply"]
+
+
+def test_a_directive_reply_naming_a_hidden_canary_is_withheld(
+    solo: tuple[Realism, Client],
+) -> None:
+    game, ada = solo
+    canary = game.plant()
+    aide(game, {"lever": "", "params": {}, "reason": f"The truth is {canary}."})
+    status, out = post(ada, "directive", **ASK)
+    assert status == 200 and out["refused"] is True and canary not in json.dumps(out)
+    status, out = post(ada, "directive", **ASK | {"text": f"Say {canary} to the Council."})
+    assert status == 200 and "error" in out and canary not in json.dumps(out)

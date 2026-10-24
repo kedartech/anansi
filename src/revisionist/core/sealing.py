@@ -6,9 +6,9 @@ Pure; the cryptography lives in ``engine/seal.py``. Two tiers of key:
   fold can always read the game;
 - a seat key seals that seat's own words: what its player typed
   (``order_received``), what its agent asked back (``clarification_asked``),
-  its private briefings (``narration_written``) and its counsel transcripts
-  (``counsel_held``). None of these is folded, so destroying a seat key erases
-  them and replay still works.
+  its private briefings (``narration_written``), its counsel transcripts
+  (``counsel_held``) and its directives (``directive_given``). None of these
+  is folded, so destroying a seat key erases them and replay still works.
 """
 
 from typing import Any
@@ -23,7 +23,14 @@ from revisionist.core.visibility import Scope, Visibility
 def seal_holder(event: Event) -> SeatId | None:
     """The seat whose key seals this event, or ``None`` for the campaign key."""
     p = event.payload
-    if isinstance(p, ev.OrderReceived | ev.ClarificationAsked | ev.GoalProposed | ev.CounselHeld):
+    if isinstance(
+        p,
+        ev.OrderReceived
+        | ev.ClarificationAsked
+        | ev.GoalProposed
+        | ev.CounselHeld
+        | ev.DirectiveGiven,
+    ):
         return p.seat_id
     if isinstance(p, ev.NarrationWritten) and event.scope.visibility is not Visibility.PUBLIC:
         return p.seat_id

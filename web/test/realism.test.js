@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
-  STEP_ACTIONS, TRAY_FILTERS, channelWord, classificationWord, entityChoices, figureValue, filterInTray, gapLine, horizonWords,
+  STEP_ACTIONS, TRAY_FILTERS, addressLine, channelWord, directiveChannel, classificationWord, entityChoices, figureValue, filterInTray, gapLine, horizonWords,
   linesHeading, paceLine, powersSentence, reportLine, runLine, sortInTray, stepLine, trackerLine, trayCounts, trendLine, unreadCount,
 } from '../js/realism-rules.js';
 
@@ -213,4 +213,14 @@ test('board lines carry no percentage sign or talk of chances', () => {
     figureValue(src.value, f.unit) ?? gapLine(src), trendLine(src), reportLine(src), runLine(src.history),
   ]));
   for (const l of lines) assert.doesNotMatch(l, /%|\bchance\b|\bprobab|_/i);
+});
+
+test('a directive offers each contact their own channel first, and a memo reads as one', () => {
+  for (const c of fixture.desk.contacts) assert.equal(c.channels[0], c.channel);
+  assert.equal(directiveChannel('letter'), 'Memo');
+  assert.equal(directiveChannel('cable'), 'Cable');
+  assert.equal(addressLine({ to: 'Cordell Hull', channel: 'letter' }), 'To Cordell Hull, by memo');
+  assert.equal(addressLine({ to: 'Winston Churchill', channel: 'cable' }), 'To Winston Churchill, by cable');
+  assert.equal(addressLine({ to: 'Harry Hopkins', channel: 'in_person' }), 'To Harry Hopkins, in person');
+  assert.throws(() => directiveChannel('pigeon'));
 });

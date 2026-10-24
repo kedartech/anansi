@@ -1,0 +1,105 @@
+{
+ "14b82ee34d52e5caa328899c": {
+  "call_class": "aide",
+  "hand_written": true,
+  "model": "claude-haiku-5-5",
+  "note": "hand-written for tests; not a model reply",
+  "prompt_head": "## Your principal\nFranklin D. Roosevelt, President of the United States\n\n## Their instruments\n[{\"lever\": \"send_bill\", \"l",
+  "reply": {
+   "cached_tokens": 383,
+   "input_tokens": 1084,
+   "model": "claude-haiku-5-5",
+   "output": {
+    "lever": "naval_order",
+    "params": {
+     "order": "shoot_on_sight",
+     "zone": "iceland_route"
+    },
+    "reason": ""
+   },
+   "output_tokens": 25,
+   "usd": 0.0001209
+  }
+ },
+ "a7e2fc56a47b69be23346543": {
+  "call_class": "aide",
+  "hand_written": true,
+  "model": "claude-haiku-5-5",
+  "note": "hand-written for tests; not a model reply",
+  "prompt_head": "## Your principal\nFranklin D. Roosevelt, President of the United States\n\n## Their instruments\n[{\"lever\": \"send_bill\", \"l",
+  "reply": {
+   "cached_tokens": 383,
+   "input_tokens": 1092,
+   "model": "claude-haiku-5-5",
+   "output": {
+    "lever": "cable_to_churchill",
+    "params": {
+     "message": "Our destroyers will escort the convoys as far as Iceland."
+    },
+    "reason": ""
+   },
+   "output_tokens": 32,
+   "usd": 0.0001252
+  }
+ },
+ "aec95e3da33d14947e06b551": {
+  "call_class": "aide",
+  "hand_written": true,
+  "model": "claude-haiku-5-5",
+  "note": "hand-written for tests; not a model reply",
+  "prompt_head": "## Your principal\nFranklin D. Roosevelt, President of the United States\n\n## Their instruments\n[{\"lever\": \"send_bill\", \"l",
+  "reply": {
+   "cached_tokens": 383,
+   "input_tokens": 1082,
+   "model": "claude-haiku-5-5",
+   "output": {
+    "lever": "lend_lease_finding",
+    "params": {
+     "recipient": "ussr",
+     "share_pct": 150
+    },
+    "reason": ""
+   },
+   "output_tokens": 24,
+   "usd": 0.0001202
+  }
+ },
+ "ccc9e18f6f34b403eac21b1a": {
+  "call_class": "aide",
+  "hand_written": true,
+  "model": "claude-haiku-5-5",
+  "note": "hand-written for tests; not a model reply",
+  "prompt_head": "## Your principal\nFranklin D. Roosevelt, President of the United States\n\n## Their instruments\n[{\"lever\": \"send_bill\", \"l",
+  "reply": {
+   "cached_tokens": 383,
+   "input_tokens": 1077,
+   "model": "claude-haiku-5-5",
+   "output": {
+    "lever": "",
+    "params": {},
+    "reason": "Only Congress can declare war. Nothing on your desk does it, though a message to the Hill could prepare the ground."
+   },
+   "output_tokens": 39,
+   "usd": 0.0001272
+  }
+ },
+ "d023e7dcd30dea086adfa4d9": {
+  "call_class": "aide",
+  "hand_written": true,
+  "model": "claude-haiku-5-5",
+  "note": "hand-written for tests; not a model reply",
+  "prompt_head": "## Your principal\nFranklin D. Roosevelt, President of the United States\n\n## Their instruments\n[{\"lever\": \"send_bill\", \"l",
+  "reply": {
+   "cached_tokens": 383,
+   "input_tokens": 1077,
+   "model": "claude-haiku-5-5",
+   "output": {
+    "lever": "",
+    "params": {},
+    "reason": "No naval_order covers the canal."
+   },
+   "output_tokens": 18,
+   "usd": 0.0001167
+  }
+ }
+}

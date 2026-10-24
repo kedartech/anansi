@@ -1,5 +1,5 @@
 {
- "7d633a1c6a521732ce251e71": {
+ "16ca8245361f7002cbd74d7a": {
   "call_class": "aide",
   "hand_written": true,
   "model": "claude-haiku-5-5",
@@ -7,7 +7,7 @@
   "prompt_head": "## Your principal\nFranklin D. Roosevelt, President of the United States\n\n## Their levers\n[{\"lever\": \"send_bill\", \"params",
   "reply": {
    "cached_tokens": 238,
-   "input_tokens": 1880,
+   "input_tokens": 1920,
    "model": "claude-haiku-5-5",
    "output": {
     "drafts": [
@@ -36,7 +36,7 @@
     "summary": "Admiral Stark's Atlantic report puts Allied merchant losses to U-boats this month at 209,835, with 30 U-boats operational in the Atlantic. The Speaker counts 267 House Democrats to 162 Republicans; the Majority Leader gives no figure yet for the Senate neutrality vote. Gallup has 55 calling your course about right. MAGIC and State have nothing firm on Japanese oil stocks, and the Prime Minister's cables carry no figures."
    },
    "output_tokens": 179,
-   "usd": 0.0002775
+   "usd": 0.0002815
   }
  }
 }

@@ -356,6 +356,8 @@ def _fits(spec: ParamSpec, raw: str) -> ParamValue:
         return value
     if spec.kind is ParamKind.ENUM and raw not in spec.choices:
         raise ValueError(f"{spec.name}: {raw!r} is not one of {', '.join(spec.choices)}")
+    if spec.kind is ParamKind.TEXT and not raw.strip():
+        raise ValueError(f"{spec.name}: give it some words")
     return raw
 
 
@@ -365,6 +367,14 @@ def file_order(
     """Draft the seat's order for ``lever`` dated today. Every parameter must be given
     and fit its spec. Raises ``ValueError``."""
     state = load_state(store, campaign_id)
+    order = draft_order(state, seat, lever, given)
+    _append(store, state, ev.OrderDrafted(order=order), seat)
+    return order
+
+
+def draft_order(state: State, seat: SeatId, lever: str, given: dict[str, str]) -> Order:
+    """The seat's order for ``lever`` dated today, checked against its card but not
+    filed. Raises ``ValueError``."""
     card = state.cards[state.seats[seat].embodies]
     found = next((x for x in card.levers if x.name == lever), None)
     if found is None:
@@ -375,7 +385,7 @@ def file_order(
         raise ValueError(f"{lever} takes exactly: {', '.join(sorted(wanted)) or 'no parameters'}")
     params = {p.name: _fits(p, given[p.name]) for p in found.params}
     assert state.in_world_date is not None
-    order = Order(
+    return Order(
         order_id=OrderId(new_id()),
         issuer=seat,
         lever=lever,
@@ -383,8 +393,6 @@ def file_order(
         params=params,
         filed=state.in_world_date,
     )
-    _append(store, state, ev.OrderDrafted(order=order), seat)
-    return order
 
 
 def take_step(
@@ -500,6 +508,7 @@ def _append(
 
 __all__ = [
     "RealismTickResult",
+    "draft_order",
     "file_order",
     "mark_read",
     "run_realism_tick",

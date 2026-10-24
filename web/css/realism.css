@@ -102,6 +102,11 @@
 .rl-field input, .rl-field select, .rl-field textarea { padding: var(--space-2); background: var(--paper-field); color: var(--ink-primary); border: 1px solid var(--ink-field-border); border-radius: var(--radius-paper); font: 14px/1.4 var(--font-ui); }
 .rl-submit { justify-self: start; padding: var(--space-2) var(--space-4); background: var(--ink-primary); color: var(--paper-sheet); border: 0; border-radius: var(--radius-paper); font: 600 14px/1.3 var(--font-ui); cursor: pointer; }
 
+.rl-proposal { padding: var(--space-3); background: var(--paper-field); border: 1px solid var(--ink-rule); border-radius: var(--radius-paper); }
+.rl-address { margin: 0; font: 600 13px/1.4 var(--font-ui); color: var(--ink-secondary); }
+.rl-words { margin: var(--space-2) 0; padding-left: var(--space-3); border-left: 2px solid var(--ink-rule); white-space: pre-wrap; overflow-wrap: anywhere; }
+.rl-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+
 .rl-count { font-weight: 400; }
 .rl-filter[aria-selected="true"] .rl-count { color: inherit; }
 

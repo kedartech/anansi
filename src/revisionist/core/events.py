@@ -23,7 +23,7 @@ from typing import Annotated, ClassVar, Literal
 
 from pydantic import ConfigDict, Field
 
-from revisionist.core._base import Model
+from revisionist.core._base import Label, Model
 from revisionist.core.delta import Delta
 from revisionist.core.goals import Goal, GoalKind, WinCondition
 from revisionist.core.ids import (
@@ -56,7 +56,7 @@ from revisionist.core.ontology import (
     Seat,
     SeatStatus,
 )
-from revisionist.core.realism.card import ChannelKind, SeatCard
+from revisionist.core.realism.card import ChannelKind, ParamValue, SeatCard
 from revisionist.core.realism.document import DocumentTruth, DocumentView, Feed
 from revisionist.core.realism.pipeline import Order, OrderStatus, Pipeline, StepOutcome
 from revisionist.core.realism.quantity import Quantity
@@ -576,6 +576,20 @@ class CounselHeld(Model):
     text: str = Field(max_length=8000)
 
 
+class DirectiveGiven(Model):
+    """A seat signed a directive: its own words to a contact, and the order the aide
+    read them as, filed in the same batch. A record, sealed with the seat's key."""
+
+    kind: Literal["directive_given"] = "directive_given"
+    seat_id: SeatId
+    person: EntityId
+    channel: ChannelKind
+    text: str = Field(max_length=1000)
+    order_id: OrderId
+    lever: Label
+    params: dict[Label, ParamValue] = Field(default_factory=dict)
+
+
 # --- Admin --------------------------------------------------------------------
 
 
@@ -666,6 +680,7 @@ Payload = Annotated[
     | OrderSettled
     | QuantitySet
     | CounselHeld
+    | DirectiveGiven
     | Sealed,
     Field(discriminator="kind"),
 ]

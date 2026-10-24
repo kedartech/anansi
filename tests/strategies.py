@@ -641,6 +641,16 @@ realism_payloads = st.one_of(
         channel=channels,
         text=st.text(max_size=400),
     ),
+    st.builds(
+        ev.DirectiveGiven,
+        seat_id=seat_ids,
+        person=entity_ids,
+        channel=channels,
+        text=st.text(max_size=400),
+        order_id=order_ids,
+        lever=labels,
+        params=param_maps,
+    ),
 )
 
 payloads = st.one_of(

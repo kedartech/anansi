@@ -72,9 +72,9 @@
       ]}
     ],
     "contacts": [
-      {"person": "Harry Hopkins", "channel": "in_person"},
-      {"person": "Sam Rayburn", "channel": "telephone"},
-      {"person": "Winston Churchill", "channel": "cable"}
+      {"person": "Harry Hopkins", "channel": "in_person", "channels": ["in_person", "letter"]},
+      {"person": "Sam Rayburn", "channel": "telephone", "channels": ["telephone", "letter"]},
+      {"person": "Winston Churchill", "channel": "cable", "channels": ["cable"]}
     ],
     "principals": ["The electorate", "Congress"],
     "constraints": ["Congress holds the purse", "Isolationist sentiment in the Midwest"],

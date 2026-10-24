@@ -24,13 +24,14 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from revisionist.core.ids import DocumentId, OrderId, SeatId
+from revisionist.core.ids import DocumentId, EntityId, OrderId, SeatId
 from revisionist.core.ontology import Persona, Phase
 from revisionist.core.project import project
+from revisionist.core.realism.card import ChannelKind
 from revisionist.core.realism.pipeline import OrderStatus, StepAction
 from revisionist.core.state import State
 from revisionist.engine import campaign as cmp
-from revisionist.engine import realism_tick
+from revisionist.engine import directive, realism_tick
 from revisionist.engine import scheduler as sch
 from revisionist.engine.discord import handlers as dh
 from revisionist.engine.llm import Transport
@@ -200,6 +201,39 @@ class App:
                     first = state.pipelines[order.pipeline].steps[0]
                     who = state.entities[first.person].name
                     reply = f"Sent to {who}: {_lever_label(state, seat, order.lever)}."
+                elif action in ("directive", "sign"):
+                    asked = directive.Proposal(
+                        person=_contact(state, seat, _text(body, "to", 120)),
+                        channel=_channel(body),
+                        text=_text(body, "text", directive.TEXT_MAX, required=False),
+                        **(
+                            {"lever": _text(body, "lever", 120), "params": _params(body)}
+                            if action == "sign"
+                            else {}
+                        ),
+                    )
+                    if action == "directive":
+                        read = directive.propose(
+                            store,
+                            cid,
+                            seat,
+                            asked.person,
+                            asked.channel,
+                            asked.text,
+                            directive.ClaudeDirectiveReader(self.transport_factory()),
+                        )
+                        shown = realism_snapshot.proposal(project(state, seat), read)
+                        said = (
+                            f"Your aide reads this as: {shown['label']}."
+                            if shown["label"]
+                            else str(shown["reason"])
+                        )
+                        out = {"reply": said, "refused": not read.lever, "proposal": shown}
+                        return snapshot.checked(state, seat, out)
+                    order = directive.sign(store, cid, seat, asked)
+                    first = state.pipelines[order.pipeline].steps[0]
+                    who = state.entities[first.person].name
+                    reply = f"Sent to {who}: {_lever_label(state, seat, order.lever)}."
                 elif action == "step":
                     try:
                         taken = StepAction(_text(body, "action", 20))
@@ -343,6 +377,22 @@ def _params(body: dict[str, Any]) -> dict[str, str]:
     if not isinstance(raw, dict) or not all(isinstance(v, str | int) for v in raw.values()):
         raise ApiError(HTTPStatus.BAD_REQUEST, "params is a JSON object of names and values.")
     return {str(k): str(v) for k, v in raw.items()}
+
+
+def _contact(state: State, seat: SeatId, name: str) -> EntityId:
+    """The contact on the seat's card called ``name``. Raises ``ValueError``."""
+    card = state.cards[state.seats[seat].embodies]
+    for c in card.contacts:
+        if state.entities[c.person].name == name:
+            return c.person
+    raise ValueError("That person is not within your reach.")
+
+
+def _channel(body: dict[str, Any]) -> ChannelKind:
+    try:
+        return ChannelKind(_text(body, "channel", 20))
+    except ValueError:
+        raise ValueError("Choose how the directive is to travel.") from None
 
 
 def _route(body: dict[str, Any]) -> str:

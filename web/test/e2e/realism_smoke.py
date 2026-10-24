@@ -1,8 +1,9 @@
 """Browser smoke run of the realism room against a live `revisionist web serve`.
 
 Signs up a fresh account, joins a realism game with an invite code, and checks the
-in-tray folders, an open dossier and its flag, the filters, the desk, a signed
-order, the advance and the situation board, screenshotting each tab at
+in-tray folders, an open dossier and its flag, the filters, the desk, a directive
+read by the aide (signed when it reads as an order, revised when it cannot be sent),
+an order signed on a standard form, the advance and the situation board, screenshotting each tab at
 1440x900. Fails on any console error, page error, failed request or a request to
 another origin, or any named check that does not hold; runs axe-core when it is
 mounted at /axe/axe.min.js.
@@ -157,12 +158,40 @@ def main() -> int:
         page.get_by_role("tab", name="Orders").click()
         before = page.locator(".rl-order").count()
         page.get_by_role("tab", name="Desk").click()
+        words = "Send word that our escorts will see the convoys as far as Iceland."
+        directive = page.locator("form.rl-directive")
+        check("the desk offers a directive", directive.count() == 1)
+        directive.get_by_label("Your instruction").fill(words)
+        directive.get_by_role("button", name="Prepare the order").click()
+        card = page.locator(".rl-proposal")
+        card.wait_for(timeout=WAKE_MS)
+        page.wait_for_timeout(300)
+        report["directive_reading"] = card.inner_text()
+        shoot(page, "05-directive-reading")
+        axe(page, "directive")
+        check("the reading quotes the instruction", words in card.inner_text())
+        check("the reading is in words", "_" not in card.inner_text(), card.inner_text())
+        sign = card.get_by_role("button", name="Sign and send")
+        if sign.count():
+            sign.click()
+            page.get_by_role("status").filter(has_text="Sent to").wait_for()
+            report["directive_reply"] = page.get_by_role("status").inner_text()
+            before += 1
+        else:
+            card.get_by_role("button", name="Revise").click()
+            kept = page.locator("form.rl-directive textarea").input_value()
+            check("Revise keeps the instruction", kept == words, kept)
+        page.wait_for_timeout(300)
+        page.get_by_role("tab", name="Orders").click()
+        filed = page.locator(".rl-order").count()
+        check("a directive files only when signed", filed == before, f"{before} -> {filed}")
+        page.get_by_role("tab", name="Desk").click()
         first = page.locator(".rl-instrument").first
         first.get_by_role("button", name="Draft").click()
         form = first.locator("form.rl-form")
         form.wait_for()
         fill(form)
-        shoot(page, "05-desk-draft")
+        shoot(page, "06-desk-draft")
         form.get_by_role("button", name="Sign and send").click()
         page.get_by_role("status").filter(has_text="Sent to").wait_for()
         report["sent_reply"] = page.get_by_role("status").inner_text()
@@ -170,7 +199,7 @@ def main() -> int:
         page.get_by_role("tab", name="Orders").click()
         after = page.locator(".rl-order").count()
         check("signing an order adds a tracker entry", after == before + 1, f"{before} -> {after}")
-        shoot(page, "06-orders")
+        shoot(page, "07-orders")
         axe(page, "orders")
 
         pace = page.locator(".rl-pace").first.inner_text()
@@ -183,7 +212,7 @@ def main() -> int:
         check("advance moves the world date", moved != pace, f"{pace!r} -> {moved!r}")
         page.get_by_role("tab", name="In-tray").click()
         page.wait_for_timeout(300)
-        shoot(page, "07-in-tray-after-advance")
+        shoot(page, "08-in-tray-after-advance")
         titles = page.locator(".rl-folder .rl-doc-title").all_inner_texts()
         report["titles_after_advance"] = titles
         check("an order reply arrives as a paper", any(t.startswith("On your") for t in titles))
@@ -197,7 +226,7 @@ def main() -> int:
             page.locator(".rl-dossier .rl-page").wait_for()
             page.wait_for_timeout(300)
             report["reply_page"] = page.locator(".rl-page").inner_text()[:800]
-            shoot(page, "08-reply-letter")
+            shoot(page, "09-reply-letter")
             axe(page, "reply")
         report["pace_after_advance"] = moved
         check("pace line has no engine words", "horizon" not in moved, moved)
@@ -207,7 +236,7 @@ def main() -> int:
         cards = page.locator(".rl-card")
         check("the situation board shows figures", cards.count() > 0)
         report["situation"] = page.locator(".rl-board").inner_text()[:1200]
-        shoot(page, "09-situation")
+        shoot(page, "10-situation")
         axe(page, "situation")
 
         body = page.locator("body").inner_text()

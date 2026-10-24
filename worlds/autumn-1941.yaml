@@ -365,6 +365,22 @@ cards:
         summary: "Speak to the country by radio on a chosen theme."
         params:
           - {name: theme, kind: enum, choices: [aid_to_allies, freedom_of_the_seas, national_unity], label: "Theme", choice_labels: ["Aid to the Allies", "Freedom of the seas", "National unity"]}
+      # [proposed] Neither resolver moves a figure for these two levers yet: the order
+      # runs its pipeline and its reply letter, and nothing more.
+      - name: executive_order
+        pipeline: executive_order
+        resolver: production
+        label: "Issue an executive order"
+        summary: "Direct the executive departments over your own signature, without going to Congress."
+        params:
+          - {name: subject, kind: text, label: "What the order directs"}
+      - name: cable_to_churchill
+        pipeline: cable_to_churchill
+        resolver: shipping
+        label: "Cable the Prime Minister"
+        summary: "Send Mr. Churchill a message through the State Department cable office."
+        params:
+          - {name: message, kind: text, label: "The message"}
     contacts:
       - {person: hull, channel: in_person}
       - {person: hopkins, channel: in_person}

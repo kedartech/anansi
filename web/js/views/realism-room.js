@@ -6,11 +6,13 @@ import { api } from '../api.js';
 import { h } from '../dom.js';
 import { STEP_ACTIONS, entityChoices } from '../realism-rules.js';
 import { worldDate } from '../rules.js';
-import { board, desk, dossier, inTray, paceHeader, tracker } from './realism.js';
+import {
+  board, desk, directiveForm, dossier, inTray, paceHeader, proposalCard, tracker,
+} from './realism.js';
 import { header } from './frame.js';
 
 const TABS = [['tray', 'In-tray'], ['situation', 'Situation'], ['desk', 'Desk'], ['orders', 'Orders']];
-const ui = { tab: 'tray', page: null, said: null, filter: 'all', sort: 'newest' };
+const ui = { tab: 'tray', page: null, said: null, filter: 'all', sort: 'newest', draft: null, proposal: null };
 
 function stepForm(order, act) {
   const id = `rl-step-${order.id}`;
@@ -43,6 +45,36 @@ export function realismRoom(ctx) {
     }
   }
 
+  /** The aide reads the directive; nothing is filed until the player signs. */
+  async function ask(draft) {
+    ui.draft = draft;
+    status.replaceChildren('Your aide is reading it…');
+    try {
+      const r = await api.realism('directive', draft);
+      ui.proposal = r.proposal ?? null;
+      ui.said = ui.proposal ? null : r.reply; // the card says it
+      rerender();
+    } catch (ex) {
+      status.replaceChildren(h('span', { class: 'form-error', role: 'alert' }, ex.message));
+    }
+  }
+
+  /** File the signed order; a refusal leaves the reading on the desk to revise. */
+  async function signed(p) {
+    status.replaceChildren('Working…');
+    try {
+      const r = await api.realism('sign', { to: p.to, channel: p.channel, text: p.text, lever: p.lever, params: p.params });
+      ui.said = r.reply;
+      if (!r.refused) {
+        ui.proposal = null;
+        ui.draft = null;
+      }
+      await refresh();
+    } catch (ex) {
+      status.replaceChildren(h('span', { class: 'form-error', role: 'alert' }, ex.message));
+    }
+  }
+
   async function open(d) {
     try {
       ui.page = await api.realism('read', { doc_id: d.id });
@@ -65,8 +97,11 @@ export function realismRoom(ctx) {
 
   function body() {
     if (ui.tab === 'desk') {
+      const directive = ui.proposal
+        ? proposalCard(ui.proposal, { onSign: signed, onRevise: () => { ui.proposal = null; ui.said = null; rerender(); } })
+        : directiveForm(rv.desk.contacts, ui.draft, ask);
       return h('div', { class: 'tab-body' },
-        desk(rv.desk, { onSubmit: (v) => run('lever', v), entities: entityChoices(rv.desk) }));
+        desk(rv.desk, { onSubmit: (v) => run('lever', v), entities: entityChoices(rv.desk), directive }));
     }
     if (ui.tab === 'situation') {
       return h('div', { class: 'tab-body' }, board(rv.situation, { onOpen: open }));

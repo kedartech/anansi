@@ -115,6 +115,8 @@ class Clock(TypedDict):
 class ContactLine(TypedDict):
     person: str
     channel: str
+    channels: list[str]
+    """How a directive can reach them, their own channel first."""
 
 
 class LeverChoice(TypedDict):
@@ -139,6 +141,21 @@ class LeverLine(TypedDict):
     pipeline: str
     params: list[LeverParam]
     """The draft form is built from these."""
+
+
+class DirectiveProposal(TypedDict):
+    """The order the aide read a directive as, for the player to sign or revise."""
+
+    to: str
+    channel: str
+    text: str
+    lever: str | None
+    """Posted back on signing; None when it cannot be done."""
+    label: str | None
+    terms: list[str]
+    params: dict[str, int | str]
+    reason: str | None
+    """Why it cannot be done, in words."""
 
 
 class Desk(TypedDict):
@@ -203,6 +220,7 @@ __all__ = [
     "Clock",
     "ContactLine",
     "Desk",
+    "DirectiveProposal",
     "DocumentListItem",
     "DocumentListing",
     "DocumentPage",

@@ -21,11 +21,13 @@ from revisionist.core.realism.card import Lever, ParamKind, ParamSpec, words
 from revisionist.core.realism.document import DocumentView
 from revisionist.core.realism.pipeline import Order, OrderStatus, Pipeline, StepAction, StepOutcome
 from revisionist.core.state import State, View
+from revisionist.engine.directive import Proposal, channels
 from revisionist.engine.web.realism_api import (
     BodyLine,
     Clock,
     ContactLine,
     Desk,
+    DirectiveProposal,
     DocumentListing,
     DocumentListItem,
     DocumentPage,
@@ -288,7 +290,11 @@ def desk(view: View) -> Desk:
             for lever in card.levers
         ],
         contacts=[
-            ContactLine(person=view.entities[c.person].name, channel=c.channel.value)
+            ContactLine(
+                person=view.entities[c.person].name,
+                channel=c.channel.value,
+                channels=[x.value for x in channels(c)],
+            )
             for c in card.contacts
         ],
         principals=[
@@ -299,6 +305,22 @@ def desk(view: View) -> Desk:
         constraints=list(card.constraints),
         personal=list(card.personal),
         horizon_days=card.horizon_days,
+    )
+
+
+def proposal(view: View, p: Proposal) -> DirectiveProposal:
+    """A directive as the aide read it, in the desk's own words."""
+    lever = next((x for x in view.desk.levers if x.name == p.lever), None) if view.desk else None
+    specs = {s.name: s for s in lever.params} if lever is not None else {}
+    return DirectiveProposal(
+        to=view.entities[p.person].name,
+        channel=p.channel.value,
+        text=p.text,
+        lever=lever.name if lever is not None else None,
+        label=lever_label(lever) if lever is not None else None,
+        terms=[_term(specs[k], v) for k, v in p.params.items() if k in specs],
+        params=dict(p.params) if lever is not None else {},
+        reason=p.reason or None,
     )
 
 
@@ -351,6 +373,7 @@ __all__ = [
     "flagged_ids",
     "lever_label",
     "orders",
+    "proposal",
     "read_ids",
     "seat_realism",
     "situation",

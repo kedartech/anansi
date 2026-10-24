@@ -19,6 +19,7 @@ RECORDINGS = Path(__file__).parent / "recordings"
 PROSE = RECORDINGS / "realism-prose-toy.json"
 COUNSEL = RECORDINGS / "realism-counsel-autumn.json"
 AIDE = RECORDINGS / "realism-aide-autumn.json"
+DIRECTIVE = RECORDINGS / "realism-directive-autumn.json"
 AB = RECORDINGS / "realism-prose-ab.json"
 NOTE = "hand-written for tests; not a model reply"
 PRICE_PER_TOKEN = {"claude-haiku-5-5": (0.10e-6, 0.50e-6), "claude-sonnet-5-5": (2e-6, 10e-6)}
@@ -92,6 +93,44 @@ AIDE_REPLY: Mapping[str, Any] = {
 
 def aide_reply(request: Request) -> Any:
     return AIDE_REPLY
+
+
+DIRECTIVE_BY_TEXT: Mapping[str, Any] = {
+    "Tell the Prime Minister our destroyers will take the convoys as far as Iceland.": {
+        "lever": "cable_to_churchill",
+        "params": {"message": "Our destroyers will escort the convoys as far as Iceland."},
+        "reason": "",
+    },
+    "Have the Navy shoot on sight along the Iceland route.": {
+        "lever": "naval_order",
+        "params": {"order": "shoot_on_sight", "zone": "iceland_route"},
+        "reason": "",
+    },
+    "Declare war on Germany.": {
+        "lever": "",
+        "params": {},
+        "reason": (
+            "Only Congress can declare war. Nothing on your desk does it, though a message to "
+            "the Hill could prepare the ground."
+        ),
+    },
+    # Out of range on purpose: code must refuse a reading that does not fit the lever.
+    "Give the Russians everything we have.": {
+        "lever": "lend_lease_finding",
+        "params": {"recipient": "ussr", "share_pct": 150},
+        "reason": "",
+    },
+    # An engine word on purpose: code must not show a reason that names a lever.
+    "Close the Panama Canal.": {
+        "lever": "",
+        "params": {},
+        "reason": "No naval_order covers the canal.",
+    },
+}
+
+
+def directive_reply(request: Request) -> Any:
+    return DIRECTIVE_BY_TEXT[request.prompt.rsplit("\n", 1)[1]]
 
 
 AB_BY_MODEL_AND_TITLE: Mapping[tuple[str, str], str] = {
@@ -240,6 +279,22 @@ def record_aide() -> None:
     hand.save(AIDE)
 
 
+def record_directive() -> None:
+    from revisionist.engine.directive import ClaudeDirectiveReader, propose
+    from revisionist.engine.store import MemoryStore
+    from tests.counsel_scenario import roosevelt_seat, ticked
+    from tests.directive_scenario import ASKED
+    from tests.test_realism_tick import CAMPAIGN
+
+    hand = Hand(directive_reply)
+    store = MemoryStore()
+    ticked(store)
+    seat = roosevelt_seat(store)
+    for to, channel, text in ASKED:
+        propose(store, CAMPAIGN, seat, to(store), channel, text, ClaudeDirectiveReader(hand))
+    hand.save(DIRECTIVE)
+
+
 def record_ab(out: Path) -> None:
     from tests.test_prose_ab import ab
 
@@ -254,6 +309,7 @@ def main() -> None:
     record_prose()
     record_counsel()
     record_aide()
+    record_directive()
     with tempfile.TemporaryDirectory() as tmp:
         record_ab(Path(tmp))
 

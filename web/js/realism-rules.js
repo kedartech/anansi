@@ -139,6 +139,17 @@ export const STEP_ACTIONS = Object.freeze([
   ['refuse', 'Refuse'],
 ]);
 
+/** How a directive travels, as the form offers it: a letter to someone at hand is a memo. */
+export function directiveChannel(ch) {
+  return ch === 'letter' ? 'Memo' : channelWord(ch);
+}
+
+/** The line above a directive's reading: who it goes to and how. */
+export function addressLine(p) {
+  const how = directiveChannel(p.channel).toLowerCase();
+  return `To ${p.to}, ${p.channel === 'in_person' ? how : `by ${how}`}`;
+}
+
 /** Names to offer for entity parameters: contacts and principals, once each, sorted. */
 export function entityChoices(desk) {
   return [...new Set([...desk.contacts.map((c) => c.person), ...desk.principals])].sort();
