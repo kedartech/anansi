@@ -140,7 +140,7 @@ export function recover({ go, codes }) {
     form, [link('Back to sign in', 'signin', go)]);
 }
 
-export function join({ me, done, signOut }) {
+export function join({ me, done, signOut, go }) {
   const err = errorLine();
   const result = h('div', { role: 'status' });
   const form = h('form', { 'aria-label': 'Join a game', novalidate: true },
@@ -165,6 +165,6 @@ export function join({ me, done, signOut }) {
     ? `${live.map((g) => g.name).join(', ')} is open. Ask the host for an invite code: /invite on Discord, or revisionist discord invite.`
     : 'No game is open yet. When the host starts one, they can send you an invite code.';
   return frame('Join a game', lede, h('div', {}, form, result),
-    ['Signed in as ', h('strong', {}, me.account.handle), ' · ',
+    ['Signed in as ', h('strong', {}, me.account.handle), ' · ', link('Start a new game', 'new', go), ' · ',
       h('a', { href: '#', onclick: (e) => { e.preventDefault(); signOut(); } }, 'Sign out')]);
 }

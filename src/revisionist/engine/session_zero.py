@@ -416,6 +416,12 @@ def claim(store: EventStore, campaign_id: CampaignId, seat: SeatId, name: str) -
         raise taken
     if not _eligible(state, ch.entity_id):
         raise _unqualified(state, ch.entity_id)
+    if state.ruleset == "realism" and ch.entity_id not in state.cards:
+        # A generated cast's card is built when its person is picked (engine.build).
+        raise StepRefusedError(
+            f"{state.entities[ch.entity_id].name} is not ready to be played yet. "
+            "Choose them from the cast."
+        )
     claimed = ev.CharacterClaimed(seat_id=seat, entity_id=ch.entity_id)
     try:
         _log(

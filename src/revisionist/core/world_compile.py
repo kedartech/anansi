@@ -6,7 +6,8 @@ before anything is emitted. The fold runs last, as a check on what was emitted.
 
 A realism world compiles to the same creation events plus ``ruleset: realism`` on
 ``campaign_created``, one ``quantity_set`` per quantity and one ``cards_declared``.
-A legacy world compiles exactly as before.
+A legacy world compiles exactly as before. A realism roster may list people who
+have no card yet: ``compile_figure`` adds one person's card to a running campaign.
 """
 
 from collections.abc import Callable, Mapping, Sequence
@@ -81,6 +82,7 @@ from revisionist.core.world import (
     CardDecl,
     Cited,
     ClauseDecl,
+    EntityDecl,
     GoalDecl,
     ScopeDecl,
     ScopeSpec,
@@ -386,7 +388,8 @@ def _check_realism(world: WorldFile, sections: Mapping[str, str], problems: list
                 problems.append(f"{where}: lever {lv.name} names a pipeline not on the card")
     playable = {c.person for c in world.cards if c.playable}
     listed = {ch.entity for ch in world.roster}
-    for key in sorted(listed - playable):
+    # A listed person with no card yet is built when picked (compile_figure).
+    for key in sorted((listed & carded) - playable):
         problems.append(f"character {key}: a realism roster lists only playable cards")
     for key in sorted(playable - listed):
         problems.append(f"card {key}: playable, so it must be on the roster")
@@ -581,16 +584,7 @@ def _emit(
         (ev.CampaignCreated(name=world.name, world=world.world, ruleset=world.ruleset), PUBLIC),
         (ev.SettingsSet(settings=world.settings), PUBLIC),
     ]
-    for e in world.entities:
-        entity = Entity(
-            entity_id=EntityId(ids[e.key]),
-            kind=e.kind,
-            name=e.name,
-            parent=_maybe(ids, e.parent, EntityId),
-            location=_maybe(ids, e.location, EntityId),
-            tags=frozenset(e.tags),
-        )
-        out.append((ev.EntityCreated(entity=entity), PUBLIC))
+    out += [(ev.EntityCreated(entity=_entity(e, ids)), PUBLIC) for e in world.entities]
     for a in world.assets:
         scope = _scope(a.scope, ids)
         asset = Asset(
@@ -821,6 +815,97 @@ def _emit_realism(world: WorldFile, ids: Mapping[str, str]) -> list[tuple[ev.Pay
     cards = tuple(_card(c, ids) for c in world.cards)
     out.append((ev.CardsDeclared(cards=cards, feeds=feeds, pipelines=pipelines), PUBLIC))
     return out
+
+
+def _entity(e: EntityDecl, ids: Mapping[str, str]) -> Entity:
+    return Entity(
+        entity_id=EntityId(ids[e.key]),
+        kind=e.kind,
+        name=e.name,
+        parent=_maybe(ids, e.parent, EntityId),
+        location=_maybe(ids, e.location, EntityId),
+        tags=frozenset(e.tags),
+    )
+
+
+def compile_figure(
+    state: State,
+    figure: EntityId,
+    part: WorldFile,
+    known: Mapping[str, EntityId],
+    versions: Versions,
+) -> list[Event]:
+    """One person's card for a running realism campaign: the people, quantities,
+    feeds and pipelines it brings, then a ``cards_declared`` holding the one card.
+
+    ``known`` gives the keys ``part`` may use for what the log already holds; part
+    may refer to them but not declare them again, nor declare a name already in
+    the world. Its own keys are salted with the figure, so two cards built apart
+    never share an ID, and its event IDs derive from the figure, so a second card
+    for one person fails at the store. Raises WorldError listing every problem.
+    """
+    by_id = {e: k for k, e in known.items()}
+    me = by_id.get(figure)
+    stubs = tuple(
+        EntityDecl(key=k, kind=state.entities[e].kind, name=state.entities[e].name)
+        for k, e in known.items()
+    )
+    # Checked as a world of its own, the stubs standing in for the log. The card is
+    # checked as unplayable: its roster entry is already in the log, not in part.
+    whole = part.model_copy(
+        update={
+            "entities": stubs + part.entities,
+            "cards": tuple(c.model_copy(update={"playable": False}) for c in part.cards),
+            "roster": (),
+            "ruleset": "realism",
+            "start_date": state.in_world_date,
+        }
+    )
+    problems: list[str] = []
+    sections = _index(whole, problems)
+    _check(whole, sections, problems)
+    if me is None:
+        problems.append(f"figure {figure}: not among the known keys")
+    elif [c.person for c in part.cards] != [me]:
+        problems.append(f"cards: exactly one card, for {me}")
+    names = {x.name.casefold(): by_id.get(e, "") for e, x in state.entities.items()}
+    for d in part.entities:
+        if d.name.casefold() in names:
+            problems.append(
+                f"entity {d.key}: {d.name} is already in the world"
+                + (f" as {names[d.name.casefold()]}" if names[d.name.casefold()] else "")
+            )
+    if problems:
+        raise WorldError(problems)
+
+    ids = {
+        key: known[key]
+        if key in known
+        else object_id(state.campaign_id, section, f"{figure}.{key}")
+        for key, section in sections.items()
+    }
+    emitted: list[tuple[ev.Payload, Scope]] = [
+        (ev.EntityCreated(entity=_entity(e, ids)), PUBLIC) for e in part.entities
+    ]
+    emitted += _emit_realism(whole.model_copy(update={"cards": part.cards}), ids)
+    events = [
+        Event(
+            event_id=EventId(derived_id(state.campaign_id, "figure", figure, n)),
+            campaign_id=state.campaign_id,
+            seq=state.last_seq + 1 + n,
+            tick=state.tick,
+            actor=None,
+            scope=scope,
+            payload=payload,
+            versions=versions,
+        )
+        for n, (payload, scope) in enumerate(emitted)
+    ]
+    try:
+        replay(events, initial=state)
+    except FoldError as exc:
+        raise WorldError([f"fold: {exc}"]) from exc
+    return events
 
 
 def _card(c: CardDecl, ids: Mapping[str, str]) -> SeatCard:

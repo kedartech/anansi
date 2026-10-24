@@ -143,6 +143,7 @@ legend { font-weight: 600; font-size: 13px; padding: 0; margin-bottom: 4px; }
 .rail-mark { width: 20px; height: 20px; display: inline-grid; place-items: center; border: 1px solid var(--ink-field-border); border-radius: 50%; font-size: 11px; flex: none; }
 .rail-private { margin-left: auto; color: var(--ink-muted); display: inline-flex; }
 .rail .hint { margin-top: var(--space-4); }
+.sz-solo { grid-template-columns: minmax(0, 1fr); }
 .sz-main { overflow-y: auto; padding: var(--space-6); }
 .sz-inner { max-width: 1100px; display: flex; flex-direction: column; gap: var(--space-5); }
 .step-head { display: flex; flex-direction: column; gap: var(--space-2); }

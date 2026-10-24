@@ -250,6 +250,31 @@ class WebSeats:
         cur = self.conn.execute("DELETE FROM web_seats WHERE campaign_id = %s", (campaign_id,))
         return cur.rowcount
 
+    def for_campaign(self, campaign_id: CampaignId) -> list[WebSeat]:
+        """Every web seat in the campaign, first linked first."""
+        rows = self.conn.execute(
+            "SELECT campaign_id, seat_id, account_id, linked_at FROM web_seats"
+            " WHERE campaign_id = %s ORDER BY linked_at, seat_id",
+            (campaign_id,),
+        ).fetchall()
+        return [WebSeat(CampaignId(r[0]), SeatId(r[1]), str(r[2]), r[3]) for r in rows]
+
+    def start(self, campaign_id: CampaignId, seat_id: SeatId, account_id: str) -> None:
+        """Make the account the host of a game it started from the web, and link it."""
+        with self.conn.transaction():
+            self.conn.execute(
+                "INSERT INTO web_hosts (campaign_id, account_id) VALUES (%s, %s)",
+                (campaign_id, account_id),
+            )
+            self.link(campaign_id, seat_id, account_id)
+
+    def host(self, campaign_id: CampaignId) -> str | None:
+        """The account that started the game from the web; None for any other game."""
+        row = self.conn.execute(
+            "SELECT account_id FROM web_hosts WHERE campaign_id = %s", (campaign_id,)
+        ).fetchone()
+        return str(row[0]) if row else None
+
     def for_account(self, account_id: str) -> list[WebSeat]:
         rows = self.conn.execute(
             "SELECT campaign_id, seat_id, account_id, linked_at FROM web_seats"

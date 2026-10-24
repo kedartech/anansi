@@ -39,4 +39,6 @@ export const api = {
   seat: (action, body = {}) => call('POST', `/api/seat/${action}`, body),
   /** A realism call: read (resolves to a document page), flag (to { flagged }), directive (to { reply, refused, proposal }), sign, lever, step, advance (to { reply, refused }). */
   realism: (action, body = {}) => call('POST', `/api/realism/${action}`, body),
+  /** A new realism game: worlds, ready, pitch, cast, pick, invite, begin; resolves to { reply, refused } and more. */
+  newGame: (action, body = {}) => call('POST', `/api/new/${action}`, body),
 };

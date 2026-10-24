@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
-  STEP_ACTIONS, TRAY_FILTERS, addressLine, channelWord, directiveChannel, classificationWord, entityChoices, figureValue, filterInTray, gapLine, horizonWords,
+  STEP_ACTIONS, TRAY_FILTERS, addressLine, castLine, channelWord, directiveChannel, classificationWord, entityChoices, figureValue, filterInTray, gapLine, horizonWords,
   linesHeading, paceLine, powersSentence, reportLine, runLine, sortInTray, stepLine, trackerLine, trayCounts, trendLine, unreadCount,
 } from '../js/realism-rules.js';
 
@@ -223,4 +223,10 @@ test('a directive offers each contact their own channel first, and a memo reads 
   assert.equal(addressLine({ to: 'Winston Churchill', channel: 'cable' }), 'To Winston Churchill, by cable');
   assert.equal(addressLine({ to: 'Harry Hopkins', channel: 'in_person' }), 'To Harry Hopkins, in person');
   assert.throws(() => directiveChannel('pigeon'));
+});
+
+test('castLine counts the players still to choose', () => {
+  assert.equal(castLine(0), 'Everyone has chosen. You can begin.');
+  assert.equal(castLine(1), 'Waiting for 1 player to choose.');
+  assert.equal(castLine(3), 'Waiting for 3 players to choose.');
 });

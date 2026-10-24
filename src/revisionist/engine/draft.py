@@ -66,7 +66,7 @@ def _strip_discriminator(node: Any) -> Any:
     return node
 
 
-def _stage_schema(fields: Sequence[str]) -> dict[str, Any]:
+def stage_schema(fields: Sequence[str]) -> dict[str, Any]:
     """The world file's schema restricted to one stage, with only the ``$defs`` it reaches."""
     schema = WorldFile.model_json_schema()
     props = {k: v for k, v in schema["properties"].items() if k in fields}
@@ -88,7 +88,7 @@ def _stage_schema(fields: Sequence[str]) -> dict[str, Any]:
     return restricted
 
 
-SCHEMAS = {stage: _stage_schema(FIELDS[stage]) for stage in STAGES}
+SCHEMAS = {stage: stage_schema(FIELDS[stage]) for stage in STAGES}
 
 
 def _fields(output: object, fields: Sequence[str]) -> dict[str, Any]:

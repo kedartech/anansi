@@ -21,6 +21,7 @@ COUNSEL = RECORDINGS / "realism-counsel-autumn.json"
 AIDE = RECORDINGS / "realism-aide-autumn.json"
 DIRECTIVE = RECORDINGS / "realism-directive-autumn.json"
 AB = RECORDINGS / "realism-prose-ab.json"
+CAST = RECORDINGS / "realism-cast-1962.json"
 NOTE = "hand-written for tests; not a model reply"
 PRICE_PER_TOKEN = {"claude-haiku-5-5": (0.10e-6, 0.50e-6), "claude-sonnet-5-5": (2e-6, 10e-6)}
 """List price per input and output token, used for the estimated cost on each reply."""
@@ -295,6 +296,15 @@ def record_directive() -> None:
     hand.save(DIRECTIVE)
 
 
+def record_cast() -> None:
+    from revisionist.engine.store import MemoryStore
+    from tests.cast_scenario import reply, scenario
+
+    hand = Hand(reply)
+    scenario(MemoryStore(), hand)
+    hand.save(CAST)
+
+
 def record_ab(out: Path) -> None:
     from tests.test_prose_ab import ab
 
@@ -310,6 +320,7 @@ def main() -> None:
     record_counsel()
     record_aide()
     record_directive()
+    record_cast()
     with tempfile.TemporaryDirectory() as tmp:
         record_ab(Path(tmp))
 

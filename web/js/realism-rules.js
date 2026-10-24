@@ -195,3 +195,9 @@ export function reportLine(source) {
 export function runLine(history) {
   return history.map((r) => (r.value === null ? 'no figure' : NUMBER.format(r.value))).join(' · ');
 }
+
+/** The host's line while the cast is being chosen: who is still to pick. */
+export function castLine(waiting) {
+  if (!waiting) return 'Everyone has chosen. You can begin.';
+  return waiting === 1 ? 'Waiting for 1 player to choose.' : `Waiting for ${waiting} players to choose.`;
+}

@@ -328,21 +328,29 @@ def seat_player(store: EventStore, campaign_id: CampaignId, entity: EntityId) ->
     name = load_state(store, campaign_id).entities[entity].name
     seat = SeatId(derived_id(campaign_id, "seat", entity))
     session_zero.claim(store, campaign_id, seat, name)
-    closed = load_state(store, campaign_id)
+    open_play(store, campaign_id)
+    return name
+
+
+def open_play(store: EventStore, campaign_id: CampaignId) -> None:
+    """Close a realism Session Zero: no goals or agents to wait for. Raises
+    ``StepRefusedError`` when no one holds a person yet."""
+    state = load_state(store, campaign_id)
+    if not cmp.human_seats(state):
+        raise session_zero.StepRefusedError("No one has chosen a person yet.")
     store.append_all(
         [
             Event(
                 event_id=EventId(new_id()),
                 campaign_id=campaign_id,
-                seq=closed.last_seq + 1,
-                tick=closed.tick,
+                seq=state.last_seq + 1,
+                tick=state.tick,
                 scope=PUBLIC,
                 payload=ev.SessionZeroClosed(),
                 versions=cmp.versions(),
             )
         ]
     )
-    return name
 
 
 def _fits(spec: ParamSpec, raw: str) -> ParamValue:
@@ -511,6 +519,7 @@ __all__ = [
     "draft_order",
     "file_order",
     "mark_read",
+    "open_play",
     "run_realism_tick",
     "seat_player",
     "set_flag",

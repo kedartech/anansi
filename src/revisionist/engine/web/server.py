@@ -24,18 +24,21 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from revisionist.core.ids import DocumentId, EntityId, OrderId, SeatId
+from revisionist.core.ids import CampaignId, DocumentId, EntityId, OrderId, SeatId
 from revisionist.core.ontology import Persona, Phase
 from revisionist.core.project import project
 from revisionist.core.realism.card import ChannelKind
 from revisionist.core.realism.pipeline import OrderStatus, StepAction
 from revisionist.core.state import State
+from revisionist.engine import build, cast, directive, realism_tick, session_zero
 from revisionist.engine import campaign as cmp
-from revisionist.engine import directive, realism_tick
 from revisionist.engine import scheduler as sch
 from revisionist.engine.discord import handlers as dh
-from revisionist.engine.llm import Transport
+from revisionist.engine.discord.tables import Invites
+from revisionist.engine.ids import new_id
+from revisionist.engine.llm import Transport, TransportError
 from revisionist.engine.pg_store import PostgresEventStore
+from revisionist.engine.pitch import PITCH_MAX, PendingCard, PitchError, read_pitch
 from revisionist.engine.prose import ClaudeProseWriter, ProseWriter, TemplateProseWriter
 from revisionist.engine.store import load_state
 from revisionist.engine.tick import NotInPlayError
@@ -45,8 +48,9 @@ from revisionist.engine.web.accounts import (
     Account,
     AccountError,
     Accounts,
+    WebSeats,
 )
-from revisionist.engine.web.handlers import WebHandlers
+from revisionist.engine.web.handlers import NOT_LINKED, WebHandlers
 
 log = logging.getLogger("revisionist.web")
 
@@ -54,6 +58,9 @@ COOKIE = "rv_session"
 BODY_MAX = 64 * 1024
 SIGNIN_TRIES = 10
 """Failed sign-ins (or recoveries) per handle per 15 minutes."""
+READY = ("autumn-1941",)
+"""[proposed] The ready-made realism worlds a web account may start."""
+MODEL_DOWN = "The model cannot be reached just now. Try again in a minute."
 
 CSP = (
     "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; "
@@ -94,6 +101,12 @@ class App:
         )
         self._failures: dict[str, list[float]] = {}
         self._lock = threading.Lock()
+        self._pitches: dict[str, PendingCard] = {}
+        """The setting card each account is choosing a start point from. Lost on a
+        restart, which only means reading the pitch again."""
+        self.spawn: Callable[[Callable[[], None]], None] = lambda run: threading.Thread(
+            target=run, daemon=True
+        ).start()
 
     def open(self) -> PostgresEventStore:
         store = cmp.open_store(self.dsn)
@@ -140,6 +153,12 @@ class App:
             game["live"] = link.campaign_id in live
             seat_view = snapshot.seat_snapshot(store, state, link.seat_id)
             game["ruleset"] = state.ruleset
+            if state.ruleset == "realism":
+                seats = WebSeats(store.conn)
+                game["host"] = seats.host(link.campaign_id) == account.account_id
+                game["waiting"] = sum(
+                    1 for s in seats.for_campaign(link.campaign_id) if s.seat_id not in state.seats
+                )
             if (
                 state.ruleset == "realism"
                 and state.phase is Phase.PLAY
@@ -249,7 +268,7 @@ class App:
                     )
                 elif action == "advance":
                     humans = cmp.human_seats(state)
-                    if humans != [seat]:
+                    if humans != [seat] and WebSeats(store.conn).host(cid) != account.account_id:
                         raise ValueError("Only the host advances a shared game.")
                     writer: ProseWriter = (
                         TemplateProseWriter()
@@ -274,6 +293,151 @@ class App:
                 text = str(exc.args[0]) if isinstance(exc, KeyError) and exc.args else str(exc)
                 return snapshot.checked(state, seat, {"reply": text, "refused": True})
             return snapshot.checked(state, seat, {"reply": reply, "refused": False})
+        finally:
+            store.close()
+
+    # --- a new game ------------------------------------------------------------
+
+    def new_game(self, account: Account, action: str, body: dict[str, Any]) -> dict[str, Any]:
+        """One ``/api/new/<action>``: start a realism game, choose its people, invite
+        the others and begin. A refusal is a reply, not an error."""
+        store = self.open()
+        try:
+            if action == "worlds":
+                decls = [(k, cmp.load_world(cmp.world_path(k))) for k in READY]
+                return {"worlds": [{"key": k, "name": d.name, "start": d.start} for k, d in decls]}
+            link = self.handlers.seat_of(store, account.account_id)
+            if action in ("ready", "pitch", "cast"):
+                if link is not None:
+                    return {"reply": dh.ALREADY_SEATED, "refused": True}
+                return self._start(store, account, action, body)
+            if link is None:
+                raise ApiError(HTTPStatus.BAD_REQUEST, NOT_LINKED)
+            cid = link.campaign_id
+            state = load_state(store, cid)
+            if state.ruleset != "realism" or state.phase is not Phase.SESSION_ZERO:
+                raise ApiError(HTTPStatus.BAD_REQUEST, "This game is not choosing its people.")
+            if action == "pick":
+                return self._pick(store, state, link.seat_id, _text(body, "name", 120))
+            if action not in ("invite", "begin"):
+                raise ApiError(HTTPStatus.NOT_FOUND, "No such call.")
+            if WebSeats(store.conn).host(cid) != account.account_id:
+                return {"reply": "Only the host can do that.", "refused": True}
+            if action == "invite":
+                code = Invites(store.conn).issue(cid, SeatId(new_id()), self.clock())
+                return {
+                    "reply": "Send this code to one player privately. It works once.",
+                    "refused": False,
+                    "code": code,
+                }
+            waiting = [
+                s for s in WebSeats(store.conn).for_campaign(cid) if s.seat_id not in state.seats
+            ]
+            if waiting:
+                return {"reply": f"Still to choose: {len(waiting)} player(s).", "refused": True}
+            try:
+                realism_tick.open_play(store, cid)
+            except session_zero.StepRefusedError as exc:
+                return {"reply": str(exc), "refused": True}
+            self.spawn(lambda: self._build_rest(cid))
+            return {
+                "reply": "The game has begun. The rest of the cast is being drawn up "
+                "and will act on their own.",
+                "refused": False,
+            }
+        finally:
+            store.close()
+
+    def _start(
+        self, store: PostgresEventStore, account: Account, action: str, body: dict[str, Any]
+    ) -> dict[str, Any]:
+        """A ready-made world, a pitch read into start points, or the cast for one."""
+        if action == "pitch":
+            pitch = _text(body, "text", PITCH_MAX)
+            try:
+                card, costs = read_pitch(pitch, self.transport_factory())
+            except PitchError as exc:
+                return {"reply": exc.reason, "refused": True}
+            except TransportError:
+                return {"reply": MODEL_DOWN, "refused": True}
+            with self._lock:
+                self._pitches[account.account_id] = PendingCard(
+                    pitch=pitch, card=card, costs=tuple(costs)
+                )
+            points = [{"label": p.label, "focus": p.focus} for p in card.start_points]
+            return {
+                "reply": card.reading,
+                "refused": False,
+                "card": {"reading": card.reading, "start_points": points},
+            }
+        if action == "ready":
+            key = _text(body, "world", 40)
+            if key not in READY:
+                return {"reply": "There is no such game to start.", "refused": True}
+            cid = cmp.new_campaign(store, cmp.load_world(cmp.world_path(key)))
+        else:
+            with self._lock:
+                pending = self._pitches.get(account.account_id)
+            if pending is None:
+                return {"reply": "Write your pitch first.", "refused": True}
+            choice = body.get("choice")
+            starts = pending.card.start_points
+            if not isinstance(choice, int) or not 1 <= choice <= len(starts):
+                return {"reply": "Choose one of the start points.", "refused": True}
+            try:
+                world, costs = cast.draft_cast(
+                    pending.card, starts[choice - 1], self.transport_factory()
+                )
+            except session_zero.SessionZeroError:
+                log.warning("cast refused for %s", account.account_id)
+                return {"reply": "The cast could not be drawn up. Try again.", "refused": True}
+            except TransportError:
+                return {"reply": MODEL_DOWN, "refused": True}
+            cid = cmp.new_campaign(store, world)
+            cmp.log_cost(store, cid, "session_zero", [*pending.costs, *costs])
+            with self._lock:
+                self._pitches.pop(account.account_id, None)
+        WebSeats(store.conn).start(cid, SeatId(new_id()), account.account_id)
+        return {"reply": "The cast is assembled. Choose who you will play.", "refused": False}
+
+    def _pick(
+        self, store: PostgresEventStore, state: State, seat: SeatId, name: str
+    ) -> dict[str, Any]:
+        """Take a person from the cast, building their card first if no one has."""
+        if seat in state.seats:
+            return {"reply": f"You already play {state.seats[seat].name}.", "refused": True}
+        person = next(
+            (c for c in state.roster if state.entities[c].name.casefold() == name.casefold()),
+            None,
+        )
+        if person is None:
+            return {"reply": "No one of that name is in the cast.", "refused": True}
+        if person not in state.cards:
+            try:
+                build.build_figure(store, state.campaign_id, person, self.transport_factory())
+            except build.BuildError:
+                log.warning("card for %s refused in %s", person, state.campaign_id)
+                return {
+                    "reply": f"The papers for {state.entities[person].name} could not be "
+                    "drawn up. Try again.",
+                    "refused": True,
+                }
+            except TransportError:
+                return {"reply": MODEL_DOWN, "refused": True}
+        try:
+            held = session_zero.claim(store, state.campaign_id, seat, state.entities[person].name)
+        except session_zero.StepRefusedError as exc:
+            return {"reply": str(exc), "refused": True}
+        return {"reply": f"You are {held}.", "refused": False}
+
+    def _build_rest(self, campaign_id: CampaignId) -> None:
+        store = self.open()
+        try:
+            failed = build.build_rest(store, campaign_id, self.transport_factory())
+            if failed:
+                log.warning("not built in %s: %s", campaign_id, ", ".join(failed))
+        except Exception:
+            log.exception("building the rest of the cast failed in %s", campaign_id)
         finally:
             store.close()
 
@@ -543,6 +707,10 @@ def make_handler(app: App) -> type[BaseHTTPRequestHandler]:
                     account = self._need_account()
                     reply = str(run(app.handlers, account.account_id, body))
                     self._send_json(HTTPStatus.OK, {"reply": reply, "refused": reply in REFUSALS})
+                elif path.startswith("/api/new/"):
+                    account = self._need_account()
+                    out = app.new_game(account, path.removeprefix("/api/new/"), body)
+                    self._send_json(HTTPStatus.OK, out)
                 elif path.startswith("/api/realism/"):
                     account = self._need_account()
                     out = app.realism(account, path.removeprefix("/api/realism/"), body)

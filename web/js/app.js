@@ -4,6 +4,8 @@
 import { api } from './api.js';
 import { h } from './dom.js';
 import { join, recover, recoveryCodes, signIn, signUp } from './views/auth.js';
+import { newGame } from './views/new-game.js';
+import { realismCast } from './views/realism-cast.js';
 import { realismRoom } from './views/realism-room.js';
 import { sessionZero } from './views/session-zero.js';
 import { warRoom } from './views/war-room.js';
@@ -77,11 +79,11 @@ async function render() {
   const refresh = async () => render();
   const ctx = { me, refresh, signOut, go };
   if (!me.game) {
-    show(join({ me, done: refresh, signOut }));
+    show(route === 'new' ? newGame(ctx) : join({ me, done: refresh, signOut, go }));
     return;
   }
   document.title = `${me.game.name} · Revisionist`;
-  if (me.game.phase === 'session_zero') show(sessionZero(ctx));
+  if (me.game.phase === 'session_zero') show(me.game.ruleset === 'realism' ? realismCast(ctx) : sessionZero(ctx));
   else show(me.game.ruleset === 'realism' ? realismRoom(ctx) : warRoom(ctx));
 }
 
