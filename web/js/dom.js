@@ -62,6 +62,7 @@ const PATHS = {
   alert: [['path', { d: 'M12 3 2 20h20L12 3z' }], ['path', { d: 'M12 10v4M12 17v.5' }]],
   clock: [['circle', { cx: 12, cy: 12, r: 9 }], ['path', { d: 'M12 7v5l3 2' }]],
   out: [['path', { d: 'M14 4h6v16h-6M10 8l-4 4 4 4M6 12h10' }]],
+  chevron: [['path', { d: 'M6 9l6 6 6-6' }]],
 };
 
 export function icon(name, size = 13) {

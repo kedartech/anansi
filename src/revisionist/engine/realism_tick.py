@@ -213,7 +213,8 @@ def run_realism_tick(
 
 def _prose(em: Emitter, writer: ProseWriter) -> tuple[list[Event], list[CallCost], list[str]]:
     """``document_written`` for each page issued since the last tick closed that has no
-    prose yet, one writer call per author. A failed call leaves its pages bare."""
+    prose yet, one writer call per author. A failed call leaves its pages bare, and so
+    does a page whose every line lacks a figure: there is nothing on it to write up."""
     log_now = list(em.store.read(em.state.campaign_id))
     start = max((i + 1 for i, e in enumerate(log_now) if e.kind == "tick_closed"), default=0)
     issued = [
@@ -224,7 +225,7 @@ def _prose(em: Emitter, writer: ProseWriter) -> tuple[list[Event], list[CallCost
     by_author: dict[EntityId, list[DocumentView]] = {}
     for doc_id in issued:
         page = em.state.documents[doc_id].view
-        if page.prose is None:
+        if page.prose is None and not _nothing_stated(page):
             by_author.setdefault(page.author, []).append(page)
     versions = em.versions.model_copy(
         update={"prompt": ",".join(x for x in (em.versions.prompt, prose_prompt_version()) if x)}
@@ -252,6 +253,10 @@ def _prose(em: Emitter, writer: ProseWriter) -> tuple[list[Event], list[CallCost
                 )
                 batch.append(e.model_copy(update={"versions": versions}))
     return batch, costs, dropped
+
+
+def _nothing_stated(page: DocumentView) -> bool:
+    return bool(page.body) and all(line.value is None for line in page.body)
 
 
 def _feed_documents(em: Emitter, today: date) -> list[Event]:

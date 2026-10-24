@@ -412,7 +412,15 @@ def aide_brief(view: View, brief: AideBrief) -> dict[str, Any]:
                 "params": dict(d.params),
             }
         )
-    return {"summary": brief.summary, "decisions": len(brief.decisions), "drafts": drafts}
+    summary = _ISO_DATE.sub(lambda m: _spoken_day(date.fromisoformat(m.group(0))), brief.summary)
+    return {"summary": summary, "decisions": len(brief.decisions), "drafts": drafts}
+
+
+_ISO_DATE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
+
+
+def _spoken_day(day: date) -> str:
+    return f"{day.day} {day:%B %Y}"
 
 
 def counsel_lines(view: View, held: Iterable[ev.CounselHeld]) -> list[dict[str, str]]:

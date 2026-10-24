@@ -3,13 +3,20 @@
 import { api } from '../api.js';
 import { h, icon, reply } from '../dom.js';
 
-export function header({ me, game, role, extra = [], refresh, signOut }) {
+/** `identity` is { name, office } of the person the player plays, shown under the game's name. */
+export function header({ me, game, role, extra = [], refresh, signOut, identity = null }) {
   const bugDialog = bugReport(refresh);
   return h('header', { class: 'frame-head' },
     h('span', { class: 'brand-mark', 'aria-hidden': 'true' }, icon('mark', 22)),
     h('div', { class: 'stack' },
       h('span', { class: 'eyebrow' }, role),
       h('span', { class: 'title' }, game?.name ?? 'Revisionist')),
+    identity?.name
+      ? h('div', { class: 'stack identity' },
+        h('span', { class: 'eyebrow' }, 'Playing as'),
+        h('span', { class: 'title' }, identity.name),
+        identity.office ? h('span', { class: 'muted office' }, identity.office) : null)
+      : null,
     ...extra,
     h('div', { class: 'head-right' },
       h('span', { class: 'muted' }, 'Signed in as ', me.account.handle),

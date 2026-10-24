@@ -3,7 +3,7 @@
 
 import { h, icon } from '../dom.js';
 import {
-  TRAY_FILTERS, addressLine, channelWord, directiveChannel, classificationWord, figureValue, filterInTray, gapLine, horizonWords, linesHeading, paceLine,
+  TRAY_FILTERS, addressLine, channelWord, directiveChannel, classificationWord, figureValue, filterInTray, horizonWords, linesHeading, paceLine,
   powersSentence, reportLine, runLine, sortInTray, stepLine, trackerLine, trayCounts, trendLine,
 } from '../realism-rules.js';
 import { worldDate } from '../rules.js';
@@ -67,31 +67,28 @@ export function inTray(listing, onOpen, opts = {}) {
         : h('p', { class: 'rl-none' }, 'Nothing in this tray.')));
 }
 
-function figures(lines, { keepEmpty }) {
-  const shown = keepEmpty ? lines : lines.filter((b) => b.value !== null);
+/** The page's figures; a line with no figure is left off rather than marked as missing. */
+function figures(lines) {
+  const shown = lines.filter((b) => b.value !== null);
   if (!shown.length) return null;
   return h('section', { class: 'rl-figures' },
     h('h3', {}, linesHeading(shown)),
     h('dl', { class: 'rl-body' }, shown.map((b) => [
       h('dt', {}, b.label),
-      b.value === null
-        ? h('dd', { class: 'rl-none' }, 'No figure given')
-        : h('dd', {}, `${b.value}${b.unit ? ` ${b.unit}` : ''}`),
+      h('dd', {}, `${b.value}${b.unit ? ` ${b.unit}` : ''}`),
     ])));
 }
 
 export function documentPage(page) {
   const { item } = page;
   const paragraphs = page.prose ? page.prose.split(/\n{2,}/).filter((p) => p.trim()) : [];
-  const nothing = !paragraphs.length && !page.body.length;
   return h('article', { class: 'rl-page', 'aria-labelledby': 'rl-page-h' },
     h('div', { class: 'rl-page-top' }, stamp(item.classification),
       h('span', { class: 'rl-page-via' }, `via ${channelWord(item.channel)}`)),
     h('h2', { id: 'rl-page-h' }, item.title),
     h('p', { class: 'rl-page-from' }, `From ${item.author}, issued ${worldDate(item.issued)}, arrived ${worldDate(item.arrives)}`),
     paragraphs.length ? h('div', { class: 'rl-prose' }, paragraphs.map((p) => h('p', {}, p))) : null,
-    figures(page.body, { keepEmpty: !paragraphs.length }),
-    nothing ? h('p', { class: 'rl-none' }, 'The text of this paper has not reached your desk.') : null);
+    figures(page.body));
 }
 
 /** An opened folder: the paper on the folder's inside, with Close folder and Flag/Unflag. */
@@ -134,8 +131,31 @@ export function desk(d, opts = {}) {
     h('section', { class: 'rl-desk-block' }, h('h3', {}, 'Your staff and contacts'),
       d.contacts.length
         ? h('ul', { class: 'rl-contacts', role: 'list' }, d.contacts.map((c) => h('li', {},
-          CHANNEL_ICON[c.channel] ? [icon(CHANNEL_ICON[c.channel]), ' '] : null, h('strong', {}, c.person), ` (${channelWord(c.channel)})`)))
+          CHANNEL_ICON[c.channel] ? icon(CHANNEL_ICON[c.channel]) : null,
+          personName(c), h('span', { class: 'rl-via' }, channelWord(c.channel)))))
         : h('p', { class: 'rl-none' }, 'No one is within reach.')));
+}
+
+/** A person's name with their title beneath, in a lighter hand. */
+export function personName(c) {
+  return h('span', { class: 'rl-person' },
+    h('span', { class: 'rl-person-name' }, c.person),
+    c.title ? h('span', { class: 'rl-person-title' }, c.title) : null);
+}
+
+/** The recipients as a list of radio cards: name, and title beneath. */
+function recipients(contacts, start, name, onPick) {
+  return h('fieldset', { class: 'rl-recipients' },
+    h('legend', {}, 'To'),
+    contacts.map((c, i) => {
+      const rid = `${name}-${i}`;
+      return h('label', { class: 'rl-recipient', for: rid },
+        h('input', {
+          type: 'radio', id: rid, name, value: c.person, required: true, checked: c === start,
+          onchange: () => onPick(c),
+        }),
+        personName(c));
+    }));
 }
 
 let directiveSeq = 0;
@@ -151,17 +171,15 @@ export function directiveForm(contacts, draft, onAsk) {
   const fill = (contact, chosen) => how.replaceChildren(...contact.channels.map((ch) => h('option', {
     value: ch, selected: ch === chosen,
   }, directiveChannel(ch))));
-  const to = h('select', {
-    id: `${id}-to`, name: 'to', required: true,
-    onchange: () => fill(contacts.find((c) => c.person === to.value), null),
-  }, contacts.map((c) => h('option', { value: c.person, selected: c === start }, c.person)));
+  const picker = recipients(contacts, start, `${id}-to`, (c) => fill(c, null));
+  const to = { get value() { return picker.querySelector('input:checked')?.value ?? ''; } };
   const words = h('textarea', { id: `${id}-text`, name: 'text', rows: 4, maxlength: 1000, required: true }, draft?.text ?? '');
   if (start) fill(start, draft?.channel);
   const form = h('form', {
     class: 'rl-form rl-directive', 'aria-label': 'Write a directive',
     onsubmit: (e) => { e.preventDefault(); onAsk?.({ to: to.value, channel: how.value, text: words.value }); },
   },
-  h('div', { class: 'rl-field' }, h('label', { for: `${id}-to` }, 'To'), to),
+  picker,
   h('div', { class: 'rl-field' }, h('label', { for: `${id}-how` }, 'By'), how),
   h('div', { class: 'rl-field' }, h('label', { for: `${id}-text` }, 'Your instruction'), words),
   h('button', { type: 'submit', class: 'rl-submit' }, 'Prepare the order'));
@@ -202,57 +220,134 @@ function instrument(lever, { onSubmit, entities = [] } = {}) {
       toggle.setAttribute('aria-expanded', String(open));
     },
   }, 'Draft');
-  return h('li', { class: 'rl-instrument' },
+  return h('li', { class: 'rl-instrument', 'data-lever': lever.name },
     h('div', { class: 'rl-instrument-head' }, h('strong', {}, lever.label), toggle),
     lever.summary ? h('p', { class: 'rl-summary' }, lever.summary) : null,
     panel);
 }
 
-/** One source's line on a figure's card: the figure or the gap, the trend, who and when. */
+/** One source's line on a figure's card: the figure, the trend, who and when. */
 function reading(unit, src, onOpen) {
-  const shown = figureValue(src.value, '');
+  const given = src.history.filter((r) => r.value !== null);
   return h('li', { class: 'rl-reading' },
     h('p', { class: 'rl-reading-head' },
-      shown === null
-        ? h('span', { class: 'rl-figure rl-gap' }, gapLine(src))
-        : [h('span', { class: 'rl-figure' }, shown), unit ? h('span', { class: 'rl-unit' }, unit) : null,
-          h('span', { class: 'rl-trend' }, trendLine(src))]),
+      h('span', { class: 'rl-figure' }, figureValue(src.value, '')), unit ? h('span', { class: 'rl-unit' }, unit) : null,
+      h('span', { class: 'rl-trend' }, trendLine(src))),
     h('p', { class: 'rl-reported' }, reportLine(src)),
-    src.history.length > 1 ? h('p', { class: 'rl-run' }, `Recent reports: ${runLine(src.history)}`) : null,
+    given.length > 1 ? h('p', { class: 'rl-run' }, `Recent reports: ${runLine(given)}`) : null,
     h('button', { type: 'button', class: 'rl-btn', onclick: () => onOpen?.({ id: src.doc_id }) }, 'Open the report'));
 }
 
 /** The situation board: an index card per figure, each source on it as it gave the figure. */
 export function board(s, { onOpen } = {}) {
+  // A source whose latest page gives no figure is left off; a card with none is not drawn.
+  const shown = s.figures
+    .map((f) => ({ ...f, sources: f.sources.filter((src) => figureValue(src.value, '') !== null) }))
+    .filter((f) => f.sources.length);
   return h('section', { class: 'rl-board', 'aria-labelledby': 'rl-board-h' },
     h('h2', { id: 'rl-board-h' }, 'Situation'),
     h('p', { class: 'rl-board-note' }, 'The figures in the papers on your desk, each as its author gave it.'),
-    s.figures.length
-      ? h('ul', { class: 'rl-cards', role: 'list' }, s.figures.map((f) => h('li', { class: `rl-card${f.disagree ? ' differ' : ''}` },
+    shown.length
+      ? h('ul', { class: 'rl-cards', role: 'list' }, shown.map((f) => h('li', { class: `rl-card${f.disagree && f.sources.length > 1 ? ' differ' : ''}` },
         h('h3', {}, f.label),
-        f.disagree ? h('p', { class: 'rl-differ' }, 'Sources differ') : null,
+        f.disagree && f.sources.length > 1 ? h('p', { class: 'rl-differ' }, 'Sources differ') : null,
         h('ul', { class: 'rl-readings', role: 'list' }, f.sources.map((src) => reading(f.unit, src, onOpen))))))
       : h('p', { class: 'rl-none' }, 'No figures have reached your desk.'));
+}
+
+/** One order: its form, terms, where it stands and its steps; `extra` goes at the foot. */
+function orderItem(o, extra = null) {
+  return h('li', { class: `rl-order status-${o.status}${o.decision_needed ? ' due' : ''}` },
+    h('p', { class: 'rl-order-head' }, h('strong', {}, o.label), ` filed ${worldDate(o.filed)}`),
+    o.terms.length ? list(o.terms, 'rl-terms') : null,
+    h('p', { class: 'rl-order-line' },
+      o.decision_needed ? icon('alert') : null, trackerLine(o)),
+    h('ol', { class: 'rl-steps' }, o.steps.map((s) => h('li', {
+      class: s.step === o.at_step && o.status === 'moving' ? 'rl-step here' : 'rl-step',
+      'aria-current': s.step === o.at_step && o.status === 'moving' ? 'step' : null,
+    }, stepLine(s)))),
+    extra);
 }
 
 export function tracker(t) {
   return h('section', { class: 'rl-tracker', 'aria-labelledby': 'rl-track-h' },
     h('h2', { id: 'rl-track-h' }, 'Your orders'),
     t.orders.length
-      ? h('ul', { class: 'rl-orders', role: 'list' }, t.orders.map((o) => h('li', { class: `rl-order status-${o.status}` },
-        h('p', { class: 'rl-order-head' }, h('strong', {}, o.label), ` filed ${worldDate(o.filed)}`),
-        o.terms.length ? list(o.terms, 'rl-terms') : null,
-        h('p', { class: 'rl-order-line' },
-          o.decision_needed ? icon('alert') : null, trackerLine(o)),
-        h('ol', { class: 'rl-steps' }, o.steps.map((s) => h('li', {
-          class: s.step === o.at_step && o.status === 'moving' ? 'rl-step here' : 'rl-step',
-          'aria-current': s.step === o.at_step && o.status === 'moving' ? 'step' : null,
-        }, stepLine(s)))))))
+      ? h('ul', { class: 'rl-orders', role: 'list' }, t.orders.map((o) => orderItem(o)))
       : h('p', { class: 'rl-none' }, 'No orders filed.'));
 }
 
+/**
+ * The desk's sidebar of orders: those waiting on the player's decision first, with the
+ * decision form under each, then those still moving; finished ones folded away.
+ * `stepForm(order)` returns the decision form.
+ */
+export function pendingOrders(t, stepForm) {
+  const due = t.orders.filter((o) => o.decision_needed);
+  const moving = t.orders.filter((o) => !o.decision_needed && o.status === 'moving');
+  const done = t.orders.filter((o) => o.status !== 'moving');
+  return h('section', { class: 'rl-tracker rl-pending', 'aria-labelledby': 'rl-track-h' },
+    h('h2', { id: 'rl-track-h' }, 'Pending orders'),
+    due.length || moving.length
+      ? h('ul', { class: 'rl-orders', role: 'list' },
+        due.map((o) => orderItem(o, stepForm(o))), moving.map((o) => orderItem(o)))
+      : h('p', { class: 'rl-none' }, t.orders.length ? 'Nothing is moving.' : 'No orders filed.'),
+    done.length
+      ? h('details', { class: 'rl-done' }, h('summary', {}, `Finished (${done.length})`),
+        h('ul', { class: 'rl-orders', role: 'list' }, done.map((o) => orderItem(o))))
+      : null);
+}
+
+/**
+ * Your aide: a brief on request, and consult a contact. `brief` is the last brief or null;
+ * `counsel` the seat's earlier answers, newest first. `on` is { brief, consult(to, question), useDraft(d) }.
+ */
+export function aidePanel(brief, contacts, counsel, on) {
+  const qid = 'rl-consult';
+  const to = h('select', { id: `${qid}-to`, name: 'to', required: true },
+    contacts.map((c) => h('option', { value: c.person }, c.title ? `${c.person}, ${c.title}` : c.person)));
+  const question = h('textarea', { id: `${qid}-q`, name: 'question', rows: 3, maxlength: 1000, required: true });
+  const ask = h('form', {
+    class: 'rl-form', 'aria-label': 'Consult someone',
+    onsubmit: (e) => {
+      e.preventDefault();
+      if (question.value.trim()) on.consult?.(to.value, question.value.trim());
+    },
+  },
+  h('div', { class: 'rl-field' }, h('label', { for: `${qid}-to` }, 'Ask'), to),
+  h('div', { class: 'rl-field' }, h('label', { for: `${qid}-q` }, 'Your question'), question),
+  h('button', { type: 'submit', class: 'rl-btn' }, 'Ask them'));
+  const answer = (c) => h('li', { class: 'rl-answer' },
+    h('p', { class: 'rl-answer-head' }, h('strong', {}, c.person), h('span', { class: 'rl-via' }, channelWord(c.channel))),
+    c.question ? h('p', { class: 'rl-answer-q' }, c.question) : null,
+    h('p', { class: 'rl-answer-a' }, c.answer));
+  return h('section', { class: 'rl-aide', 'aria-labelledby': 'rl-aide-h' },
+    h('h2', { id: 'rl-aide-h' }, 'Your aide'),
+    brief
+      ? h('div', { class: 'rl-brief' },
+        h('p', {}, brief.summary),
+        brief.decisions ? h('p', { class: 'rl-brief-due' }, icon('alert'), ` ${brief.decisions === 1 ? 'One order waits' : `${brief.decisions} orders wait`} on your decision, under Pending orders.`) : null,
+        brief.drafts.length
+          ? [h('h3', {}, 'Your aide suggests'), h('ul', { class: 'rl-drafts', role: 'list' }, brief.drafts.map((d) => h('li', {},
+            h('strong', {}, d.label), d.terms.length ? list(d.terms, 'rl-terms') : null,
+            h('button', { type: 'button', class: 'rl-btn', onclick: () => on.useDraft?.(d) }, 'Open the form'))))]
+          : null)
+      : h('p', { class: 'rl-none' }, 'Your aide reads the papers on your desk and tells you what matters.'),
+    h('button', { type: 'button', class: 'rl-btn', onclick: () => on.brief?.() }, brief ? 'Brief me again' : 'Brief me'),
+    h('h3', { class: 'rl-aide-sub' }, 'Consult'),
+    contacts.length ? ask : h('p', { class: 'rl-none' }, 'No one is within reach.'),
+    counsel.length
+      ? [h('h3', { class: 'rl-aide-sub' }, 'Answers'), h('ul', { class: 'rl-answers', role: 'list' }, counsel.slice(0, 3).map(answer)),
+        counsel.length > 3
+          ? h('details', {}, h('summary', {}, `Earlier answers (${counsel.length - 3})`),
+            h('ul', { class: 'rl-answers', role: 'list' }, counsel.slice(3).map(answer)))
+          : null]
+      : null);
+}
+
 export function paceHeader(clock) {
-  return h('p', { class: 'rl-pace' }, icon('clock'), ' ', paceLine(clock));
+  const line = paceLine(clock);
+  return h('p', { class: 'rl-pace', title: line }, icon('clock'), ' ', line);
 }
 
 let formSeq = 0;

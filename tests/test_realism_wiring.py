@@ -3,6 +3,7 @@
 import itertools
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 from typer.testing import CliRunner
@@ -248,9 +249,15 @@ def test_prose_counsel_and_the_aide_through_the_cli_leak_nothing(
     for _ in range(TICKS):  # the recordings were made after this many offline ticks
         run("tick", "--offline")
     _, state = current()
-    assert state.documents and all(d.view.prose for d in state.documents.values())
+
+    # a page whose every line lacks a figure is left without prose rather than given filler
+    def stated(v: Any) -> bool:
+        return not v.body or any(b.value is not None for b in v.body)
+
+    assert state.documents
+    assert all(bool(d.view.prose) == stated(d.view) for d in state.documents.values())
     (seat,) = state.seats
-    assert all(p.prose for p in project(state, seat).documents.values())
+    assert all(bool(p.prose) == stated(p) for p in project(state, seat).documents.values())
 
     monkeypatch.setattr(cli, "transport_factory", lambda: RecordedTransport(COUNSEL))
     said = run("consult", "hopkins", WIRING_QUESTION)

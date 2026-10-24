@@ -37,8 +37,10 @@ export const api = {
   signout: () => call('POST', '/api/signout', {}),
   /** A seat command; resolves to { reply, refused }. */
   seat: (action, body = {}) => call('POST', `/api/seat/${action}`, body),
-  /** A realism call: read (resolves to a document page), flag (to { flagged }), directive (to { reply, refused, proposal }), sign, lever, step, advance (to { reply, refused }). */
+  /** A realism call: read (resolves to a document page), flag (to { flagged }), directive (to { reply, refused, proposal }), aide (to { reply, refused, brief }), consult, sign, lever, step, advance (to { reply, refused }). */
   realism: (action, body = {}) => call('POST', `/api/realism/${action}`, body),
+  /** The game menu, host only: pause, resume, end; resolves to { reply, refused }. */
+  game: (action) => call('POST', `/api/game/${action}`, {}),
   /** A new realism game: worlds, ready, pitch, cast, pick, invite, begin; resolves to { reply, refused } and more. */
   newGame: (action, body = {}) => call('POST', `/api/new/${action}`, body),
 };

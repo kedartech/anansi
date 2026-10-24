@@ -92,7 +92,7 @@ async function render() {
 setInterval(() => {
   const typing = document.activeElement?.matches?.('input, textarea');
   const dialogOpen = document.querySelector('dialog[open]');
-  const working = document.querySelector('button[disabled].primary');
+  const working = document.querySelector('button[disabled].primary, [aria-busy="true"]');
   if (!typing && !dialogOpen && !working && route !== 'signup' && !pendingCodes) render();
 }, 60_000);
 

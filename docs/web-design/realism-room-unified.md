@@ -93,3 +93,29 @@ needs more width.
 - Should pending orders show only those needing a decision, or all moving
   orders (built: decisions first, then the rest still moving; finished ones
   under "Done").
+
+## The game menu (note 5)
+
+A "Game" button in the header opens a sheet. The host can Pause, Resume and End
+the game; ending asks first and then retires the game exactly as `/retire` does
+on Discord (the schedule row is retired, every seat is unlinked, the event log is
+kept, no new event). The player then lands on "Start a game". Other players see
+that only the host can pause or end it.
+
+Not built, because no backend exists to change it after a game starts:
+
+- the wake cadence (`Settings.tick_hours`) and the end date
+  (`Settings.end_date` / `real_days`): set at world load, no event or route
+  changes them;
+- leaving a game as a non-host player: no route unlinks one web seat;
+- live or template prose per game: a server flag (`--offline-prose`), not a
+  per-game setting.
+
+The planned Settings screens (`O1`, `O2`: account and agent) are account-level,
+not per-game, and are not built here.
+
+## Smoke run
+
+`web/test/e2e/serve_canned.py` serves with template prose and canned model
+replies, so `realism_smoke.py BASE new OUT` runs with no model calls. Screens
+from the run on this branch: `docs/web-design/shots/realism-room-unify/`.
