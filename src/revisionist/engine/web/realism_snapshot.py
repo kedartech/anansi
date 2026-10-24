@@ -6,12 +6,17 @@ is not otherwise known) and the next in-world date (it needs the calendar). Name
 replace ids wherever a person is shown. ``snapshot.checked`` is the caller's last step.
 """
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
+from typing import Any
 
-from revisionist.core.ids import DocumentId, PipelineId
+from revisionist.core import events as ev
+from revisionist.core.events import Event
+from revisionist.core.ids import DocumentId, PipelineId, SeatId
+from revisionist.core.project import project
+from revisionist.core.realism.advance import next_wake
 from revisionist.core.realism.document import DocumentView
 from revisionist.core.realism.pipeline import Order, OrderStatus, Pipeline, StepAction, StepOutcome
-from revisionist.core.state import View
+from revisionist.core.state import State, View
 from revisionist.engine.web.realism_api import (
     BodyLine,
     Clock,
@@ -167,4 +172,29 @@ def desk(view: View) -> Desk:
     )
 
 
-__all__ = ["clock", "desk", "document", "documents", "orders"]
+def read_ids(events: Iterable[Event], seat: SeatId) -> set[DocumentId]:
+    return {
+        e.payload.doc_id
+        for e in events
+        if isinstance(e.payload, ev.DocumentRead) and e.payload.seat_id == seat
+    }
+
+
+def seat_realism(
+    state: State, seat: SeatId, read: set[DocumentId], next_wake_at: str | None
+) -> dict[str, Any]:
+    """The ``view.realism`` block of ``/api/me``: in-tray, desk, orders and clock."""
+    view = project(state, seat)
+    today = view.in_world_date
+    if today is None:
+        raise ValueError("a realism campaign has an in-world date")
+    wake = next_wake(state, today)
+    return {
+        "documents": documents(view, read),
+        "desk": desk(view),
+        "orders": orders(view, state.pipelines),
+        "clock": clock(view, next_wake_at, wake.reason.label, 0, wake.to.isoformat()),
+    }
+
+
+__all__ = ["clock", "desk", "document", "documents", "orders", "read_ids", "seat_realism"]

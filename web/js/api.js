@@ -37,4 +37,6 @@ export const api = {
   signout: () => call('POST', '/api/signout', {}),
   /** A seat command; resolves to { reply, refused }. */
   seat: (action, body = {}) => call('POST', `/api/seat/${action}`, body),
+  /** A realism call: read (resolves to a document page), lever, step, advance (resolve to { reply, refused }). */
+  realism: (action, body = {}) => call('POST', `/api/realism/${action}`, body),
 };

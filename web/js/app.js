@@ -4,6 +4,7 @@
 import { api } from './api.js';
 import { h } from './dom.js';
 import { join, recover, recoveryCodes, signIn, signUp } from './views/auth.js';
+import { realismRoom } from './views/realism-room.js';
 import { sessionZero } from './views/session-zero.js';
 import { warRoom } from './views/war-room.js';
 
@@ -80,7 +81,8 @@ async function render() {
     return;
   }
   document.title = `${me.game.name} · Revisionist`;
-  show(me.game.phase === 'session_zero' ? sessionZero(ctx) : warRoom(ctx));
+  if (me.game.phase === 'session_zero') show(sessionZero(ctx));
+  else show(me.game.ruleset === 'realism' ? realismRoom(ctx) : warRoom(ctx));
 }
 
 // Keep the clock and the briefing fresh without a reload: re-read every minute

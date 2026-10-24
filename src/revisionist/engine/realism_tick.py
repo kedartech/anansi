@@ -21,7 +21,15 @@ from revisionist.core import events as ev
 from revisionist.core import goals, history
 from revisionist.core.events import Event, Versions
 from revisionist.core.fold import replay, state_hash
-from revisionist.core.ids import CampaignId, EntityId, EventId, OrderId, SeatId, derived_id
+from revisionist.core.ids import (
+    CampaignId,
+    DocumentId,
+    EntityId,
+    EventId,
+    OrderId,
+    SeatId,
+    derived_id,
+)
 from revisionist.core.ontology import Phase
 from revisionist.core.realism.advance import Wake, next_wake
 from revisionist.core.realism.card import ParamKind, ParamSpec, ParamValue
@@ -36,7 +44,7 @@ from revisionist.core.realism.resolvers import (
 )
 from revisionist.core.resolution import TickStage
 from revisionist.core.state import State
-from revisionist.core.visibility import PUBLIC, private_to
+from revisionist.core.visibility import PUBLIC, Scope, private_to
 from revisionist.engine import campaign as cmp
 from revisionist.engine import session_zero
 from revisionist.engine.ids import new_id
@@ -225,6 +233,12 @@ def _walk(em: _Emitter, events: Sequence[Event], before: date, until: date) -> l
 # --- what a human does between ticks ---------------------------------------------
 
 
+def wake_line(result: RealismTickResult, today: date | None) -> str:
+    """The line the CLI and the web print after a realism tick."""
+    woke = f"{result.wake.reason.label}, " if result.wake is not None else ""
+    return f"tick {result.tick}: woke on {woke}now {today}"
+
+
 def seat_player(store: EventStore, campaign_id: CampaignId, entity: EntityId) -> str:
     """Seat the human as ``entity``, then close Session Zero. Returns the person's
     name. Raises ``StepRefusedError``."""
@@ -331,14 +345,34 @@ def take_step(
     return load_state(store, campaign_id).orders[order_id]
 
 
-def _append(store: EventStore, state: State, payload: ev.Payload, actor: SeatId) -> None:
+def mark_read(store: EventStore, campaign_id: CampaignId, seat: SeatId, doc_id: DocumentId) -> bool:
+    """Log that ``seat`` opened ``doc_id``, once. False if it was already marked."""
+    for e in store.read(campaign_id):
+        if (
+            isinstance(e.payload, ev.DocumentRead)
+            and e.payload.seat_id == seat
+            and e.payload.doc_id == doc_id
+        ):
+            return False
+    state = load_state(store, campaign_id)
+    _append(store, state, ev.DocumentRead(seat_id=seat, doc_id=doc_id), seat, private_to(seat))
+    return True
+
+
+def _append(
+    store: EventStore,
+    state: State,
+    payload: ev.Payload,
+    actor: SeatId,
+    scope: Scope = PUBLIC,
+) -> None:
     event = Event(
         event_id=EventId(new_id()),
         campaign_id=state.campaign_id,
         seq=state.last_seq + 1,
         tick=state.tick,
         actor=actor,
-        scope=PUBLIC,
+        scope=scope,
         payload=payload,
         versions=cmp.versions(),
     )
@@ -349,7 +383,9 @@ def _append(store: EventStore, state: State, payload: ev.Payload, actor: SeatId)
 __all__ = [
     "RealismTickResult",
     "file_order",
+    "mark_read",
     "run_realism_tick",
     "seat_player",
     "take_step",
+    "wake_line",
 ]
