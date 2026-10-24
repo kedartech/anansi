@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
-  STEP_ACTIONS, TRAY_FILTERS, channelWord, classificationWord, entityChoices, filterInTray, horizonWords, paceLine,
+  STEP_ACTIONS, TRAY_FILTERS, channelWord, classificationWord, entityChoices, filterInTray, horizonWords, linesHeading, paceLine,
   powersSentence, sortInTray, stepLine, trackerLine, trayCounts, unreadCount,
 } from '../js/realism-rules.js';
 
@@ -51,6 +51,24 @@ test('paceLine names the weekday, what is awaited and the quiet days', () => {
     'Tuesday 21 October 1941 · 1 quiet day passed');
 });
 
+test('paceLine says nothing is due when only the horizon lies ahead', () => {
+  const clock = { world_date: '1941-09-04', next_world_date: '1941-09-18', waiting_on: null, days_collapsed: 0, next_wake_at: null };
+  assert.equal(paceLine(clock), 'Thursday 4 September 1941 · nothing due before about 18 Sep');
+  assert.doesNotMatch(paceLine(clock), /horizon/i);
+});
+
+test('a reply letter sits in the tray and reads as a letter in words', () => {
+  const reply = fixture.reply;
+  const item = docs.find((d) => d.id === reply.item.id);
+  assert.ok(item && item.kind === 'letter' && item.classification === 'confidential');
+  assert.equal(channelWord(item.channel), 'Letter');
+  assert.equal(item.title, 'On your order: Send a bill to Congress');
+  assert.ok(reply.prose && reply.body.every((b) => typeof b.value === 'string'));
+  assert.equal(linesHeading(reply.body), 'Particulars');
+  assert.equal(linesHeading(fixture.page.body), 'Figures quoted');
+  for (const l of [item.title, ...reply.body.map((b) => `${b.label} ${b.value}`)]) assert.doesNotMatch(l, /_/);
+});
+
 test('classification and channel words cover every value and reject strangers', () => {
   assert.equal(classificationWord('most_secret'), 'Most Secret');
   assert.equal(classificationWord('open'), 'Open');
@@ -89,7 +107,7 @@ test('the step actions match the engine and offer each once', () => {
 });
 
 test('the filter bar counts each tray and the counts agree with the listing', () => {
-  assert.deepEqual(trayCounts(docs), { all: 6, unread: 2, read: 4, flagged: 1 });
+  assert.deepEqual(trayCounts(docs), { all: 7, unread: 2, read: 5, flagged: 1 });
   assert.equal(fixture.listing.flagged, trayCounts(docs).flagged);
   assert.deepEqual(TRAY_FILTERS.map(([key]) => key), ['all', 'unread', 'read', 'flagged']);
   assert.deepEqual(trayCounts([]), { all: 0, unread: 0, read: 0, flagged: 0 });
@@ -98,7 +116,7 @@ test('the filter bar counts each tray and the counts agree with the listing', ()
 test('filterInTray keeps the right folders and rejects an unknown filter', () => {
   assert.deepEqual(filterInTray(docs, 'unread').map((d) => d.id), ['d-magic-0919', 'd-whip-1017']);
   assert.deepEqual(filterInTray(docs, 'flagged').map((d) => d.id), ['d-cable-1016']);
-  assert.equal(filterInTray(docs, 'read').length, 4);
+  assert.equal(filterInTray(docs, 'read').length, 5);
   assert.equal(filterInTray(docs, 'all').length, docs.length);
   assert.throws(() => filterInTray(docs, 'toString'));
 });

@@ -186,7 +186,9 @@ def test_me_carries_the_realism_block_for_a_realism_seat(solo: tuple[Realism, Cl
     assert set(block) == {"documents", "desk", "orders", "clock"}
     assert block["documents"]["documents"] and block["documents"]["unread"] > 0
     assert block["desk"]["levers"]
-    assert block["clock"]["world_date"] and block["clock"]["waiting_on"]
+    # nothing but the horizon is due, and the horizon is not a thing anyone waits on
+    assert block["clock"]["world_date"] and block["clock"]["next_world_date"]
+    assert block["clock"]["waiting_on"] is None
 
 
 def test_me_has_no_realism_block_for_a_legacy_seat(web: Web) -> None:  # noqa: F811

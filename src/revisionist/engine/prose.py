@@ -16,6 +16,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
+from pydantic import Field
+
 from revisionist.core._base import Model
 from revisionist.core.events import CallCost
 from revisionist.core.ids import DocumentId, EntityId
@@ -37,6 +39,8 @@ class Author(Model):
     name: str
     office: str = ""
     voice: str = ""
+    to: dict[DocumentId, str] = Field(default_factory=dict)
+    """The office each private page is addressed to; a public page has none."""
 
 
 class Written(Model):
@@ -52,15 +56,27 @@ class ProseWriter(Protocol):
     def write(self, author: Author, pages: Sequence[DocumentView]) -> Written: ...
 
 
-def author_of(state: State, entity: EntityId) -> Author:
-    """The author block for ``entity``: the name, the office and the card's voice. Read
-    here, from the state, so no writer ever needs one."""
+def _addressee(state: State, page: DocumentView) -> str:
+    """The office on the card of each person a holder seat embodies, joined with " and ".
+    Empty for a public page, or when no holder has a card."""
+    offices = [
+        card.office
+        for seat in sorted(page.scope.known_by)
+        if (card := state.cards.get(state.seats[seat].embodies)) is not None
+    ]
+    return " and ".join(offices)
+
+
+def author_of(state: State, entity: EntityId, pages: Sequence[DocumentView] = ()) -> Author:
+    """The author block for ``entity``: the name, the office, the card's voice and who each
+    of ``pages`` is addressed to. Read here, from the state, so no writer ever needs one."""
     card = state.cards.get(entity)
     return Author(
         entity=entity,
         name=state.entities[entity].name,
         office=card.office if card is not None else "",
         voice=card.voice if card is not None else "",
+        to={p.doc_id: to for p in pages if (to := _addressee(state, p))},
     )
 
 
@@ -99,6 +115,7 @@ def page_lines(page: DocumentView, author: Author) -> dict[str, Any]:
         "kind": page.kind.value,
         "title": page.title,
         "author": author.name,
+        **({"to": author.to[page.doc_id]} if page.doc_id in author.to else {}),
         "issued": page.issued.isoformat(),
         "arrives": page.arrives.isoformat(),
         "channel": page.channel.value,
@@ -163,6 +180,12 @@ _OPENING: dict[DocumentKind, str] = {
     DocumentKind.WHIP_COUNT: "Sir,\n\nMy count stands as follows. ",
 }
 
+_ADDRESSED_OPENING: dict[DocumentKind, str] = {
+    DocumentKind.LETTER: "To the {to}:\n\n",
+    DocumentKind.MEMO: "Memorandum for the {to}.\n\n",
+    DocumentKind.WHIP_COUNT: "To the {to}:\n\nMy count stands as follows. ",
+}
+
 
 _ACKNOWLEDGEMENT: dict[DocumentKind, str] = {
     DocumentKind.CABLE: "Message received. Fuller report follows.",
@@ -187,7 +210,12 @@ def template_prose(author: Author, page: DocumentView) -> str:
     if not said:
         said.append(_ACKNOWLEDGEMENT.get(page.kind, "Your attention is drawn to this matter."))
     stop = " STOP " if page.kind is DocumentKind.CABLE else " "
-    opening = _OPENING.get(page.kind, "I have the honour to report as follows. ")
+    to = author.to.get(page.doc_id)
+    opening = (
+        _ADDRESSED_OPENING[page.kind].format(to=to)
+        if to and page.kind in _ADDRESSED_OPENING
+        else _OPENING.get(page.kind, "I have the honour to report as follows. ")
+    )
     return f"{opening}{stop.join(said)}\n\n{author.name}"
 
 

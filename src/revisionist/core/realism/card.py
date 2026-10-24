@@ -23,6 +23,12 @@ from revisionist.core.ids import EntityId, FeedId, PipelineId
 from revisionist.core.realism.quantity import ResolverKey
 
 
+def words(key: str) -> str:
+    """A key in words, for what the world gave no label: "send_bill" -> "Send bill"."""
+    spoken = key.replace("_", " ").strip()
+    return spoken[:1].upper() + spoken[1:]
+
+
 class ChannelKind(StrEnum):
     """How words travel. Each trades speed against exposure (direction, channels table)."""
 
@@ -162,4 +168,5 @@ __all__ = [
     "ParamSpec",
     "ParamValue",
     "SeatCard",
+    "words",
 ]

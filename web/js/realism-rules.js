@@ -118,9 +118,10 @@ export function paceLine(clock) {
   const [y, m, d] = clock.world_date.split('-').map(Number);
   const weekday = WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
   const parts = [`${weekday} ${worldDate(clock.world_date)}`];
-  if (clock.waiting_on || clock.next_world_date) {
-    const what = clock.waiting_on ?? 'the next advance';
-    parts.push(clock.next_world_date ? `next: ${what}, about ${shortDate(clock.next_world_date)}` : `next: ${what}`);
+  if (clock.waiting_on) {
+    parts.push(clock.next_world_date ? `next: ${clock.waiting_on}, about ${shortDate(clock.next_world_date)}` : `next: ${clock.waiting_on}`);
+  } else if (clock.next_world_date) {
+    parts.push(`nothing due before about ${shortDate(clock.next_world_date)}`);
   }
   if (clock.days_collapsed > 0) {
     parts.push(`${clock.days_collapsed} quiet ${clock.days_collapsed === 1 ? 'day' : 'days'} passed`);
@@ -141,4 +142,9 @@ export const STEP_ACTIONS = Object.freeze([
 /** Names to offer for entity parameters: contacts and principals, once each, sorted. */
 export function entityChoices(desk) {
   return [...new Set([...desk.contacts.map((c) => c.person), ...desk.principals])].sort();
+}
+
+/** What a page's structured lines are called: figures when they are numbers, particulars when they are words. */
+export function linesHeading(lines) {
+  return lines.some((b) => typeof b.value === 'string') ? 'Particulars' : 'Figures quoted';
 }

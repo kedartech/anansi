@@ -235,7 +235,7 @@ def _prose(em: Emitter, writer: ProseWriter) -> tuple[list[Event], list[CallCost
     for author_id in sorted(by_author):
         pages = sorted(by_author[author_id], key=lambda v: (v.issued, v.doc_id))
         try:
-            written = writer.write(author_of(em.state, author_id), pages)
+            written = writer.write(author_of(em.state, author_id, pages), pages)
         except TransportError as exc:
             log.warning("prose call for %s failed: %s", author_id, exc)
             dropped += [f"{p.doc_id}: call failed" for p in pages]
@@ -279,7 +279,10 @@ def _walk(em: Emitter, events: Sequence[Event], before: date, until: date) -> li
 
     def add(payloads: Sequence[ev.Payload]) -> None:
         nonlocal state
-        batch = [em.event(p) for p in payloads]
+        batch = [
+            em.event(p, scope=p.document.scope) if isinstance(p, ev.DocumentIssued) else em.event(p)
+            for p in payloads
+        ]
         state = replay(batch, initial=state)
         out.extend(batch)
 

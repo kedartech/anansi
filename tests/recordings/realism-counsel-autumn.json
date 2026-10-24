@@ -1,5 +1,5 @@
 {
- "c8d3aff3a47fda982f4009af": {
+ "05a0a4f0651fc073b4dd927d": {
   "call_class": "counsel",
   "hand_written": true,
   "model": "claude-sonnet-5-5",
@@ -7,30 +7,30 @@
   "prompt_head": "## You are\nHarry L. Hopkins, Special assistant to the President\n\n## Today\n1941-09-18\n\n## Your papers\n[{\"kind\": \"letter\",",
   "reply": {
    "cached_tokens": 263,
-   "input_tokens": 445,
-   "model": "claude-sonnet-5-5",
-   "output": {
-    "text": "Mr. President, going by the list as Harriman sent it, tanks come first: they ask for 500 a month, and 400 aircraft a month behind that. That is what they asked for, mind you, not what they will get. I can't tell you yet what we can ship against it; that is a question for the Army and for the British, who will want their share. My advice is to tell Stalin something definite soon, even if it is less than the list."
-   },
-   "output_tokens": 106,
-   "usd": 0.00195
-  }
- },
- "f57589b07034c03bf9817e95": {
-  "call_class": "counsel",
-  "hand_written": true,
-  "model": "claude-sonnet-5-5",
-  "note": "hand-written for tests; not a model reply",
-  "prompt_head": "## You are\nHarry L. Hopkins, Special assistant to the President\n\n## Today\n1941-09-18\n\n## Your papers\n[{\"kind\": \"letter\",",
-  "reply": {
-   "cached_tokens": 263,
-   "input_tokens": 377,
+   "input_tokens": 384,
    "model": "claude-sonnet-5-5",
    "output": {
     "text": "Mr. President, I have only their letter of request so far, and it gives no figures I would put in front of you. From what I saw in Moscow they need everything, but I would not guess at numbers until the full list comes through. When it does, I will bring it to you myself."
    },
    "output_tokens": 71,
-   "usd": 0.001464
+   "usd": 0.001478
+  }
+ },
+ "89652d0f01d0de9a9a1011eb": {
+  "call_class": "counsel",
+  "hand_written": true,
+  "model": "claude-sonnet-5-5",
+  "note": "hand-written for tests; not a model reply",
+  "prompt_head": "## You are\nHarry L. Hopkins, Special assistant to the President\n\n## Today\n1941-09-18\n\n## Your papers\n[{\"kind\": \"letter\",",
+  "reply": {
+   "cached_tokens": 263,
+   "input_tokens": 453,
+   "model": "claude-sonnet-5-5",
+   "output": {
+    "text": "Mr. President, going by the list as Harriman sent it, tanks come first: they ask for 500 a month, and 400 aircraft a month behind that. That is what they asked for, mind you, not what they will get. I can't tell you yet what we can ship against it; that is a question for the Army and for the British, who will want their share. My advice is to tell Stalin something definite soon, even if it is less than the list."
+   },
+   "output_tokens": 106,
+   "usd": 0.001966
   }
  }
 }

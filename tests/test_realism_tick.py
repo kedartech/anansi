@@ -7,7 +7,15 @@ import pytest
 
 from revisionist.core import events as ev
 from revisionist.core.fold import replay, state_hash
-from revisionist.core.ids import CampaignId, EntityId, EventId, OrderId, PipelineId, derived_id
+from revisionist.core.ids import (
+    CampaignId,
+    EntityId,
+    EventId,
+    OrderId,
+    PipelineId,
+    SeatId,
+    derived_id,
+)
 from revisionist.core.project import project
 from revisionist.core.realism.pipeline import Order
 from revisionist.core.resolution import TickStage
@@ -47,10 +55,11 @@ def seated(store: EventStore, world: str = "realism-toy", who: str = "ada") -> C
     return CAMPAIGN
 
 
-def file_levy(store: EventStore) -> None:
-    """Ada's levy with a fixed order id, so two runs share a state hash."""
+def file_levy(store: EventStore, who: SeatId | None = None) -> None:
+    """Ada's levy with a fixed order id, so two runs share a state hash. ``who`` names
+    the seat when more than one is seated."""
     state = load_state(store, CAMPAIGN)
-    (seat,) = [s for s in state.seats.values()]
+    (seat,) = [s for s in state.seats.values() if who is None or s.seat_id == who]
     card = state.cards[seat.embodies]
     lever = next(x for x in card.levers if x.name == "propose_levy")
     order = Order(
@@ -189,3 +198,45 @@ def test_a_feed_due_mid_stretch_issues_on_its_own_day() -> None:
     state = load_state(store, cid)
     assert state.in_world_date == date(1941, 9, 4)
     assert date(1941, 9, 3) in {d.view.issued for d in state.documents.values()}
+
+
+def test_a_reply_letter_rides_a_private_envelope_and_is_written_next_wake() -> None:
+    from revisionist.core.realism.prose import invented_numbers
+    from revisionist.engine import session_zero
+    from revisionist.engine.prose import TemplateProseWriter
+
+    store = MemoryStore()
+    decl = cmp.load_world(cmp.world_path("realism-toy"))
+    store.append_all(compile_world(decl, CAMPAIGN, cmp.versions()))
+    ids = resolve_keys(decl, CAMPAIGN)
+    cora = session_zero.claim(
+        store, CAMPAIGN, SeatId(derived_id(CAMPAIGN, "seat", ids["cora"])), "Cora Senn"
+    )
+    assert cora
+    realism_tick.seat_player(store, CAMPAIGN, EntityId(ids["ada"]))
+    ada = SeatId(derived_id(CAMPAIGN, "seat", ids["ada"]))
+    file_levy(store, ada)
+    for _ in range(4):
+        run_realism_tick(store, CAMPAIGN, prose=TemplateProseWriter())
+
+    state = load_state(store, CAMPAIGN)
+    other = SeatId(derived_id(CAMPAIGN, "seat", ids["cora"]))
+    letters = [
+        e
+        for e in store.read(CAMPAIGN)
+        if isinstance(e.payload, ev.DocumentIssued)
+        and e.payload.document.title.startswith("On your")
+    ]
+    assert letters, "an order moving through other people should write back"
+    for e in letters:
+        assert isinstance(e.payload, ev.DocumentIssued)
+        assert e.scope.visibility.value == "private" and e.scope.known_by == {ada}
+        assert e.scope == e.payload.document.scope
+        page = state.documents[e.payload.document.doc_id].view
+        assert page.prose and invented_numbers(page.prose, page) == ()
+    mine = set(project(state, ada).documents)
+    theirs = set(project(state, other).documents)
+    for e in letters:
+        assert isinstance(e.payload, ev.DocumentIssued)
+        assert e.payload.document.doc_id in mine
+        assert e.payload.document.doc_id not in theirs

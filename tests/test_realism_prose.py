@@ -15,6 +15,7 @@ from revisionist.core.project import project
 from revisionist.core.realism.document import DocumentView
 from revisionist.core.resolution import TickStage
 from revisionist.core.state import State
+from revisionist.core.visibility import PUBLIC
 from revisionist.engine.llm import RecordedTransport, Reply, Request, Transport, TransportError
 from revisionist.engine.prose import (
     Author,
@@ -218,3 +219,23 @@ def test_a_page_with_no_lines_gets_a_kind_fit_acknowledgement_and_passes_the_che
         assert accepted([bare], Written(prose={bare.doc_id: text}))[1] == []
     cable = page.model_copy(update={"kind": DocumentKind.CABLE, "body": (), "prose": None})
     assert "Message received. Fuller report follows." in template_prose(author, cable)
+
+
+def test_a_private_page_is_addressed_to_the_office_that_holds_it() -> None:
+    from revisionist.engine.prose import author_of, page_lines, prose_prompt
+
+    store = MemoryStore()
+    scenario(store)
+    run_realism_tick(store, CAMPAIGN)
+    state = load_state(store, CAMPAIGN)
+    private = next(d.view for d in state.documents.values() if d.view.scope.known_by)
+    author = author_of(state, private.author, [private])
+    (office,) = author.to.values()
+    assert office and page_lines(private, author)["to"] == office
+    assert f"To the {office}" in template_prose(
+        author, private.model_copy(update={"kind": "letter"})
+    )
+    public = private.model_copy(update={"scope": PUBLIC})
+    assert author_of(state, private.author, [public]).to == {}
+    assert "to" not in page_lines(public, author_of(state, private.author, [public]))
+    assert "recipient" not in prose_prompt(author, [private]).lower()

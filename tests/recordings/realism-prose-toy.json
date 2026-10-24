@@ -1,13 +1,13 @@
 {
- "253483ba86944af8d509f62a": {
+ "dd220833de3ce45a3ad517c5": {
   "call_class": "prose",
   "hand_written": true,
   "model": "claude-sonnet-5-5",
   "note": "hand-written for tests; not a model reply",
   "prompt_head": "## Author\nCora Senn, Clerk of the Council\n\n## Pages to write\n[{\"doc_id\": \"3MQ10ZP4PV7SVCYSQ3JX63MM0Y\", \"kind\": \"letter\",",
   "reply": {
-   "cached_tokens": 305,
-   "input_tokens": 411,
+   "cached_tokens": 355,
+   "input_tokens": 468,
    "model": "claude-sonnet-5-5",
    "output": {
     "pages": [
@@ -18,18 +18,18 @@
     ]
    },
    "output_tokens": 59,
-   "usd": 0.001412
+   "usd": 0.001526
   }
  },
- "ab63c346180ae6d4cd30ba8f": {
+ "fc016669804f537b8e4b2f93": {
   "call_class": "prose",
   "hand_written": true,
   "model": "claude-sonnet-5-5",
   "note": "hand-written for tests; not a model reply",
   "prompt_head": "## Author\nBram Tull, Speaker of the Council\nVoice: Careful; counts before he speaks.\n\n## Pages to write\n[{\"doc_id\": \"4ET",
   "reply": {
-   "cached_tokens": 305,
-   "input_tokens": 644,
+   "cached_tokens": 355,
+   "input_tokens": 725,
    "model": "claude-sonnet-5-5",
    "output": {
     "pages": [
@@ -52,7 +52,7 @@
     ]
    },
    "output_tokens": 202,
-   "usd": 0.003308
+   "usd": 0.00347
   }
  }
 }

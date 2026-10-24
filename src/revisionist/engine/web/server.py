@@ -226,7 +226,14 @@ class App:
                     for dropped in result.prose_dropped:
                         log.warning("no prose for %s", dropped)
                     today = load_state(store, cid).in_world_date
-                    reply = _calendar_line(today, result.wake.reason.label if result.wake else None)
+                    reply = _calendar_line(
+                        today,
+                        (
+                            result.wake.reason.label
+                            if result.wake and result.wake.reason.what != "horizon"
+                            else None
+                        ),
+                    )
                 else:
                     raise ApiError(HTTPStatus.NOT_FOUND, "No such call.")
             except (ValueError, KeyError, NotInPlayError) as exc:

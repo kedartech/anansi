@@ -6,15 +6,18 @@ is not otherwise known) and the next in-world date (it needs the calendar). Name
 replace ids wherever a person is shown. ``snapshot.checked`` is the caller's last step.
 """
 
+import re
 from collections.abc import Iterable, Mapping
+from datetime import date
 from typing import Any
 
 from revisionist.core import events as ev
 from revisionist.core.events import Event
 from revisionist.core.ids import DocumentId, PipelineId, SeatId
+from revisionist.core.ontology import EntityKind
 from revisionist.core.project import project
 from revisionist.core.realism.advance import next_wake
-from revisionist.core.realism.card import Lever, ParamKind, ParamSpec
+from revisionist.core.realism.card import Lever, ParamKind, ParamSpec, words
 from revisionist.core.realism.document import DocumentView
 from revisionist.core.realism.pipeline import Order, OrderStatus, Pipeline, StepAction, StepOutcome
 from revisionist.core.state import State, View
@@ -38,12 +41,6 @@ _HIDDEN = frozenset({StepAction.STALL, StepAction.LEAK})
 """Outcomes the issuer never sees: an order that stalls is still with that person."""
 
 
-def words(key: str) -> str:
-    """A key in words, for what the world gave no label: "send_bill" -> "Send bill"."""
-    spoken = key.replace("_", " ").strip()
-    return spoken[:1].upper() + spoken[1:]
-
-
 def lever_label(lever: Lever) -> str:
     return lever.label or words(lever.name)
 
@@ -64,13 +61,28 @@ def _term(spec: ParamSpec, value: int | str) -> str:
     return f"{_param_label(spec)}: {shown}"
 
 
+_TRAILING_DATE = re.compile(r", (\d{4})-(\d{2})-(\d{2})$")
+
+
+def _spoken_title(title: str) -> str:
+    """A trailing ISO date becomes words: "MAGIC, 1941-09-03" -> "MAGIC, 3 September 1941"."""
+    found = _TRAILING_DATE.search(title)
+    if found is None:
+        return title
+    try:
+        day = date(*(int(g) for g in found.groups()))
+    except ValueError:
+        return title
+    return f"{title[: found.start()]}, {day.day} {day:%B %Y}"
+
+
 def _item(
     view: View, doc_id: DocumentId, doc: DocumentView, unread: bool, flagged: bool
 ) -> DocumentListItem:
     return DocumentListItem(
         id=doc_id,
         kind=doc.kind.value,
-        title=doc.title,
+        title=_spoken_title(doc.title),
         author=view.entities[doc.author].name,
         issued=doc.issued.isoformat(),
         arrives=doc.arrives.isoformat(),
@@ -216,7 +228,11 @@ def desk(view: View) -> Desk:
             ContactLine(person=view.entities[c.person].name, channel=c.channel.value)
             for c in card.contacts
         ],
-        principals=[view.entities[p].name for p in card.principals],
+        principals=[
+            view.entities[p].name
+            for p in card.principals
+            if view.entities[p].kind is not EntityKind.POLITY
+        ],
         constraints=list(card.constraints),
         personal=list(card.personal),
         horizon_days=card.horizon_days,
@@ -253,11 +269,13 @@ def seat_realism(
     if today is None:
         raise ValueError("a realism campaign has an in-world date")
     wake = next_wake(state, today)
+    # the horizon is not a thing anyone is waiting on: the client says nothing is due
+    waiting_on = None if wake.reason.what == "horizon" else wake.reason.label
     return {
         "documents": documents(view, read, flagged),
         "desk": desk(view),
         "orders": orders(view, state.pipelines),
-        "clock": clock(view, next_wake_at, wake.reason.label, 0, wake.to.isoformat()),
+        "clock": clock(view, next_wake_at, waiting_on, 0, wake.to.isoformat()),
     }
 
 

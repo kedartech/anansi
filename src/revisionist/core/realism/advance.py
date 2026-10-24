@@ -78,10 +78,9 @@ def next_wake(state: State, today: date) -> Wake:
             continue
         when = step_due(order, state.pipelines[order.pipeline])
         if when is not None:
+            holder = state.entities[state.pipelines[order.pipeline].steps[order.step].person].name
             found.append(
-                _reason(
-                    "step", when, f"{_lever_words(state, order)} at step {order.step + 1}", today
-                )
+                _reason("step", when, f"{_lever_words(state, order)}, now with {holder}", today)
             )
     event = history.next_due(state, today + timedelta(days=1))
     if event is not None and event.on_date is not None:

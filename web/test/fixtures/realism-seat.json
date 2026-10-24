@@ -8,7 +8,8 @@
       {"id": "d-cable-1016", "kind": "cable", "title": "Moscow situation, week ending 16 October", "author": "Laurence Steinhardt", "issued": "1941-10-16", "arrives": "1941-10-18", "channel": "cable", "classification": "secret", "unread": false, "flagged": true},
       {"id": "d-memo-1015", "kind": "memo", "title": "Lend-Lease shipments, September tonnage", "author": "Harry Hopkins", "issued": "1941-10-15", "arrives": "1941-10-16", "channel": "letter", "classification": "restricted", "unread": false, "flagged": false},
       {"id": "d-press-1014", "kind": "press", "title": "Editorial: Convoys and the Congress", "author": "New York Times", "issued": "1941-10-14", "arrives": "1941-10-14", "channel": "press", "classification": "open", "unread": false, "flagged": false},
-      {"id": "d-report-1010", "kind": "report", "title": "Atlantic Fleet escort status", "author": "Admiral Ernest King", "issued": "1941-10-10", "arrives": "1941-10-12", "channel": "courier", "classification": "confidential", "unread": false, "flagged": false}
+      {"id": "d-report-1010", "kind": "report", "title": "Atlantic Fleet escort status", "author": "Admiral Ernest King", "issued": "1941-10-10", "arrives": "1941-10-12", "channel": "courier", "classification": "confidential", "unread": false, "flagged": false},
+      {"id": "d-reply-1012", "kind": "letter", "title": "On your order: Send a bill to Congress", "author": "Sam Rayburn", "issued": "1941-10-12", "arrives": "1941-10-12", "channel": "letter", "classification": "confidential", "unread": false, "flagged": false}
     ]
   },
   "page": {
@@ -21,6 +22,14 @@
       {"label": "Absentee estimate", "value": null, "unit": "members"}
     ],
     "prose": "Mr. President,\n\nThe count is not yet where either of us would like it. I believe the doubtful members will follow the Speaker once the Senate has acted, but I would not stake the session on it.\n\nI shall report again when the last of the committee chairmen has been seen."
+  },
+  "reply": {
+    "item": {"id": "d-reply-1012", "kind": "letter", "title": "On your order: Send a bill to Congress", "author": "Sam Rayburn", "issued": "1941-10-12", "arrives": "1941-10-12", "channel": "letter", "classification": "confidential", "unread": false, "flagged": false},
+    "body": [
+      {"label": "What was done", "value": "passed it on", "unit": ""},
+      {"label": "Order", "value": "Send a bill to Congress", "unit": ""}
+    ],
+    "prose": "Mr. President,\n\nI have taken the bill and passed it on to committee, as you asked."
   },
   "orders": {
     "orders": [

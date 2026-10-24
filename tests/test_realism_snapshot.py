@@ -228,7 +228,7 @@ def test_the_desk_names_people_and_leaves_out_the_ai_policy(toy: Toy) -> None:
         "horizon_days",
     }
     assert desk["office"] == "First Citizen of Vell" and desk["horizon_days"] == 14
-    assert desk["principals"] == ["Vell"]
+    assert desk["principals"] == []  # Vell is a polity: no one answers to a country
     assert [c["person"] for c in desk["contacts"]] == ["Bram Tull", "Cora Senn"]
     lever = desk["levers"][0]
     assert lever["name"] == "propose_levy" and lever["pipeline"] == toy.ids["levy_bill"]
@@ -241,6 +241,21 @@ def test_the_desk_names_people_and_leaves_out_the_ai_policy(toy: Toy) -> None:
     assert not {"voice", "loyalty", "doctrine", "interests"} & set(desk)
     assert "Brisk, plain" not in text and "reformer" not in text
     _json(toy.state, toy.ada, desk)
+
+
+def test_a_principal_that_is_an_office_held_by_people_is_kept(toy: Toy) -> None:
+    assert rs.desk(project(toy.state, toy.bram))["principals"] == ["The Vell Council"]
+
+
+def test_a_title_ending_in_an_iso_date_reads_in_words() -> None:
+    assert rs._spoken_title("MAGIC intercepts, 1941-09-03") == "MAGIC intercepts, 3 September 1941"
+    assert rs._spoken_title("Bram's note") == "Bram's note"
+    assert rs._spoken_title("Count, 1900-13-45") == "Count, 1900-13-45"
+
+
+def test_the_horizon_is_not_what_the_clock_waits_on(toy: Toy) -> None:
+    block = rs.seat_realism(toy.state, toy.ada, set(), set(), None)
+    assert block["clock"]["waiting_on"] is None and block["clock"]["next_world_date"]
 
 
 def test_the_clock_reads_the_in_world_date_and_what_it_waits_on(toy: Toy) -> None:

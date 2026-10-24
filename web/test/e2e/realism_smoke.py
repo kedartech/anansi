@@ -184,6 +184,23 @@ def main() -> int:
         page.get_by_role("tab", name="In-tray").click()
         page.wait_for_timeout(300)
         shoot(page, "07-in-tray-after-advance")
+        titles = page.locator(".rl-folder .rl-doc-title").all_inner_texts()
+        report["titles_after_advance"] = titles
+        check("an order reply arrives as a paper", any(t.startswith("On your") for t in titles))
+        check(
+            "no title shows an ISO date",
+            not any(c.isdigit() and "-" in t for t in titles for c in t[-3:]),
+        )
+        reply = page.locator(".rl-folder", has_text="On your").first
+        if reply.count():
+            reply.locator(".rl-cover").click()
+            page.locator(".rl-dossier .rl-page").wait_for()
+            page.wait_for_timeout(300)
+            report["reply_page"] = page.locator(".rl-page").inner_text()[:800]
+            shoot(page, "08-reply-letter")
+            axe(page, "reply")
+        report["pace_after_advance"] = moved
+        check("pace line has no engine words", "horizon" not in moved, moved)
 
         body = page.locator("body").inner_text()
         for word in ("controller", "human", "truth", " AI ", "%"):

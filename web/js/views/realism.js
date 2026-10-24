@@ -3,7 +3,7 @@
 
 import { h, icon } from '../dom.js';
 import {
-  TRAY_FILTERS, channelWord, classificationWord, filterInTray, horizonWords, paceLine, powersSentence,
+  TRAY_FILTERS, channelWord, classificationWord, filterInTray, horizonWords, linesHeading, paceLine, powersSentence,
   sortInTray, stepLine, trackerLine, trayCounts,
 } from '../realism-rules.js';
 import { worldDate } from '../rules.js';
@@ -71,7 +71,7 @@ function figures(lines, { keepEmpty }) {
   const shown = keepEmpty ? lines : lines.filter((b) => b.value !== null);
   if (!shown.length) return null;
   return h('section', { class: 'rl-figures' },
-    h('h3', {}, 'Figures quoted'),
+    h('h3', {}, linesHeading(shown)),
     h('dl', { class: 'rl-body' }, shown.map((b) => [
       h('dt', {}, b.label),
       b.value === null

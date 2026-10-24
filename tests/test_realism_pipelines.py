@@ -77,6 +77,15 @@ class Rig:
         return self.state.orders[self.order_id]
 
 
+def _bare(out: list[RealismStep]) -> list[RealismStep]:
+    """``out`` without the reply letters each step now sends the issuer."""
+    return [
+        p
+        for p in out
+        if not (isinstance(p, ev.DocumentIssued) and p.document.title.startswith("On your"))
+    ]
+
+
 def _with_loyalty(state: State, person: str, ids: dict[str, str], loyalty: int) -> State:
     key = EntityId(ids[person])
     cards = {**state.cards, key: state.cards[key].model_copy(update={"loyalty": loyalty})}
@@ -98,7 +107,7 @@ def _find(rig: Rig, want: StepAction, state: State | None = None, day: int = 30)
 def test_clerical_passes_on_its_due_day_not_before() -> None:
     rig = Rig()
     assert run_pipelines(rig.state, rig.filed + timedelta(days=1), "s") == []
-    out = run_pipelines(rig.state, rig.filed + timedelta(days=2), "s")
+    out = _bare(run_pipelines(rig.state, rig.filed + timedelta(days=2), "s"))
     assert len(out) == 1 and isinstance(out[0], ev.OrderStepTaken)
     assert out[0].outcome.action is S.PASS and out[0].outcome.on == rig.filed + timedelta(days=2)
     assert rig.add_all(out).orders[rig.order_id].step == 1
@@ -110,9 +119,11 @@ def test_a_collapsed_stretch_runs_several_steps_each_on_its_own_day() -> None:
     seed = _find(rig, S.PASS, state)
     out = run_pipelines(state, rig.filed + timedelta(days=30), seed)
     steps = [p for p in out if isinstance(p, ev.OrderStepTaken)]
+    assert isinstance(_bare(out)[-1], ev.OrderSettled)
     assert steps[0].outcome.on == rig.filed + timedelta(days=2)
     assert steps[1].outcome.on == rig.filed + timedelta(days=7)
-    assert isinstance(out[-1], ev.OrderSettled) and out[-1].status is OrderStatus.ENACTED
+    settled = _bare(out)[-1]
+    assert isinstance(settled, ev.OrderSettled) and settled.status is OrderStatus.ENACTED
     assert rig.add_all(out).orders[rig.order_id].status is OrderStatus.ENACTED
 
 
@@ -148,7 +159,7 @@ def test_refuse_settles_refused() -> None:
     day = rig.filed + timedelta(days=9)
     rig.add_all(run_pipelines(rig.state, day, "s"))
     out = human_step(rig.state, rig.order_id, S.REFUSE, day)
-    assert [p.kind for p in out] == ["order_step_taken", "order_settled"]
+    assert [p.kind for p in _bare(out)] == ["order_step_taken", "order_settled"]
     assert rig.add_all(out).orders[rig.order_id].status is OrderStatus.REFUSED
 
 
@@ -157,11 +168,12 @@ def test_three_stalls_at_one_step_lapse_the_order() -> None:
     day = rig.filed + timedelta(days=9)
     rig.add_all(run_pipelines(rig.state, day, "s"))
     for i in range(2):
-        out = human_step(rig.state, rig.order_id, S.STALL, day + timedelta(days=i))
+        out = _bare(human_step(rig.state, rig.order_id, S.STALL, day + timedelta(days=i)))
         assert len(out) == 1
         assert rig.add_all(out).orders[rig.order_id].step == 1
     out = human_step(rig.state, rig.order_id, S.STALL, day + timedelta(days=2))
-    assert isinstance(out[-1], ev.OrderSettled) and out[-1].status is OrderStatus.LAPSED
+    settled = _bare(out)[-1]
+    assert isinstance(settled, ev.OrderSettled) and settled.status is OrderStatus.LAPSED
     assert rig.add_all(out).orders[rig.order_id].status is OrderStatus.LAPSED
 
 
@@ -170,6 +182,7 @@ def test_ai_stalls_repeatedly_then_lapses() -> None:
     state = _with_loyalty(rig.state, "bram", rig.ids, -5)
     for n in range(300):
         out = run_pipelines(state, rig.filed + timedelta(days=400), f"s{n}")
+        out = _bare(out)
         if out and isinstance(out[-1], ev.OrderSettled) and out[-1].status is OrderStatus.LAPSED:
             stalls = [
                 p for p in out if isinstance(p, ev.OrderStepTaken) and p.outcome.action is S.STALL
@@ -185,7 +198,8 @@ def test_ai_refusal_settles_refused() -> None:
     state = _with_loyalty(rig.state, "bram", rig.ids, -5)
     seed = _find(rig, S.REFUSE, state)
     out = run_pipelines(state, rig.filed + timedelta(days=30), seed)
-    assert isinstance(out[-1], ev.OrderSettled) and out[-1].status is OrderStatus.REFUSED
+    settled = _bare(out)[-1]
+    assert isinstance(settled, ev.OrderSettled) and settled.status is OrderStatus.REFUSED
     assert rig.add_all(out).orders[rig.order_id].status is OrderStatus.REFUSED
 
 
@@ -194,17 +208,111 @@ def test_a_leak_issues_a_public_press_document_with_no_truth() -> None:
     state = rig.state
     seed = _find(rig, S.LEAK, state)
     out = run_pipelines(state, rig.filed + timedelta(days=30), seed)
-    docs = [p for p in out if isinstance(p, ev.DocumentIssued)]
+    docs = [p for p in _bare(out) if isinstance(p, ev.DocumentIssued)]
     assert len(docs) == 1
     doc = docs[0]
     on = rig.filed + timedelta(days=7)
     assert doc.document.kind.value == "press" and doc.document.channel.value == "press"
-    assert doc.document.scope == PUBLIC and doc.document.title == "Leaked: propose_levy"
+    assert doc.document.scope == PUBLIC and doc.document.title == "Leaked: Propose a levy"
     assert doc.document.issued == on and doc.document.arrives == on + timedelta(days=1)
     assert doc.document.author == rig.ids["bram"]
     assert doc.truth.feed is None and doc.truth.truth_refs == ()
-    assert {(b.label, b.value) for b in doc.document.body} == {("rate", 8), ("purpose", "harbour")}
+    assert {(b.label, b.value) for b in doc.document.body} == {
+        ("Rate", 8),
+        ("Purpose", "For the harbour"),
+    }
     assert doc.document.doc_id in rig.add_all(out).documents
+
+
+def _replies(out: list[RealismStep]) -> list[ev.DocumentIssued]:
+    return [
+        p
+        for p in out
+        if isinstance(p, ev.DocumentIssued) and p.document.title.startswith("On your")
+    ]
+
+
+def test_each_step_by_someone_else_sends_the_issuer_a_letter() -> None:
+    rig = Rig()
+    state = _with_loyalty(rig.state, "bram", rig.ids, 5)
+    seed = _find(rig, S.PASS, state)
+    out = run_pipelines(state, rig.filed + timedelta(days=30), seed)
+    clerk, speaker = _replies(out)
+    # cora is reached in person, so her word is a note of the call; bram writes
+    assert clerk.document.kind.value == "memo" and clerk.document.channel.value == "in_person"
+    assert speaker.document.kind.value == "letter" and speaker.document.channel.value == "letter"
+    for r, who in ((clerk, "cora"), (speaker, "bram")):
+        d = r.document
+        assert d.author == rig.ids[who] and d.classification.value == "confidential"
+        assert d.title == "On your order: Propose a levy"
+        assert d.issued == d.arrives and d.scope.known_by == {rig.ada}
+        assert d.scope.visibility.value == "private" and r.truth.truth_refs == ()
+    assert clerk.document.doc_id != speaker.document.doc_id
+    body = {b.label: b.value for b in speaker.document.body}
+    assert body == {
+        "What was done": "passed it on",
+        "Order": "Propose a levy",
+        "Outcome": "enacted",
+    }
+    assert rig.add_all(out).documents[speaker.document.doc_id].view.author == rig.ids["bram"]
+
+
+def test_a_choice_leads_the_title_in_its_own_words() -> None:
+    rig = Rig()
+    state = _with_loyalty(rig.state, "bram", rig.ids, 5)
+    ada = EntityId(rig.ids["ada"])
+    card = state.cards[ada]
+    lever = card.levers[0].model_copy(update={"params": card.levers[0].params[::-1]})
+    cards = {**state.cards, ada: card.model_copy(update={"levers": (lever,)})}
+    out = run_pipelines(
+        state.model_copy(update={"cards": cards}), rig.filed + timedelta(days=30), "s"
+    )
+    assert {r.document.title for r in _replies(out)} == {"On your order: For the harbour"}
+
+
+def test_a_stall_repeated_at_one_step_sends_a_letter_each_time() -> None:
+    rig = Rig(human="bram")
+    day = rig.filed + timedelta(days=9)
+    rig.add_all(run_pipelines(rig.state, day, "s"))
+    ids = set()
+    for i in range(3):
+        out = human_step(rig.state, rig.order_id, S.STALL, day + timedelta(days=i))
+        (letter,) = _replies(out)
+        assert dict((b.label, b.value) for b in letter.document.body)["What was done"] == "held it"
+        ids.add(letter.document.doc_id)
+        rig.add_all(out)
+    assert len(ids) == 3
+    assert dict((b.label, b.value) for b in letter.document.body)["Outcome"] == "lapsed"
+
+
+def test_an_amendment_letter_names_the_change_in_words() -> None:
+    rig = Rig(human="bram")
+    day = rig.filed + timedelta(days=9)
+    rig.add_all(run_pipelines(rig.state, day, "s"))
+    out = human_step(rig.state, rig.order_id, S.AMEND, day, {"purpose": "militia", "rate": 3})
+    (letter,) = _replies(out)
+    body = {b.label: b.value for b in letter.document.body}
+    assert body["Changed: Purpose"] == "For the militia" and body["Changed: Rate"] == 3
+    assert body["What was done"] == "amended it"
+
+
+def test_the_issuers_own_step_sends_no_letter() -> None:
+    rig = Rig()
+    state = rig.state
+    pl = state.pipelines[state.orders[rig.order_id].pipeline]
+    mine = pl.model_copy(
+        update={"steps": (pl.steps[0].model_copy(update={"person": EntityId(rig.ids["ada"])}),)}
+    )
+    state = state.model_copy(update={"pipelines": {pl.pipeline_id: mine}})
+    out = run_pipelines(state, rig.filed + timedelta(days=30), "s")
+    assert [p.kind for p in out] == ["order_step_taken", "order_settled"]
+
+
+def test_a_long_title_is_trimmed_to_the_limit_at_a_word() -> None:
+    from revisionist.core.realism.pipelines import _trim_title
+
+    cut = _trim_title("On your order: " + "Word " * 20)
+    assert len(cut) <= 60 and cut.endswith("…") and " …" not in cut
 
 
 def test_an_amendment_stays_inside_the_lever_spec() -> None:
@@ -252,7 +360,7 @@ def test_a_gap_length_step_is_never_acted_on() -> None:
         update={"steps": (pl.steps[0], pl.steps[1].model_copy(update={"days": None}))}
     )
     state = state.model_copy(update={"pipelines": {pl.pipeline_id: gap}})
-    out = run_pipelines(state, date(2100, 1, 1), "s")
+    out = _bare(run_pipelines(state, date(2100, 1, 1), "s"))
     assert len(out) == 1 and isinstance(out[0], ev.OrderStepTaken) and out[0].outcome.step == 0
 
 
