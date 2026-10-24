@@ -183,8 +183,9 @@ def test_me_carries_the_realism_block_for_a_realism_seat(solo: tuple[Realism, Cl
     game = ada.me()["game"]
     assert game["ruleset"] == "realism"
     block = game["view"]["realism"]
-    assert set(block) == {"documents", "desk", "situation", "orders", "clock", "map"}
-    assert block["map"] is None  # the toy has no positions: no map tab
+    assert set(block) == {"documents", "desk", "situation", "orders", "clock", "map", "counsel"}
+    assert block["map"] is None  # the toy has no positions: the map panel says so
+    assert block["counsel"] == []
     assert block["documents"]["documents"] and block["documents"]["unread"] > 0
     assert block["desk"]["levers"]
     # nothing but the horizon is due, and the horizon is not a thing anyone waits on
@@ -536,3 +537,96 @@ def test_a_directive_reply_naming_a_hidden_canary_is_withheld(
     assert status == 200 and out["refused"] is True and canary not in json.dumps(out)
     status, out = post(ada, "directive", **ASK | {"text": f"Say {canary} to the Council."})
     assert status == 200 and "error" in out and canary not in json.dumps(out)
+
+
+# --- the unified room: titles, the aide, consult and the game menu -------------------------
+
+
+def make_host(game: Realism, client: Client) -> None:
+    store = game.web.app.open()
+    try:
+        handle = client.me()["account"]["handle"]
+        row = store.conn.execute(
+            "SELECT account_id FROM web_accounts WHERE handle = %s", (handle,)
+        ).fetchone()
+        assert row is not None
+        store.conn.execute(
+            "INSERT INTO web_hosts (campaign_id, account_id) VALUES (%s, %s)",
+            (game.campaign, row[0]),
+        )
+    finally:
+        store.close()
+
+
+def test_contacts_carry_the_title_on_their_public_card_face(solo: tuple[Realism, Client]) -> None:
+    _, ada = solo
+    titles = {c["person"]: c["title"] for c in realism_of(ada)["desk"]["contacts"]}
+    assert titles == {"Bram Tull": "Speaker of the Council", "Cora Senn": "Clerk of the Council"}
+
+
+def test_the_aide_briefs_from_the_seat_view_and_files_nothing(
+    solo: tuple[Realism, Client],
+) -> None:
+    game, ada = solo
+    game.plant()
+    game.web.app.offline_prose = True
+    before = realism_of(ada)["orders"]["orders"]
+    status, out = post(ada, "aide")
+    assert status == 200 and not out["refused"], out
+    brief = out["brief"]
+    assert brief["summary"] and isinstance(brief["decisions"], int)
+    for d in brief["drafts"]:
+        assert "_" not in d["label"] and all("_" not in t for t in d["terms"])
+    assert CANARY not in json.dumps(out)
+    assert realism_of(ada)["orders"]["orders"] == before
+
+
+def test_consult_asks_a_contact_and_keeps_the_answer_for_the_seat_only(web: Web) -> None:  # noqa: F811
+    game = Realism(web)
+    ada = game.seat("ada", "ada")
+    bram = game.seat("bram", "bram")
+    game.open_play()
+    game.first_tick()
+    aide(game, {"text": "The Council will not move before the harvest."})
+    status, out = post(ada, "consult", to="Bram Tull", question="Will the levy pass?")
+    assert status == 200 and not out["refused"], out
+    assert out["reply"] == "Bram Tull has answered."
+    (held,) = realism_of(ada)["counsel"]
+    assert held == {
+        "person": "Bram Tull",
+        "channel": "letter",
+        "question": "Will the levy pass?",
+        "answer": "The Council will not move before the harvest.",
+    }
+    assert realism_of(bram)["counsel"] == []
+    _, far = post(ada, "consult", to="Nobody Here", question="Hello?")
+    assert far["refused"]
+    status, empty = post(ada, "consult", to="Bram Tull", question="   ")
+    assert status == 400 or empty["refused"], empty
+    assert len(realism_of(ada)["counsel"]) == 1
+
+
+def test_only_the_host_pauses_resumes_and_ends_the_game(web: Web) -> None:  # noqa: F811
+    game = Realism(web)
+    ada = game.seat("ada", "ada")
+    bram = game.seat("bram", "bram")
+    game.open_play()
+    game.first_tick()
+    make_host(game, ada)
+    assert ada.me()["game"]["host"] is True and bram.me()["game"]["host"] is False
+    status, out = bram.call("/api/game/end", {})
+    assert status == 200 and out["refused"]
+    _, out = ada.call("/api/game/pause", {})
+    assert not out["refused"] and ada.me()["game"]["paused"] is True
+    _, out = ada.call("/api/game/resume", {})
+    assert not out["refused"] and ada.me()["game"]["paused"] is False
+    status, _ = ada.call("/api/game/nonsense", {})
+    assert status == 404
+    _, out = ada.call("/api/game/end", {})
+    assert not out["refused"] and "ended" in out["reply"]
+    assert ada.me()["game"] is None and bram.me()["game"] is None
+    store = web.app.open()
+    try:
+        assert list(store.read(game.campaign))  # the record is kept
+    finally:
+        store.close()

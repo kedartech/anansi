@@ -239,3 +239,32 @@ def test_a_private_page_is_addressed_to_the_office_that_holds_it() -> None:
     assert author_of(state, private.author, [public]).to == {}
     assert "to" not in page_lines(public, author_of(state, private.author, [public]))
     assert "recipient" not in prose_prompt(author, [private]).lower()
+
+
+def test_a_line_with_no_figure_is_neither_prompted_nor_written() -> None:
+    from datetime import date
+
+    from revisionist.core.ids import EntityId
+    from revisionist.core.realism.card import ChannelKind
+    from revisionist.core.realism.document import BodyField, DocumentKind
+    from revisionist.engine.prose import page_lines
+
+    page = DocumentView(
+        doc_id=DocumentId("D1"),
+        kind=DocumentKind.REPORT,
+        author=EntityId("E1"),
+        issued=date(1941, 10, 1),
+        arrives=date(1941, 10, 1),
+        channel=ChannelKind.LETTER,
+        title="A report",
+        body=(
+            BodyField(label="Tanks shipped", value=None),
+            BodyField(label="Aircraft shipped", value=40),
+        ),
+        scope=PUBLIC,
+    )
+    author = Author(entity=EntityId("E1"), name="Harry Hopkins")
+    assert [x["label"] for x in page_lines(page, author)["lines"]] == ["Aircraft shipped"]
+    written = template_prose(author, page)
+    assert "Aircraft shipped: 40." in written and "Tanks" not in written
+    assert "nothing firm" not in written

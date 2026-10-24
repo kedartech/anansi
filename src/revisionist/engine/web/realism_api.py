@@ -114,6 +114,8 @@ class Clock(TypedDict):
 
 class ContactLine(TypedDict):
     person: str
+    title: str | None
+    """The office on the person's public card face, if they have a card."""
     channel: str
     channels: list[str]
     """How a directive can reach them, their own channel first."""

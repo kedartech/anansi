@@ -1,35 +1,13 @@
 {
- "0ee4dd2309c22dd65247d47d": {
-  "call_class": "prose",
-  "hand_written": true,
-  "model": "claude-sonnet-5-5",
-  "note": "hand-written for tests; not a model reply",
-  "prompt_head": "## Author\nStephen T. Early, White House press secretary\n\n## Pages to write\n[{\"doc_id\": \"VZPC34SMT5X71QRYNZC0QN9GEF\", \"ki",
-  "reply": {
-   "cached_tokens": 355,
-   "input_tokens": 504,
-   "model": "claude-sonnet-5-5",
-   "output": {
-    "pages": [
-     {
-      "doc_id": "VZPC34SMT5X71QRYNZC0QN9GEF",
-      "prose": "Boss,\n\nGallup's latest has 55 percent calling your course about right. They haven't given me anything I'd trust on a declaration against Germany, nor on helping Britain at the risk of war; I'll chase them for it.\n\nSteve"
-     }
-    ]
-   },
-   "output_tokens": 72,
-   "usd": 0.001728
-  }
- },
- "15a1b9745ceb96bb9f61a3e0": {
+ "04d0952c27043cf844fc6845": {
   "call_class": "prose",
   "hand_written": true,
   "model": "claude-haiku-5-5",
   "note": "hand-written for tests; not a model reply",
   "prompt_head": "## Author\nHarold R. Stark, Chief of Naval Operations\n\n## Pages to write\n[{\"doc_id\": \"7WD18YQ5NNBCYVWE5V96DPY182\", \"kind\"",
   "reply": {
-   "cached_tokens": 355,
-   "input_tokens": 568,
+   "cached_tokens": 377,
+   "input_tokens": 591,
    "model": "claude-haiku-5-5",
    "output": {
     "pages": [
@@ -40,84 +18,18 @@
     ]
    },
    "output_tokens": 55,
-   "usd": 8.43e-05
+   "usd": 8.66e-05
   }
  },
- "16b0854cb0921dd23ed7b11c": {
-  "call_class": "prose",
-  "hand_written": true,
-  "model": "claude-haiku-5-5",
-  "note": "hand-written for tests; not a model reply",
-  "prompt_head": "## Author\nStephen T. Early, White House press secretary\n\n## Pages to write\n[{\"doc_id\": \"VZPC34SMT5X71QRYNZC0QN9GEF\", \"ki",
-  "reply": {
-   "cached_tokens": 355,
-   "input_tokens": 504,
-   "model": "claude-haiku-5-5",
-   "output": {
-    "pages": [
-     {
-      "doc_id": "VZPC34SMT5X71QRYNZC0QN9GEF",
-      "prose": "Gallup has 55 percent saying your course is about right. No figures yet on declaring war on Germany or on helping Britain at the risk of war.\n\nSteve Early"
-     }
-    ]
-   },
-   "output_tokens": 55,
-   "usd": 7.79e-05
-  }
- },
- "189387155677e67c0f41c1e5": {
-  "call_class": "prose",
-  "hand_written": true,
-  "model": "claude-haiku-5-5",
-  "note": "hand-written for tests; not a model reply",
-  "prompt_head": "## Author\nSam Rayburn, Speaker of the House of Representatives\n\n## Pages to write\n[{\"doc_id\": \"80C6G710WKH1B4CTGD4MXMBT6",
-  "reply": {
-   "cached_tokens": 355,
-   "input_tokens": 472,
-   "model": "claude-haiku-5-5",
-   "output": {
-    "pages": [
-     {
-      "doc_id": "80C6G710WKH1B4CTGD4MXMBT6V",
-      "prose": "Mr. President, the House stands at 267 Democrats and 162 Republicans. Sam Rayburn"
-     }
-    ]
-   },
-   "output_tokens": 36,
-   "usd": 6.52e-05
-  }
- },
- "362475863fd73483b533b11f": {
-  "call_class": "prose",
-  "hand_written": true,
-  "model": "claude-haiku-5-5",
-  "note": "hand-written for tests; not a model reply",
-  "prompt_head": "## Author\nSam Rayburn, Speaker of the House of Representatives\n\n## Pages to write\n[{\"doc_id\": \"6TNB5JDMH94DFM6YV0JQCZZH2",
-  "reply": {
-   "cached_tokens": 355,
-   "input_tokens": 472,
-   "model": "claude-haiku-5-5",
-   "output": {
-    "pages": [
-     {
-      "doc_id": "6TNB5JDMH94DFM6YV0JQCZZH2B",
-      "prose": "Mr. President, no change in the House: 267 Democrats, 162 Republicans. Sam Rayburn"
-     }
-    ]
-   },
-   "output_tokens": 37,
-   "usd": 6.57e-05
-  }
- },
- "535b550051e4e2a4efa1a26e": {
+ "0bffad98d8b51f388e604d13": {
   "call_class": "prose",
   "hand_written": true,
   "model": "claude-sonnet-5-5",
   "note": "hand-written for tests; not a model reply",
   "prompt_head": "## Author\nSam Rayburn, Speaker of the House of Representatives\n\n## Pages to write\n[{\"doc_id\": \"80C6G710WKH1B4CTGD4MXMBT6",
   "reply": {
-   "cached_tokens": 355,
-   "input_tokens": 472,
+   "cached_tokens": 377,
+   "input_tokens": 494,
    "model": "claude-sonnet-5-5",
    "output": {
     "pages": [
@@ -128,62 +40,62 @@
     ]
    },
    "output_tokens": 62,
-   "usd": 0.001564
+   "usd": 0.001608
   }
  },
- "5d4c18219a30594e7cd72523": {
+ "14f9de88e94702ecee378515": {
   "call_class": "prose",
   "hand_written": true,
-  "model": "claude-sonnet-5-5",
+  "model": "claude-haiku-5-5",
   "note": "hand-written for tests; not a model reply",
-  "prompt_head": "## Author\nStephen T. Early, White House press secretary\n\n## Pages to write\n[{\"doc_id\": \"4JC697KXWXDSVKCJ6KVR18N9JD\", \"ki",
+  "prompt_head": "## Author\nSam Rayburn, Speaker of the House of Representatives\n\n## Pages to write\n[{\"doc_id\": \"80C6G710WKH1B4CTGD4MXMBT6",
   "reply": {
-   "cached_tokens": 355,
-   "input_tokens": 504,
-   "model": "claude-sonnet-5-5",
+   "cached_tokens": 377,
+   "input_tokens": 494,
+   "model": "claude-haiku-5-5",
    "output": {
     "pages": [
      {
-      "doc_id": "4JC697KXWXDSVKCJ6KVR18N9JD",
-      "prose": "Boss,\n\nA small move our way: 56 percent now call your course about right. Still no number on war with Germany or on helping Britain whatever the risk, and I'd rather give you none than a guess.\n\nSteve"
+      "doc_id": "80C6G710WKH1B4CTGD4MXMBT6V",
+      "prose": "Mr. President, the House stands at 267 Democrats and 162 Republicans. Sam Rayburn"
      }
     ]
    },
-   "output_tokens": 67,
-   "usd": 0.001678
+   "output_tokens": 36,
+   "usd": 6.74e-05
   }
  },
- "8f86a6b8294175cfabf74309": {
+ "1e188ddbd9226c8ff891ccd4": {
   "call_class": "prose",
   "hand_written": true,
-  "model": "claude-sonnet-5-5",
+  "model": "claude-haiku-5-5",
   "note": "hand-written for tests; not a model reply",
   "prompt_head": "## Author\nSam Rayburn, Speaker of the House of Representatives\n\n## Pages to write\n[{\"doc_id\": \"6TNB5JDMH94DFM6YV0JQCZZH2",
   "reply": {
-   "cached_tokens": 355,
-   "input_tokens": 472,
-   "model": "claude-sonnet-5-5",
+   "cached_tokens": 377,
+   "input_tokens": 494,
+   "model": "claude-haiku-5-5",
    "output": {
     "pages": [
      {
       "doc_id": "6TNB5JDMH94DFM6YV0JQCZZH2B",
-      "prose": "Mr. President,\n\nThe House is as it was a week ago, 267 Democrats to 162 Republicans. The party line will hold on most things; on neutrality I'll want another week of talking before I give you a count you can lean on.\n\nSam"
+      "prose": "Mr. President, no change in the House: 267 Democrats, 162 Republicans. Sam Rayburn"
      }
     ]
    },
-   "output_tokens": 72,
-   "usd": 0.001664
+   "output_tokens": 37,
+   "usd": 6.79e-05
   }
  },
- "e2befe422c5cb16c69abfc71": {
+ "1f911890ec85190746407c34": {
   "call_class": "prose",
   "hand_written": true,
   "model": "claude-sonnet-5-5",
   "note": "hand-written for tests; not a model reply",
   "prompt_head": "## Author\nHarold R. Stark, Chief of Naval Operations\n\n## Pages to write\n[{\"doc_id\": \"7WD18YQ5NNBCYVWE5V96DPY182\", \"kind\"",
   "reply": {
-   "cached_tokens": 355,
-   "input_tokens": 568,
+   "cached_tokens": 377,
+   "input_tokens": 591,
    "model": "claude-sonnet-5-5",
    "output": {
     "pages": [
@@ -194,18 +106,106 @@
     ]
    },
    "output_tokens": 86,
-   "usd": 0.001996
+   "usd": 0.002042
   }
  },
- "ff32d66e2df35ff634fa8d25": {
+ "64405b942bea7ac9018f1eb7": {
+  "call_class": "prose",
+  "hand_written": true,
+  "model": "claude-haiku-5-5",
+  "note": "hand-written for tests; not a model reply",
+  "prompt_head": "## Author\nStephen T. Early, White House press secretary\n\n## Pages to write\n[{\"doc_id\": \"VZPC34SMT5X71QRYNZC0QN9GEF\", \"ki",
+  "reply": {
+   "cached_tokens": 377,
+   "input_tokens": 480,
+   "model": "claude-haiku-5-5",
+   "output": {
+    "pages": [
+     {
+      "doc_id": "VZPC34SMT5X71QRYNZC0QN9GEF",
+      "prose": "Gallup has 55 percent saying your course is about right. No figures yet on declaring war on Germany or on helping Britain at the risk of war.\n\nSteve Early"
+     }
+    ]
+   },
+   "output_tokens": 55,
+   "usd": 7.55e-05
+  }
+ },
+ "7a694aa87004efde66a4da46": {
+  "call_class": "prose",
+  "hand_written": true,
+  "model": "claude-sonnet-5-5",
+  "note": "hand-written for tests; not a model reply",
+  "prompt_head": "## Author\nStephen T. Early, White House press secretary\n\n## Pages to write\n[{\"doc_id\": \"4JC697KXWXDSVKCJ6KVR18N9JD\", \"ki",
+  "reply": {
+   "cached_tokens": 377,
+   "input_tokens": 480,
+   "model": "claude-sonnet-5-5",
+   "output": {
+    "pages": [
+     {
+      "doc_id": "4JC697KXWXDSVKCJ6KVR18N9JD",
+      "prose": "Boss,\n\nA small move our way: 56 percent now call your course about right. Still no number on war with Germany or on helping Britain whatever the risk, and I'd rather give you none than a guess.\n\nSteve"
+     }
+    ]
+   },
+   "output_tokens": 67,
+   "usd": 0.00163
+  }
+ },
+ "ab02d9c08cf5f45c45707ec6": {
+  "call_class": "prose",
+  "hand_written": true,
+  "model": "claude-sonnet-5-5",
+  "note": "hand-written for tests; not a model reply",
+  "prompt_head": "## Author\nSam Rayburn, Speaker of the House of Representatives\n\n## Pages to write\n[{\"doc_id\": \"6TNB5JDMH94DFM6YV0JQCZZH2",
+  "reply": {
+   "cached_tokens": 377,
+   "input_tokens": 494,
+   "model": "claude-sonnet-5-5",
+   "output": {
+    "pages": [
+     {
+      "doc_id": "6TNB5JDMH94DFM6YV0JQCZZH2B",
+      "prose": "Mr. President,\n\nThe House is as it was a week ago, 267 Democrats to 162 Republicans. The party line will hold on most things; on neutrality I'll want another week of talking before I give you a count you can lean on.\n\nSam"
+     }
+    ]
+   },
+   "output_tokens": 72,
+   "usd": 0.001708
+  }
+ },
+ "cfe9d6114d91421319e6e45c": {
+  "call_class": "prose",
+  "hand_written": true,
+  "model": "claude-sonnet-5-5",
+  "note": "hand-written for tests; not a model reply",
+  "prompt_head": "## Author\nStephen T. Early, White House press secretary\n\n## Pages to write\n[{\"doc_id\": \"VZPC34SMT5X71QRYNZC0QN9GEF\", \"ki",
+  "reply": {
+   "cached_tokens": 377,
+   "input_tokens": 480,
+   "model": "claude-sonnet-5-5",
+   "output": {
+    "pages": [
+     {
+      "doc_id": "VZPC34SMT5X71QRYNZC0QN9GEF",
+      "prose": "Boss,\n\nGallup's latest has 55 percent calling your course about right. They haven't given me anything I'd trust on a declaration against Germany, nor on helping Britain at the risk of war; I'll chase them for it.\n\nSteve"
+     }
+    ]
+   },
+   "output_tokens": 72,
+   "usd": 0.00168
+  }
+ },
+ "db0588d99dba863f217d7a3a": {
   "call_class": "prose",
   "hand_written": true,
   "model": "claude-haiku-5-5",
   "note": "hand-written for tests; not a model reply",
   "prompt_head": "## Author\nStephen T. Early, White House press secretary\n\n## Pages to write\n[{\"doc_id\": \"4JC697KXWXDSVKCJ6KVR18N9JD\", \"ki",
   "reply": {
-   "cached_tokens": 355,
-   "input_tokens": 504,
+   "cached_tokens": 377,
+   "input_tokens": 480,
    "model": "claude-haiku-5-5",
    "output": {
     "pages": [
@@ -216,7 +216,7 @@
     ]
    },
    "output_tokens": 53,
-   "usd": 7.69e-05
+   "usd": 7.45e-05
   }
  }
 }

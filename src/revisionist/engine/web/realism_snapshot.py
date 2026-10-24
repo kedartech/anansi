@@ -21,6 +21,7 @@ from revisionist.core.realism.card import Lever, ParamKind, ParamSpec, words
 from revisionist.core.realism.document import BodyField, DocumentView
 from revisionist.core.realism.pipeline import Order, OrderStatus, Pipeline, StepAction, StepOutcome
 from revisionist.core.state import State, View
+from revisionist.engine.aide import AideBrief
 from revisionist.engine.directive import Proposal, channels
 from revisionist.engine.web.realism_api import (
     BodyLine,
@@ -360,6 +361,7 @@ def desk(view: View) -> Desk:
         contacts=[
             ContactLine(
                 person=view.entities[c.person].name,
+                title=view.cards[c.person].office if c.person in view.cards else None,
                 channel=c.channel.value,
                 channels=[x.value for x in channels(c)],
             )
@@ -390,6 +392,44 @@ def proposal(view: View, p: Proposal) -> DirectiveProposal:
         params=dict(p.params) if lever is not None else {},
         reason=p.reason or None,
     )
+
+
+def aide_brief(view: View, brief: AideBrief) -> dict[str, Any]:
+    """The aide's brief in the desk's words: the summary, how many decisions wait,
+    and each draft as its form's label and terms. Drafts are never filed here."""
+    levers = {x.name: x for x in view.desk.levers} if view.desk is not None else {}
+    drafts = []
+    for d in brief.drafts:
+        lever = levers.get(d.lever)
+        if lever is None:
+            continue
+        specs = {s.name: s for s in lever.params}
+        drafts.append(
+            {
+                "lever": lever.name,
+                "label": lever_label(lever),
+                "terms": [_term(specs[k], v) for k, v in d.params.items() if k in specs],
+                "params": dict(d.params),
+            }
+        )
+    return {"summary": brief.summary, "decisions": len(brief.decisions), "drafts": drafts}
+
+
+def counsel_lines(view: View, held: Iterable[ev.CounselHeld]) -> list[dict[str, str]]:
+    """The seat's own consultations, newest first: who, how, the question and the answer."""
+    out = []
+    for c in held:
+        asked, _, answer = c.text.partition("\n\n")
+        question = asked.removeprefix("You asked: ") if asked.startswith("You asked: ") else ""
+        out.append(
+            {
+                "person": view.entities[c.person].name if c.person in view.entities else "",
+                "channel": c.channel.value,
+                "question": question,
+                "answer": answer if question else c.text,
+            }
+        )
+    return out[::-1]
 
 
 def read_ids(events: Iterable[Event], seat: SeatId) -> set[DocumentId]:
@@ -435,7 +475,9 @@ def seat_realism(
 
 
 __all__ = [
+    "aide_brief",
     "clock",
+    "counsel_lines",
     "desk",
     "document",
     "documents",

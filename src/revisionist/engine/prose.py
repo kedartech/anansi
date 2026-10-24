@@ -109,7 +109,8 @@ PROSE_SCHEMA: dict[str, Any] = {
 
 
 def page_lines(page: DocumentView, author: Author) -> dict[str, Any]:
-    """One page as the prompt shows it: the view's fields, omitted lines included."""
+    """One page as the prompt shows it: the view's fields and the lines that carry a
+    figure. A line with no figure is left out, so the page says nothing about it."""
     return {
         "doc_id": page.doc_id,
         "kind": page.kind.value,
@@ -123,10 +124,11 @@ def page_lines(page: DocumentView, author: Author) -> dict[str, Any]:
         "lines": [
             {
                 "label": line.label,
-                "value": "not stated" if line.value is None else line.value,
+                "value": line.value,
                 **({"unit": line.unit} if line.unit else {}),
             }
             for line in page.body
+            if line.value is not None
         ],
     }
 
@@ -202,9 +204,7 @@ def template_prose(author: Author, page: DocumentView) -> str:
     """The page's lines as plain period sentences. States no figure the page lacks."""
     said: list[str] = []
     for line in page.body:
-        if line.value is None:
-            said.append(f"On {line.label.lower()} I can give you nothing firm at present.")
-        else:
+        if line.value is not None:
             unit = f" {line.unit}" if line.unit else ""
             said.append(f"{line.label}: {_figure(line.value)}{unit}.")
     if not said:
