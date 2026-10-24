@@ -602,8 +602,7 @@ def tick(offline: Offline = False) -> None:
     result = run.result
     if isinstance(result, realism_tick.RealismTickResult):
         now = load_state(store, _campaign(store)).in_world_date
-        woke = f"{result.wake.reason.label}, " if result.wake is not None else ""
-        typer.echo(f"tick {result.tick}: woke on {woke}now {now}")
+        typer.echo(realism_tick.wake_line(result, now))
         if run.leaks:
             raise _fail(render_leaks(run.leaks), EXIT_LEAK)
         return

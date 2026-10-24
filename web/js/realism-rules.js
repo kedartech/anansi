@@ -76,3 +76,18 @@ export function paceLine(clock) {
   }
   return parts.join(' · ');
 }
+
+/** What a player may do at a step they hold (core/realism/pipeline.py `StepAction`), in the order offered. */
+export const STEP_ACTIONS = Object.freeze([
+  ['pass', 'Pass it on'],
+  ['expedite', 'Expedite'],
+  ['amend', 'Amend'],
+  ['stall', 'Stall'],
+  ['leak', 'Leak'],
+  ['refuse', 'Refuse'],
+]);
+
+/** Names to offer for entity parameters: contacts and principals, once each, sorted. */
+export function entityChoices(desk) {
+  return [...new Set([...desk.contacts.map((c) => c.person), ...desk.principals])].sort();
+}

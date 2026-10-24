@@ -24,14 +24,19 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from revisionist.core.ontology import Persona
+from revisionist.core.ids import DocumentId, OrderId
+from revisionist.core.ontology import Persona, Phase
+from revisionist.core.project import project
+from revisionist.core.realism.pipeline import StepAction
 from revisionist.engine import campaign as cmp
+from revisionist.engine import realism_tick
 from revisionist.engine import scheduler as sch
 from revisionist.engine.discord import handlers as dh
 from revisionist.engine.llm import Transport
 from revisionist.engine.pg_store import PostgresEventStore
 from revisionist.engine.store import load_state
-from revisionist.engine.web import snapshot
+from revisionist.engine.tick import NotInPlayError
+from revisionist.engine.web import realism_snapshot, snapshot
 from revisionist.engine.web.accounts import (
     SESSION_DAYS,
     Account,
@@ -128,8 +133,78 @@ class App:
             game |= snapshot.schedule_info(store, link.campaign_id, now)
             game["live"] = link.campaign_id in live
             seat_view = snapshot.seat_snapshot(store, state, link.seat_id)
+            game["ruleset"] = state.ruleset
+            if (
+                state.ruleset == "realism"
+                and state.phase is Phase.PLAY
+                and link.seat_id in state.seats
+            ):
+                wake_at = None if game["paused"] else game["next_tick_at"]
+                seat_view["realism"] = realism_snapshot.seat_realism(
+                    state,
+                    link.seat_id,
+                    realism_snapshot.read_ids(store.read(link.campaign_id), link.seat_id),
+                    wake_at,
+                )
             out["game"] = game | {"view": seat_view}
             return snapshot.checked(state, link.seat_id, out)
+        finally:
+            store.close()
+
+    # --- realism actions -------------------------------------------------------
+
+    def realism(self, account: Account, action: str, body: dict[str, Any]) -> dict[str, Any]:
+        """One ``/api/realism/<action>``. A refusal is a reply, not an error."""
+        store = self.open()
+        try:
+            link = self.handlers._game_of(store, account.account_id, "status")
+            if isinstance(link, str):
+                raise ApiError(HTTPStatus.BAD_REQUEST, link)
+            state = load_state(store, link.campaign_id)
+            if state.ruleset != "realism":
+                raise ApiError(HTTPStatus.BAD_REQUEST, "This game does not use the realism rules.")
+            if state.phase is not Phase.PLAY or link.seat_id not in state.seats:
+                raise ApiError(HTTPStatus.BAD_REQUEST, "The game is not in play yet.")
+            seat, cid = link.seat_id, link.campaign_id
+            try:
+                if action == "read":
+                    doc_id = DocumentId(_text(body, "doc_id", 64))
+                    try:
+                        page = realism_snapshot.document(project(state, seat), doc_id)
+                    except KeyError:
+                        raise ApiError(HTTPStatus.NOT_FOUND, "No such document.") from None
+                    realism_tick.mark_read(store, cid, seat, doc_id)
+                    return snapshot.checked(state, seat, dict(page))
+                if action == "lever":
+                    order = realism_tick.file_order(
+                        store, cid, seat, _text(body, "lever", 120), _params(body)
+                    )
+                    first = state.pipelines[order.pipeline].steps[0]
+                    who = state.entities[first.person].name
+                    reply = f"Filed {order.lever}. First step: {who} ({first.kind.value})."
+                elif action == "step":
+                    try:
+                        taken = StepAction(_text(body, "action", 20))
+                    except ValueError:
+                        names = ", ".join(a.value for a in StepAction)
+                        raise ValueError(f"The action is one of {names}.") from None
+                    order = realism_tick.take_step(
+                        store, cid, OrderId(_text(body, "order_id", 64)), taken, _params(body)
+                    )
+                    reply = f"{order.lever}: {taken.value}. It is now {order.status.value}."
+                elif action == "advance":
+                    humans = cmp.human_seats(state)
+                    if humans != [seat]:
+                        raise ValueError("Only the host advances a shared game.")
+                    result = realism_tick.run_realism_tick(store, cid)
+                    today = load_state(store, cid).in_world_date
+                    reply = realism_tick.wake_line(result, today)
+                else:
+                    raise ApiError(HTTPStatus.NOT_FOUND, "No such call.")
+            except (ValueError, KeyError, NotInPlayError) as exc:
+                text = str(exc.args[0]) if isinstance(exc, KeyError) and exc.args else str(exc)
+                return snapshot.checked(state, seat, {"reply": text, "refused": True})
+            return snapshot.checked(state, seat, {"reply": reply, "refused": False})
         finally:
             store.close()
 
@@ -192,6 +267,14 @@ SEAT_ACTIONS: dict[str, Callable[[WebHandlers, str, dict[str, Any]], str]] = {
     "report": lambda h, a, b: h.report(a),
     "bug": lambda h, a, b: h.bug(a, _text(b, "notes", 4000)),
 }
+
+
+def _params(body: dict[str, Any]) -> dict[str, str]:
+    """Order parameters as the CLI passes them: every value a string."""
+    raw = body.get("params", {})
+    if not isinstance(raw, dict) or not all(isinstance(v, str | int) for v in raw.values()):
+        raise ApiError(HTTPStatus.BAD_REQUEST, "params is a JSON object of names and values.")
+    return {str(k): str(v) for k, v in raw.items()}
 
 
 def _route(body: dict[str, Any]) -> str:
@@ -342,10 +425,17 @@ def make_handler(app: App) -> type[BaseHTTPRequestHandler]:
                     account = self._need_account()
                     reply = str(run(app.handlers, account.account_id, body))
                     self._send_json(HTTPStatus.OK, {"reply": reply, "refused": reply in REFUSALS})
+                elif path.startswith("/api/realism/"):
+                    account = self._need_account()
+                    out = app.realism(account, path.removeprefix("/api/realism/"), body)
+                    self._send_json(HTTPStatus.OK, out)
                 else:
                     raise ApiError(HTTPStatus.NOT_FOUND, "No such call.")
             except ApiError as exc:
                 self._send_json(exc.status, {"error": exc.message})
+            except snapshot.WithheldError:
+                log.warning("realism reply withheld: canary hit")
+                self._send_json(HTTPStatus.OK, {"error": dh.WITHHELD})
             except AccountError as exc:
                 self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
             except Exception:

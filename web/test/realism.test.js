@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { channelWord, classificationWord, paceLine, sortInTray, trackerLine, unreadCount } from '../js/realism-rules.js';
+import { STEP_ACTIONS, channelWord, classificationWord, entityChoices, paceLine, sortInTray, trackerLine, unreadCount } from '../js/realism-rules.js';
 
 const WEB = fileURLToPath(new URL('..', import.meta.url));
 const fixture = JSON.parse(readFileSync(join(WEB, 'test', 'fixtures', 'realism-seat.json'), 'utf8'));
@@ -73,4 +73,14 @@ test('realism files never show a percentage or talk of chances', () => {
 test('realism output contains no figures that read as a chance', () => {
   const lines = [paceLine(fixture.clock), ...orders.map(trackerLine)];
   for (const l of lines) assert.doesNotMatch(l, /%|\bchance\b|\bprobab/i);
+});
+
+test('entity choices are contacts and principals, once each', () => {
+  const names = entityChoices({ contacts: [{ person: 'B' }, { person: 'A' }], principals: ['A', 'C'] });
+  assert.deepEqual(names, ['A', 'B', 'C']);
+});
+
+test('the step actions match the engine and offer each once', () => {
+  const values = STEP_ACTIONS.map(([v]) => v).sort();
+  assert.deepEqual(values, ['amend', 'expedite', 'leak', 'pass', 'refuse', 'stall']);
 });
